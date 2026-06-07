@@ -1,19 +1,45 @@
 #!/usr/bin/env bash
-# fedora.sh — Fedora toolkit lane picker (launches lane menus, returns here on exit)
-# Version: 0.5.5
+# fedora.sh — Fedora toolkit main entry (lane picker + rebuild + doctor CLI)
+# Version: 0.9.1
 #
-# Run: ./fedora.sh [--help|--doctor|--rebuild*]
+# Run: ./fedora.sh [--help|--check|--smoke|--doctor|--baseline|--rebuild-check|--rebuild*|--system|--dev|--android]
 #
-# This script picks a lane and opens its menu. When you exit a lane, you return
-# here. Full rebuild: ./fedora_rebuild.sh (separate script).
+# MobSF is separate: ./mobsf.sh (not a lane here).
 
 set -euo pipefail
 
 FEDORA_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# --no-color before lib load (also respects NO_COLOR via theme_init)
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-color) FEDORA_NO_COLOR=1; shift ;;
+    *) break ;;
+  esac
+done
+
 # shellcheck source=lib/menu.sh
 source "${FEDORA_ROOT}/lib/menu.sh"
 
-menu_init "Fedora Toolkit" "${FEDORA_ROOT}"
+menu_init "Fedora Workstation Toolkit" "${FEDORA_ROOT}" 1
+
+_fedora_run_rebuild() {
+  FEDORA_REBUILD_VIA_FEDORA=1 exec bash "${FEDORA_ROOT}/fedora_rebuild.sh" "$@"
+}
+
+_fedora_run_check() {
+  # shellcheck source=lib/check.sh
+  source "${FEDORA_ROOT}/lib/check.sh"
+  local full=0 fix_repos=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --full) full=1; shift ;;
+      --fix-repos) fix_repos=1; shift ;;
+      *) die "Unknown option for --check: $1 (try: --check [--full] [--fix-repos])" ;;
+    esac
+  done
+  fedora_toolkit_check "${FEDORA_ROOT}" "${full}" "${fix_repos}"
+}
 
 _fedora_open_lane() {
   local lane="$1"
@@ -22,55 +48,75 @@ _fedora_open_lane() {
     1) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh" || ec=$? ;;
     2) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" || ec=$? ;;
     3) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/android/android.sh" || ec=$? ;;
-    4) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/mobsf/mobsf.sh" || ec=$? ;;
-    *) die "Invalid lane: ${lane} (use 1–4)" ;;
+    *) die "Invalid lane: ${lane} (use 1–3)" ;;
   esac
   if (( ec != 0 )); then
-    warn "Lane exited with status ${ec} — returning to lane picker"
+    warn "Lane exited with status ${ec} — returning to main menu"
   fi
 }
 
 # Non-interactive lane shortcut (must run before option parsing consumes args)
-if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-4]$ ]]; then
+if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-3]$ ]]; then
   _fedora_open_lane "$1"
   exit 0
 fi
 
 fedora_usage() {
   cat <<EOF
-Fedora toolkit — pick a lane (exit a lane to return here).
+Fedora Workstation Toolkit — main entry point.
+
+Quick start:
+  ./fedora.sh
+  ./fedora.sh --check          All-in-one readiness (validate · smoke · rebuild)
+  ./fedora.sh --check --full   Include full smoke + Fedora doctor
+  ./fedora.sh --check --fix-repos   Fix DNF repos (sudo) then re-check
+  ./fedora.sh --doctor
+  ./fedora.sh --baseline
+  ./fedora.sh --rebuild-check
+  ./fedora.sh --rebuild
+  ./fedora.sh --smoke          Dynamic CLI/menu tests
+
+MobSF stack (separate lifecycle):
+  ./mobsf.sh
+  ./mobsf.sh --doctor
 
 Usage: $(basename "$0") [options|lane]
 
 Lane (non-interactive):
-  1|2|3|4          Open System / Dev / Android / MobSF lane once, then exit to shell
-
-Menu keys (interactive):
-  [0] Back one level   [r] Repeat last choice
+  1|2|3              Open System / Development / Android RE once, then exit
 
 Options:
-  --help, -h       Show this help
-  --doctor         Full research doctor (Android + MobSF)
-  --rebuild        Run guided rebuild (same as ./fedora_rebuild.sh)
-  --rebuild-yes    Rebuild with --yes
-  --dry-run        Rebuild dry-run
+  --help, -h         Show this help
+  --no-color         Plain text output (also: NO_COLOR=1)
+  --check            Validate + smoke + rebuild readiness (add --full or --fix-repos)
+  --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
+  --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
+  --doctor           Fedora doctor (repo · lanes · workstation health)
+  --baseline         Fresh-install host baseline report (read-only → logs/)
+  --security-audit   Read-only security audit → logs/security_audit/
+  --audit-summary    Fast live findings only (no full report)
+  --audit-plan       Ordered remediation plan from live findings
+  --host-context     Live host snapshot (users · network · posture)
+  --rebuild-check    Pre-rebuild readiness (no installs)
+  --rebuild [opts]   Guided rebuild (passes options to rebuild engine)
+  --rebuild-yes      Rebuild with --yes
+  --dry-run          Rebuild dry-run
+  --system           Open System lane menu
+  --dev              Open Development lane menu
+  --android          Open Android RE lane menu
 
-Lane launchers (same as the interactive menu):
-  ./system/system.sh       Host, update, logs, research doctor
-  ./dev/dev.sh             Git, VS Code, KVM, LAMP
+Lane launchers:
+  ./system/system.sh       Host · updates · logs · cleanup
+  ./dev/dev.sh             Git · VS Code · KVM · LAMP
   ./android/android.sh     Android RE workstation
-  ./mobsf/mobsf.sh         MobSF static analysis
 
-Guided full rebuild (separate script — not a submenu here):
-  ./fedora_rebuild.sh              Confirm each step
-  ./fedora_rebuild.sh --yes        Unattended core steps
-  ./fedora_rebuild.sh --dry-run    Show plan only
+Fresh install flow:
+  ./fedora.sh --check
+  ./fedora.sh --doctor
+  ./fedora.sh --rebuild
 
-fedora.sh          = daily work — lanes [1–4], rebuild [5], doctor (--doctor)
-fedora_rebuild.sh  = same as picker [5] with optional mode menu first
-
-Legacy scripts in ./legacy/ are disabled reference only (not in this menu).
-See: GETTING-STARTED.md
+Legacy scripts in ./legacy/ are disabled reference only.
+See: docs/GETTING-STARTED.md
 Root: ${FEDORA_ROOT}
 EOF
 }
@@ -78,30 +124,85 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) fedora_usage; exit 0 ;;
-    --rebuild) exec bash "${FEDORA_ROOT}/fedora_rebuild.sh" ;;
-    --rebuild-yes) exec bash "${FEDORA_ROOT}/fedora_rebuild.sh" --yes ;;
-    --dry-run) exec bash "${FEDORA_ROOT}/fedora_rebuild.sh" --dry-run ;;
-    --doctor) exec bash "${FEDORA_ROOT}/system/research_doctor.sh" ;;
+    --no-color) shift ;;
+    --check)
+      shift
+      _fedora_run_check "$@"
+      exit $?
+      ;;
+    --smoke)
+      shift
+      if [[ "${1:-}" == "--full" ]]; then
+        shift
+        exec bash "${FEDORA_ROOT}/smoke_test.sh"
+      fi
+      exec bash "${FEDORA_ROOT}/smoke_test.sh" --quick "$@"
+      ;;
+    --fix-repos)
+      shift
+      exec sudo bash "${FEDORA_ROOT}/system/fix_dnf_repo_permissions.sh" "$@"
+      ;;
+    --rebuild) shift; _fedora_run_rebuild "$@" ;;
+    --rebuild-yes) shift; _fedora_run_rebuild --yes "$@" ;;
+    --dry-run) shift; _fedora_run_rebuild --dry-run "$@" ;;
+    --doctor) shift; exec bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only "$@" ;;
+    --baseline) shift; exec bash "${FEDORA_ROOT}/system/fresh_install_check.sh" "$@" ;;
+    --security-audit) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" "$@" ;;
+    --audit-summary) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" --summary "$@" ;;
+    --audit-plan) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" --plan "$@" ;;
+    --host-context) shift; exec bash "${FEDORA_ROOT}/system/host_context.sh" "$@" ;;
+    --rebuild-check) shift; exec bash "${FEDORA_ROOT}/system/rebuild_readiness_check.sh" "$@" ;;
+    --system) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/system/system.sh" "$@" ;;
+    --dev) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" "$@" ;;
+    --android) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/android/android.sh" "$@" ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
 done
 
+fedora_main_header() {
+  menu_clear_screen
+  theme_banner "${MENU_APP_NAME}"
+  theme_meta_line "Host: $(hostname) · User: $(real_user)"
+  theme_meta_line "Root: ${MENU_ROOT}"
+}
+
 _fedora_main_items() {
-  menu_item 1 "System lane      (host · update · logs)"
-  menu_item 2 "Dev lane         (git · KVM · LAMP)"
-  menu_item 3 "Android RE lane  (SDK · RE tools · verify)"
-  menu_item 4 "MobSF lane       (static analysis stack)"
-  menu_item 5 "Guided rebuild   (full workstation setup)"
+  theme_section "Main lanes"
+  menu_item 1 "System" "host · updates · logs · cleanup"
+  menu_item 2 "Development" "git · vscode · kvm · lamp"
+  menu_item 3 "Android RE" "sdk · apktool · jadx · frida · verify"
+  theme_section "Setup and health"
+  menu_item 4 "Guided rebuild" "full workstation setup"
+  menu_item 5 "Fedora doctor" "repo · lanes · workstation health"
+  menu_item 6 "Toolkit check" "validate · smoke · rebuild readiness"
+  theme_section "Separate tools"
+  theme_note_kv "MobSF stack" "./mobsf.sh"
+  theme_section "Shortcuts"
+  theme_shortcut "r" "repeat menu"
+  echo
   menu_item_exit
 }
 
 _fedora_main_dispatch() {
   case "$1" in
-    0) echo "Bye."; exit 0 ;;
-    1|2|3|4) _fedora_open_lane "$1"; return 0 ;;
+    0) info "Main menu closed. Run ./fedora.sh to return."; exit 0 ;;
+    1|2|3) _fedora_open_lane "$1"; return 0 ;;
+    4)
+      info "Guided rebuild (confirm each step)"
+      FEDORA_FROM_MENU=1 FEDORA_REBUILD_VIA_FEDORA=1 bash "${FEDORA_ROOT}/fedora_rebuild.sh" || true
+      menu_pause
+      return 0
+      ;;
     5)
-      info "Leaving lane picker — guided rebuild (confirm each step)"
-      FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/fedora_rebuild.sh" || true
+      menu_run_script_scroll system/research_doctor.sh --android-only
+      menu_pause
+      return 0
+      ;;
+    6)
+      local prev="${MENU_SCROLL_MODE}"
+      MENU_SCROLL_MODE=1
+      _fedora_run_check || true
+      MENU_SCROLL_MODE="${prev}"
       menu_pause
       return 0
       ;;
@@ -110,9 +211,8 @@ _fedora_main_dispatch() {
 }
 
 main_menu() {
-  menu_loop "Lane picker" \
-    "rebuild: [5] or ./fedora_rebuild.sh  ·  doctor: ./fedora.sh --doctor  ·  [r] repeat" \
-    _fedora_main_items _fedora_main_dispatch
+  menu_set_header_fn fedora_main_header
+  menu_loop "Main menu" "" _fedora_main_items _fedora_main_dispatch
 }
 
 main_menu

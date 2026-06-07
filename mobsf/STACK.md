@@ -2,7 +2,7 @@
 
 How the four-container MobSF stack works in this toolkit, and how it differs from upstream MobSF docs.
 
-**Related:** [README](README.md) · [INSTALL](INSTALL.md) · [OPERATIONS](OPERATIONS.md) · [TROUBLESHOOTING](TROUBLESHOOTING.md)
+**Related:** [GUIDE](GUIDE.md) · [TROUBLESHOOTING](TROUBLESHOOTING.md)
 
 ---
 
@@ -116,7 +116,7 @@ Scripts discover containers by **label** (`io.podman.compose.service=postgres`),
 | Variable | Set on | Meaning |
 |----------|--------|---------|
 | `MOBSF_ASYNC_ANALYSIS=1` | mobsf | Scans run via djangoq queue |
-| `POSTGRES_*` | mobsf, djangoq | DB connection (password `password` in default bundle — change for untrusted networks) |
+| `POSTGRES_*` | mobsf, djangoq, postgres | DB connection; password in `~/MobSF/compose/.env` (generated on fresh install) |
 | `host.docker.internal:host-gateway` | mobsf | Host reachability for future dynamic analysis / ADB |
 
 ---
@@ -129,7 +129,7 @@ Static analysis works out of the box. Dynamic analysis requires:
 - `MOBSF_ANALYZER_IDENTIFIER` env (see [MobSF Docker docs](https://github.com/MobSF/docs/blob/master/running_mobsf_docker.md))
 - Often `--add-host=host.docker.internal:host-gateway` (already in bundle)
 
-This toolkit does not yet automate dynamic setup; track as future `mobsf_dynamic_setup.sh` if needed.
+This toolkit does not automate full dynamic setup. Run readiness checks with `./mobsf.sh --doctor --dynamic` (or MobSF menu → **Doctor** → full check). Manual `MOBSF_ANALYZER_IDENTIFIER` configuration is still required.
 
 ---
 
@@ -138,15 +138,39 @@ This toolkit does not yet automate dynamic setup; track as future `mobsf_dynamic
 | Concern | Location |
 |---------|----------|
 | Compose bundle | `mobsf/compose/` |
-| Stack logic | `mobsf/lib/` (`stack.sh`, `podman.sh`, …) |
 | CLI scripts | `mobsf/mobsf_*.sh` |
-| Menu | `fedora.sh` → MobSF |
+| Menu | `./mobsf.sh` |
 | Session logs | `logs/mobsf.log` |
+| Compose secrets | `~/MobSF/compose/.env` (mode 0600) |
+| Login autostart | `./mobsf.sh autostart install` → user systemd unit |
+
+### Shared library (`mobsf/lib/`)
+
+Load in scripts:
+
+```bash
+MOBSF_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/mobsf.sh
+source "${MOBSF_DIR}/lib/mobsf.sh"
+```
+
+| Module | Responsibility |
+|--------|----------------|
+| `mobsf.sh` | Loader — sources common + modules |
+| `config.sh` | UI URLs, bundle dir defaults |
+| `paths.sh` | `~/MobSF/` paths, compose resolution, data dir prep |
+| `podman.sh` | `mobsf_pc` / `mobsf_pd`, container discovery, HTTP check |
+| `compose.sh` | Deploy Fedora bundle, validate guardrails, `.env` secrets |
+| `stack.sh` | Install, reset, ordered up/down (`mobsf_stack_up_ordered`) |
+| `doctor.sh` | Static + dynamic readiness, `mobsf_doctor_brief` |
+| `systemd.sh` | User systemd unit for login autostart |
+| `menu.sh` | MobSF menus (sources repo `lib/menu.sh`) |
+
+Top-level `lib/mobsf.sh` is a backward-compat shim → `mobsf/lib/mobsf.sh`.
 
 ---
 
 ## See also
 
-- Install walkthrough → [INSTALL.md](INSTALL.md)
-- Commands cheat sheet → [OPERATIONS.md](OPERATIONS.md)
+- Install & operations → [GUIDE.md](GUIDE.md)
 - SELinux / permission fixes → [TROUBLESHOOTING.md](TROUBLESHOOTING.md)

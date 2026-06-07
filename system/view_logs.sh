@@ -11,7 +11,7 @@ _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${_SCRIPT_DIR}/../lib/logging.sh"
 
 if [[ -t 2 ]]; then
-  echo "[DEPRECATED] view_logs.sh — use: ./system/log_engine.sh (see CONSOLIDATION.md)" >&2
+  echo "[DEPRECATED] view_logs.sh — use: ./system/log_engine.sh (see docs/GETTING-STARTED.md)" >&2
 fi
 
 logging_view_logs_legacy "${_SCRIPT_DIR}/log_engine.sh" "$@"

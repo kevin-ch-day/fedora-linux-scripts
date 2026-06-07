@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
-# fedora_rebuild.sh — Run the recommended workstation rebuild sequence
-# Version: 0.4.5
+# fedora_rebuild.sh — Guided workstation rebuild sequence (implementation)
+# Version: 0.4.6
+#
+# Prefer: ./fedora.sh --rebuild
+#
+# This script is retained for compatibility. When invoked directly it delegates
+# to ./fedora.sh --rebuild (see FEDORA_REBUILD_VIA_FEDORA guard below).
 #
 # Run:
-#   ./fedora_rebuild.sh              # mode menu, then guided sequence
-#   ./fedora_rebuild.sh --yes        # no prompts between steps
-#   ./fedora_rebuild.sh --dry-run    # show steps only
-#   ./fedora_rebuild.sh --log        # tee output to logs/fedora_rebuild.log
-#
-# Not the same as ./fedora.sh (daily lane picker). See GETTING-STARTED.md
+#   ./fedora.sh --rebuild              # preferred
+#   ./fedora_rebuild.sh                # compatibility → fedora.sh --rebuild
+#   ./fedora.sh --rebuild --yes        # no prompts between steps
+#   ./fedora.sh --rebuild --dry-run    # show steps only
+#   ./fedora.sh --rebuild --log        # tee output to logs/fedora_rebuild.log
 
 set -euo pipefail
 
 FEDORA_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# Compatibility wrapper: direct callers go through fedora.sh (avoid loop below).
+if [[ "${FEDORA_REBUILD_VIA_FEDORA:-}" != 1 ]]; then
+  exec bash "${FEDORA_ROOT}/fedora.sh" --rebuild "$@"
+fi
 # shellcheck source=lib/common.sh
 source "${FEDORA_ROOT}/lib/common.sh"
 # shellcheck source=lib/logging.sh
@@ -31,7 +40,10 @@ usage() {
 Usage: $(basename "$0") [options]
 
 Guided rebuild: system update → KVM/containers → Android core → RE tools →
-verify → optional MobSF → research doctor (Android + MobSF).
+verify → optional MobSF → research doctor.
+
+Not included (run from Dev lane after rebuild): git, VS Code, Cinnamon desktop,
+LAMP/phpMyAdmin — see docs/GETTING-STARTED.md § After rebuild.
 
 Options:
   --yes, -y              Auto-run all core steps (no step prompts)
@@ -44,8 +56,9 @@ Options:
 
 With --yes: auto-installs MobSF when compose is missing; runs research doctor at end.
 
-Daily lane menus: ./fedora.sh (separate from this full rebuild).
-See: GETTING-STARTED.md · CONSOLIDATION.md
+Daily lane menus: ./fedora.sh
+Preferred rebuild: ./fedora.sh --rebuild  (this script: compatibility wrapper + implementation)
+See: docs/GETTING-STARTED.md
 EOF
 }
 
@@ -220,7 +233,7 @@ info "Root: ${FEDORA_ROOT}"
 (( USE_LOG )) && info "Logging to: $(log_file_path "${FEDORA_LOG_REBUILD}")"
 echo "[NOTE] system_update.sh always logs to logs/system_update.log on its own."
 
-run_step "System update" "system/system_update.sh" --sudo
+run_step "System update" "system/system_update.sh" --sudo-E --quick
 run_step "Containers + KVM" "dev/fedora_container_kvm_setup.sh" --sudo
 run_step "Android core tools" "android/android_dev_core_setup.sh" --sudo
 run_step "Install RE tools (all)" "android/android_re_install.sh" all
@@ -236,7 +249,7 @@ else
   ok "Rebuild sequence finished"
 fi
 echo "[NEXT] source ~/.bashrc  OR  log out/in for PATH/group changes"
-echo "[NEXT] ./fedora.sh  OR  ./android/android.sh  OR  ./mobsf/mobsf.sh"
+echo "[NEXT] ./fedora.sh  OR  ./android/android.sh  OR  ./mobsf.sh"
 if (( USE_LOG )); then
   echo "[NEXT] ./system/log_engine.sh tail --file fedora_rebuild.log --lines 50"
 fi

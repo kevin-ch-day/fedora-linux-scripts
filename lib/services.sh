@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/services.sh — systemd and common service visibility helpers
-# Version: 0.2.4
+# Version: 0.2.5
 #
 # Do not execute directly.
 
@@ -17,15 +17,19 @@ source "${_SVC_LIB_DIR}/health.sh"
 
 # ---------- generic systemd ----------
 service_unit_active() {
-  local unit="$1"
+  local unit="$1" out
   have systemctl || { printf 'unknown\n'; return 1; }
-  systemctl is-active "${unit}" 2>/dev/null || printf 'inactive\n'
+  out="$(systemctl is-active "${unit}" 2>/dev/null | head -n 1)" || true
+  [[ -n "${out}" ]] || out=inactive
+  printf '%s\n' "${out}"
 }
 
 service_unit_enabled() {
-  local unit="$1"
+  local unit="$1" out
   have systemctl || { printf 'unknown\n'; return 1; }
-  systemctl is-enabled "${unit}" 2>/dev/null || printf 'disabled\n'
+  out="$(systemctl is-enabled "${unit}" 2>/dev/null | head -n 1)" || true
+  [[ -n "${out}" ]] || out=disabled
+  printf '%s\n' "${out}"
 }
 
 service_status_line() {

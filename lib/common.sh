@@ -57,21 +57,11 @@ err() {
 
 # ---------- colors (TTY-safe; empty when not a terminal) ----------
 common_init_colors() {
-  # Public globals for scripts that source common.sh (fedora.sh, system_info.sh, …)
-  # shellcheck disable=SC2034
-  if [[ -t 1 ]] && have tput; then
-    CYAN="$(tput setaf 6; tput bold)"
-    GREEN="$(tput setaf 2; tput bold)"
-    YELLOW="$(tput setaf 3; tput bold)"
-    RED="$(tput setaf 1; tput bold)"
-    RESET="$(tput sgr0)"
-  else
-    CYAN=""
-    GREEN=""
-    YELLOW=""
-    RED=""
-    RESET=""
+  if [[ -z "${FEDORA_THEME_SH_LOADED:-}" ]]; then
+    # shellcheck source=theme.sh
+    source "${_FEDORA_LIB_DIR}/theme.sh"
   fi
+  theme_init
 }
 
 # ---------- privilege / user context ----------

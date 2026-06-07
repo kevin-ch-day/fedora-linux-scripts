@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # system/lib/menu.sh — System lane menus (host, maintenance, logs)
-# Version: 0.2.2
+# Version: 0.3.1
 #
 # Standalone:  ./system/system.sh
-# From fedora: ./fedora.sh → [1] execs ./system/system.sh
+# From main:   ./fedora.sh → [1] or ./fedora.sh --system
 #
 # Do not execute directly.
 
@@ -28,77 +28,35 @@ system_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  echo "${CYAN}${BOLD}${MENU_APP_NAME}${RESET}  ${DIM}$(hostname) · $(real_user)${RESET}"
-  echo "Logs: $(log_dir)"
+  theme_banner "System lane"
+  theme_meta_line "Host: $(hostname) · User: $(real_user)"
+  theme_meta_line "Root: ${MENU_ROOT}"
+  theme_meta_line "Logs: $(log_dir)"
   menu_hr
   menu_print_breadcrumb
-  echo "${BOLD}${title}${RESET}"
-  [[ -n "${subtitle}" ]] && echo "${DIM}${subtitle}${RESET}"
+  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
 }
 
 system_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "System" "${fedora_root}"
+  menu_init "System lane" "${fedora_root}" 0
   menu_set_header_fn system_menu_header
 }
 
-# ---------- Host visibility ----------
-_system_host_items() {
-  menu_item 1 "System info snapshot"
-  menu_item 2 "Live system monitor (Ctrl+C to exit)"
-  menu_item 3 "Post-update health snapshot"
-  menu_item 4 "Disk usage summary"
-  menu_item 5 "Top processes (CPU)"
-  menu_item_back
-}
-
-_system_host_dispatch() {
-  case "$1" in
-    0) return 1 ;;
-    1) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
-    2) echo "Starting live monitor..."; menu_run_script system/system_monitor.sh; return 0 ;;
-    3)
-      local prev="${MENU_SCROLL_MODE}"
-      MENU_SCROLL_MODE=1
-      health_post_update_snapshot
-      MENU_SCROLL_MODE="${prev}"
-      menu_pause
-      return 0
-      ;;
-    4)
-      local prev="${MENU_SCROLL_MODE}"
-      MENU_SCROLL_MODE=1
-      echo "Root disk:"
-      health_root_disk_usage
-      health_disk_top_mounts
-      MENU_SCROLL_MODE="${prev}"
-      menu_pause
-      return 0
-      ;;
-    5)
-      local prev="${MENU_SCROLL_MODE}"
-      MENU_SCROLL_MODE=1
-      health_top_processes 15
-      MENU_SCROLL_MODE="${prev}"
-      menu_pause
-      return 0
-      ;;
-    *) return 2 ;;
-  esac
-}
-
-system_menu_host() {
-  menu_loop "Host visibility" "snapshots · monitor · disk" \
-    _system_host_items _system_host_dispatch
-}
-
-# ---------- Maintenance ----------
+# ---------- Cleanup submenu ----------
 _system_cleanup_items() {
+  theme_section "Log files"
   menu_item 1 "Truncate system_update.log"
   menu_item 2 "Truncate all .log files"
   menu_item 3 "Archive system_update.log"
-  menu_item 4 "Rotate system_update.log (10 MB)"
-  menu_item 5 "DNF clean (sudo)"
+  menu_item 4 "Rotate system_update.log" "10 MB max"
+  theme_section "System"
+  menu_item 5 "DNF clean" "sudo"
+  menu_item 6 "Fix DNF repo permissions" "sudo · rebuild-check fix"
+  menu_item 7 "Failed systemd units"
   menu_item_back
 }
 
@@ -110,44 +68,104 @@ _system_cleanup_dispatch() {
     3) menu_run_script system/cleanup.sh --archive --file system_update.log --quiet; menu_pause; return 0 ;;
     4) menu_run_script system/cleanup.sh --rotate --file system_update.log --max-mb 10 --quiet; menu_pause; return 0 ;;
     5) menu_run_sudo_script system/cleanup.sh --dnf; menu_pause; return 0 ;;
+    6) menu_run_sudo_script system/fix_dnf_repo_permissions.sh; menu_pause; return 0 ;;
+    7) services_show_failed_units; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
-_system_maint_items() {
-  menu_item 1 "Full Fedora update (sudo)"
-  menu_item 2 "Backup system state"
-  menu_item 3 "Cleanup (logs / dnf cache)"
-  menu_item 4 "Failed systemd units"
+system_menu_cleanup() {
+  menu_loop "Cleanup" "logs · dnf · repo permissions" \
+    _system_cleanup_items _system_cleanup_dispatch
+}
+
+# ---------- OS hardening submenu ----------
+_system_hardening_items() {
+  theme_section "Round 1 — safe baseline"
+  menu_item 1 "OS hardening Round 1" "sudo · auto-detect · idempotent"
+  menu_item 4 "Round 1 status" "read-only · what's applied"
+  theme_section "Round 2 — strict profile"
+  menu_item 5 "OS hardening Round 2" "sudo · firewall + services"
+  menu_item 7 "Strict firewall (SSH only)" "custom zone · wired NM"
+  menu_item 8 "Listening hardening" "MariaDB · Avahi · LLMNR · BT/Wi-Fi"
+  menu_item 6 "Wired only (BT/Wi-Fi off)" "wired Ethernet · mask BT"
+  theme_section "Audit"
+  menu_item 9 "Security audit" "read-only · findings · full report"
+  menu_item 10 "Audit summary" "fast · live findings only"
+  menu_item 11 "Audit action plan" "ordered remediation steps"
+  menu_item 12 "Host context" "users · network · posture snapshot"
+  theme_section "Round 2 prep"
+  menu_item 2 "Services audit" "profile-aware · read-only"
+  menu_item 3 "Help" "hardening notes"
   menu_item_back
 }
 
-_system_maint_dispatch() {
+_system_hardening_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script system/system_update.sh; menu_pause; return 0 ;;
-    2) menu_run_script system/backup_state.sh; menu_pause; return 0 ;;
-    3) menu_loop "Cleanup options" "" _system_cleanup_items _system_cleanup_dispatch; return 0 ;;
-    4) services_show_failed_units; menu_pause; return 0 ;;
+    1) menu_run_script system/hardening_round1.sh; menu_pause; return 0 ;;
+    5) menu_run_script system/hardening_round2.sh; menu_pause; return 0 ;;
+    6) menu_run_script system/hardening_wired_only.sh; menu_pause; return 0 ;;
+    7) menu_run_script system/hardening_firewall_strict.sh; menu_pause; return 0 ;;
+    8) menu_run_script system/hardening_listening.sh; menu_pause; return 0 ;;
+    9) menu_run_script_scroll system/security_audit.sh; return 0 ;;
+    10) menu_run_script_scroll system/security_audit.sh --summary; return 0 ;;
+    11) menu_run_script_scroll system/security_audit.sh --plan; return 0 ;;
+    12) menu_run_script_scroll system/host_context.sh --summary; return 0 ;;
+    2) menu_run_script_scroll system/hardening_services_audit.sh; menu_pause; return 0 ;;
+    3)
+      cat <<EOF
+
+OS hardening
+────────────
+Round 1: baseline, SELinux, SSH, sysctl, journald, firewalld.
+  Host/OS/profile/users detected automatically.
+  Idempotent — skips steps already applied (--force to redo).
+
+AllowUsers modes (--allow-users):
+  auto   wheel admins if any, else login users (merges existing sshd)
+  wheel  wheel group only
+  login  all /home/* accounts
+
+Round 2 (strict research): firewall public zone · ssh only · disable avahi/cups/bt
+  ./system/hardening_round2.sh --dry-run --yes
+  ./system/hardening_round2.sh --yes
+  ./system/security_audit.sh
+  ./system/security_audit.sh --summary
+  ./system/security_audit.sh --findings --compare
+  ./system/security_audit.sh --plan
+  ./system/hardening_round1.sh --status
+  ./system/hardening_round1.sh --dry-run
+  ./system/hardening_round1.sh --yes --allow-users wheel
+  ./system/hardening_services_audit.sh
+
+Baselines: /data/logs/hardening/<host>/<stamp>/ (or logs/hardening/)
+EOF
+      menu_pause
+      return 0
+      ;;
+    4) menu_run_script_scroll system/hardening_round1.sh --status; return 0 ;;
     *) return 2 ;;
   esac
 }
 
-system_menu_maintenance() {
-  menu_loop "Maintenance" "update · backup · cleanup" \
-    _system_maint_items _system_maint_dispatch
+system_menu_hardening() {
+  menu_loop "OS hardening" "Round 1 safe · audit before Round 2" \
+    _system_hardening_items _system_hardening_dispatch
 }
 
-# ---------- Logs ----------
+# ---------- Logs submenu ----------
 _system_logs_items() {
+  theme_section "Overview"
   menu_item 1 "Engine status"
   menu_item 2 "List logs + archive + backups"
   menu_item 3 "Summary (system_update.log)"
   menu_item 4 "Issues / errors (system_update.log)"
-  menu_item 5 "Tail system_update.log (last 50)"
-  menu_item 6 "Tail fedora_rebuild.log (last 50)"
-  menu_item 7 "Tail mobsf.log (last 50)"
-  menu_item 8 "Follow system_update.log (Ctrl+C)"
+  theme_section "Tail / follow"
+  menu_item 5 "Tail system_update.log" "last 50"
+  menu_item 6 "Tail fedora_rebuild.log" "last 50"
+  menu_item 7 "Tail mobsf.log" "last 50"
+  menu_item 8 "Follow system_update.log" "Ctrl+C"
   menu_item 9 "Open logs/README"
   menu_item_back
 }
@@ -172,58 +190,44 @@ system_menu_logs() {
   menu_loop "Logs" "$(log_dir)" _system_logs_items _system_logs_dispatch
 }
 
-# ---------- Main system menu ----------
-_system_help_items() {
-  menu_item 1 "GETTING-STARTED.md"
-  menu_item 2 "README.md (toolkit index)"
-  menu_item 3 "CONSOLIDATION.md"
-  menu_item 4 "logs/README.md"
-  menu_item_back
-}
-
-_system_help_dispatch() {
-  local doc=""
-  case "$1" in
-    0) return 1 ;;
-    1) doc="${MENU_ROOT}/GETTING-STARTED.md" ;;
-    2) doc="${MENU_ROOT}/README.md" ;;
-    3) doc="${MENU_ROOT}/CONSOLIDATION.md" ;;
-    4) doc="${MENU_ROOT}/logs/README.md" ;;
-    *) return 2 ;;
-  esac
-  menu_open_file "${doc}"
-  menu_pause
-  return 0
-}
-
 system_menu_help() {
-  menu_loop "Help & docs" "guides · index · logs" \
-    _system_help_items _system_help_dispatch
+  menu_help_docs_loop "system/README.md" "guides · index · logs"
 }
 
 _system_main_items() {
-  menu_item 1 "Host visibility"
-  menu_item 2 "Maintenance"
-  menu_item 3 "Logs"
-  menu_item 4 "Research doctor (Android + MobSF)"
-  menu_item 5 "Help & docs"
+  menu_item 1 "Host information" "system snapshot"
+  menu_item 2 "Fresh install baseline" "report → logs/"
+  menu_item 3 "Rebuild readiness" "pre-rebuild validation"
+  menu_item 4 "Update Fedora" "sudo · scroll · log"
+  menu_item 5 "View logs" "log_engine · tail · follow"
+  menu_item 6 "Backup current state" "export for reinstall"
+  menu_item 7 "Cleanup" "logs · dnf · repo fix"
+  menu_item 8 "OS hardening" "Round 1 · services audit"
   menu_item_lane_exit
 }
 
 _system_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
-    1) system_menu_host; return 0 ;;
-    2) system_menu_maintenance; return 0 ;;
-    3) system_menu_logs; return 0 ;;
-    4) menu_run_script_scroll system/research_doctor.sh; menu_pause; return 0 ;;
-    5) system_menu_help; return 0 ;;
+    1) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    4)
+      info "Update logs to: $(log_dir)/system_update.log"
+      menu_run_sudo_env_script_scroll system/system_update.sh --quick
+      menu_pause
+      return 0
+      ;;
+    5) system_menu_logs; return 0 ;;
+    6) menu_run_script system/backup_state.sh; menu_pause; return 0 ;;
+    7) system_menu_cleanup; return 0 ;;
+    8) system_menu_hardening; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 system_main_menu() {
-  menu_loop "System menu" "host · maintenance · logs" \
+  menu_loop "System menu" "MobSF stack: ./mobsf.sh" \
     _system_main_items _system_main_dispatch
 }
 

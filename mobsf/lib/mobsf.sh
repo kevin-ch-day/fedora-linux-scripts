@@ -32,6 +32,8 @@ source "${_MOBSF_LIB_DIR}/compose.sh"
 source "${_MOBSF_LIB_DIR}/stack.sh"
 # shellcheck source=doctor.sh
 source "${_MOBSF_LIB_DIR}/doctor.sh"
+# shellcheck source=systemd.sh
+source "${_MOBSF_LIB_DIR}/systemd.sh"
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   err "Source this file; do not execute directly."

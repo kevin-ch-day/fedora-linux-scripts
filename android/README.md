@@ -2,27 +2,24 @@
 
 Quick reference for the Android security / reverse-engineering workstation on Fedora.
 
-**Menu:** `./android/android.sh` · **From picker:** `./fedora.sh` → [3]
+**Menu:** `./android/android.sh` · **From main entry:** `./fedora.sh` → `[3]` or `./fedora.sh --android`
 
 ---
 
 ## Install order
 
+See [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) for full rebuild flow. Lane sequence:
+
 ```bash
-# 1. Core stack (sudo) — Java, SDK, Frida, ADB, pip tools
 sudo ./android/android_dev_core_setup.sh
-
-# 2. RE tools (user scope → ~/.local/)
 ./android/android_re_install.sh all
-
-# 3. Verify
 ./android/verify_re_tool.sh all
-
-# 4. Android-only doctor
 ./android/doctor_android_research.sh
 ```
 
-Full research doctor (Android **+** MobSF): `./system/research_doctor.sh`
+Full research doctor (Android **+** MobSF): `./system/research_doctor.sh` or `./android/android.sh research-doctor`
+
+Fedora doctor (entry points · Android RE, no MobSF): `./fedora.sh --doctor`
 
 ---
 
@@ -31,6 +28,8 @@ Full research doctor (Android **+** MobSF): `./system/research_doctor.sh`
 | Task | Command |
 |------|---------|
 | Install one tool | `./android/android_re_install.sh jadx` |
+| Upgrade / re-fetch | `./android/android_re_install.sh --upgrade jadx` |
+| Upgrade from menu | `./fedora.sh --android` → RE tool installs → items 11–15 |
 | Install all | `./android/android_re_install.sh all` |
 | Verify one | `./android/verify_re_tool.sh apktool` |
 | Verify all | `./android/verify_re_tool.sh all` |
@@ -56,4 +55,4 @@ source ~/.bashrc   # or log out/in for PATH
 
 Tools land in `~/.local/bin` and `~/.local/opt/`.
 
-See [GETTING-STARTED.md](../GETTING-STARTED.md) · [CONSOLIDATION.md](../CONSOLIDATION.md)
+See [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) · [docs/README.md](../docs/README.md)

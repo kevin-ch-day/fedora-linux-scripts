@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # desktop_setup.sh — Cinnamon primary desktop + fallback environments
-# Version: 0.1.0
+# Version: 0.1.1
+#
+# Installs Fedora @cinnamon-desktop (same as: dnf install @cinnamon-desktop)
+# plus optional GNOME/XFCE fallbacks. See dev/README.md § Desktop environments.
 #
 # Run:
 #   sudo ./dev/desktop_setup.sh
 #   sudo ./dev/desktop_setup.sh --status
 #   sudo ./dev/desktop_setup.sh --cinnamon-only
-#   sudo ./dev/desktop_setup.sh --fallbacks-only
 #   sudo ./dev/desktop_setup.sh --set-default
 
 set -euo pipefail
@@ -61,7 +63,7 @@ usage() {
 Usage: $(basename "$0") [options]
 
 Install desktop environments for $(real_user):
-  Primary:  Cinnamon (recommended)
+  Primary:  Cinnamon via @cinnamon-desktop (Fedora group; see dev/README.md)
   Fallback: GNOME, XFCE (login-screen session picker)
 
 Options:

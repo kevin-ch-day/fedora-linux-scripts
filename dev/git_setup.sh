@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # git_setup.sh — Configure Git identity and common preferences (invoker user)
-# Version: 0.3.1
+# Version: 0.3.2
 #
 # Run:
 #   ./dev/git_setup.sh
@@ -75,9 +75,15 @@ if [[ "${EUID}" -eq 0 && -z "${SUDO_USER:-}" ]]; then
 fi
 
 if [[ -z "${GIT_NAME}" ]]; then
+  if [[ ! -t 0 ]]; then
+    die "Non-interactive: set GIT_NAME and GIT_EMAIL, or run: ./dev/git_setup.sh --status"
+  fi
   read -r -p "Git user.name: " GIT_NAME
 fi
 if [[ -z "${GIT_EMAIL}" ]]; then
+  if [[ ! -t 0 ]]; then
+    die "Non-interactive: set GIT_NAME and GIT_EMAIL, or run: ./dev/git_setup.sh --status"
+  fi
   read -r -p "Git user.email: " GIT_EMAIL
 fi
 [[ -n "${GIT_NAME}" ]] || die "Git user.name is required"

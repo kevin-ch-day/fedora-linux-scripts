@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/menu.sh — interactive TUI menu helpers for the Fedora toolkit
-# Version: 0.3.2
+# Version: 0.4.0
 #
 # Source from launchers (fedora.sh):
 #   source "${FEDORA_ROOT}/lib/menu.sh"
@@ -19,6 +19,8 @@ FEDORA_MENU_SH_LOADED=1
 _MENU_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${_MENU_LIB_DIR}/common.sh"
+# shellcheck source=theme.sh
+source "${_MENU_LIB_DIR}/theme.sh"
 
 MENU_APP_NAME="${MENU_APP_NAME:-Fedora Toolkit}"
 MENU_ROOT="${MENU_ROOT:-$(fedora_toolkit_root)}"
@@ -26,9 +28,7 @@ MENU_HEADER_FN="menu_header"
 MENU_STACK=()
 MENU_LAST_CHOICE=""
 MENU_SCROLL_MODE=0
-
-BOLD=""
-DIM=""
+MENU_IS_ROOT=0
 
 menu_set_header_fn() {
   MENU_HEADER_FN="${1:?header function name required}"
@@ -37,21 +37,17 @@ menu_set_header_fn() {
 menu_init() {
   local app_name="${1:-Fedora Toolkit}"
   local root="${2:-$(fedora_toolkit_root)}"
+  local is_root="${3:-0}"
   MENU_APP_NAME="${app_name}"
   MENU_ROOT="${root}"
+  MENU_IS_ROOT="${is_root}"
   MENU_STACK=()
   MENU_LAST_CHOICE=""
-  if [[ -t 1 ]] && have tput; then
-    BOLD="$(tput bold 2>/dev/null || true)"
-    DIM="$(tput dim 2>/dev/null || true)"
-  else
-    BOLD=""
-    DIM=""
-  fi
+  theme_init
 }
 
 menu_hr() {
-  printf '%s\n' "--------------------------------------------------"
+  theme_rule '─'
 }
 
 menu_breadcrumb_text() {
@@ -67,15 +63,17 @@ menu_breadcrumb_text() {
 menu_print_breadcrumb() {
   local crumb
   crumb="$(menu_breadcrumb_text)"
-  [[ -n "${crumb}" ]] && echo "${DIM}${crumb}${RESET}"
+  if [[ -n "${crumb}" ]]; then
+    theme_meta_line "${crumb}"
+  fi
 }
 
 menu_clear_screen() {
   if (( MENU_SCROLL_MODE )); then
     echo
-    echo "${DIM}── scroll mode (output kept above) ──${RESET}"
-  else
-    clear
+    theme_meta_line "── scroll mode (output kept above) ──"
+  elif [[ -t 1 ]]; then
+    clear 2>/dev/null || printf '\033[H\033[J' || true
   fi
 }
 
@@ -83,22 +81,22 @@ menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  echo "${CYAN}${BOLD}${MENU_APP_NAME}${RESET}  ${DIM}$(hostname) · $(real_user)${RESET}"
-  echo "Root: ${MENU_ROOT}"
+  theme_banner "${MENU_APP_NAME}"
+  theme_meta_line "Host: $(hostname) · User: $(real_user)"
+  theme_meta_line "Root: ${MENU_ROOT}"
   menu_hr
   menu_print_breadcrumb
-  echo "${BOLD}${title}${RESET}"
-  [[ -n "${subtitle}" ]] && echo "${DIM}${subtitle}${RESET}"
+  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
 }
 
 menu_item() {
   local num="$1"
   local label="$2"
-  if [[ "${num}" == "${MENU_LAST_CHOICE}" && "${num}" != "0" ]]; then
-    printf '[%s] %s %s\n' "${num}" "${label}" "${DIM}← last${RESET}"
-  else
-    printf '[%s] %s\n' "${num}" "${label}"
-  fi
+  local hint="${3:-}"
+  theme_option "${num}" "${label}" "${hint}"
 }
 
 menu_item_back() {
@@ -126,24 +124,23 @@ menu_lane_handle_main_exit() {
 }
 
 menu_lane_exit_msg() {
-  echo "Exited. Run ./fedora.sh to pick a lane."
+  info "Returned to shell. Run ./fedora.sh to open the main menu."
 }
 
 menu_print_nav_hint() {
-  local hints="[0] Back"
   if [[ -n "${MENU_LAST_CHOICE}" ]]; then
-    hints+="  ·  [r] Repeat last (${MENU_LAST_CHOICE})"
+    theme_shortcut "r" "repeat last choice (${MENU_LAST_CHOICE})"
   fi
-  echo "${DIM}${hints}${RESET}"
 }
 
 menu_read_choice() {
   local __var="${1:?variable name required}"
   local prompt="${2:-Choice: }"
   local value=""
-  if ! read -r -p "${prompt}" value; then
+  theme_choice_prompt "${prompt}"
+  if ! read -r value; then
     echo
-    warn "Input closed — use [0] Back to leave this menu"
+    warn "Input closed — use [0] to leave this menu"
     printf -v "${__var}" '%s' ""
     return 1
   fi
@@ -151,8 +148,7 @@ menu_read_choice() {
 }
 
 menu_invalid() {
-  warn "Invalid choice"
-  sleep 1
+  warn "Invalid choice — enter a menu number, [0] to go back/exit, or r to repeat"
 }
 
 menu_pause() {
@@ -167,7 +163,25 @@ _menu_exec_script() {
   local rc=0
   assert_file "${script}" "Script not found: ${rel}"
   echo
-  "$@" "${script}" || rc=$?
+
+  # Optional runner prefix: sudo [-E] bash — remaining args go to the script.
+  local -a runner=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      sudo|-E|bash)
+        runner+=("$1")
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+  if ((${#runner[@]} == 0)); then
+    runner=(bash)
+  fi
+
+  "${runner[@]}" "${script}" "$@" || rc=$?
   echo
   if (( rc != 0 )); then
     warn "Action finished with errors (exit ${rc}): ${rel}"
@@ -235,10 +249,13 @@ menu_loop() {
     if ! menu_read_choice choice; then
       continue
     fi
+    if [[ -z "${choice}" ]]; then
+      menu_invalid
+      continue
+    fi
     if [[ "${choice}" == [rR] ]]; then
       if [[ -z "${MENU_LAST_CHOICE}" ]]; then
-        warn "No previous choice to repeat"
-        sleep 1
+        warn "No previous choice to repeat — pick a menu number first"
         continue
       fi
       choice="${MENU_LAST_CHOICE}"
@@ -268,6 +285,65 @@ menu_open_file() {
     return 1
   fi
   less "${path}" 2>/dev/null || cat "${path}"
+}
+
+# Shared Help & docs submenu (System, Dev, …).
+# menu_help_docs_loop [lane_readme_rel] [subtitle]
+# lane_readme_rel e.g. dev/README.md — optional lane guide as item 2.
+menu_help_docs_loop() {
+  local lane_rel="${1:-}"
+  local subtitle="${2:-guides · index · logs}"
+
+  _menu_help_docs_items() {
+    menu_item 1 "docs/GETTING-STARTED.md"
+    if [[ -n "${lane_rel}" ]]; then
+      menu_item 2 "${lane_rel}"
+      menu_item 3 "README.md (toolkit index)"
+      menu_item 4 "docs/README.md (doc index)"
+      menu_item 5 "logs/README.md"
+    else
+      menu_item 2 "README.md (toolkit index)"
+      menu_item 3 "docs/README.md (doc index)"
+      menu_item 4 "logs/README.md"
+    fi
+    menu_item_back
+  }
+
+  _menu_help_docs_dispatch() {
+    local doc=""
+    case "$1" in
+      0) return 1 ;;
+      1) doc="${MENU_ROOT}/docs/GETTING-STARTED.md" ;;
+      2)
+        if [[ -n "${lane_rel}" ]]; then
+          doc="${MENU_ROOT}/${lane_rel}"
+        else
+          doc="${MENU_ROOT}/README.md"
+        fi
+        ;;
+      3)
+        if [[ -n "${lane_rel}" ]]; then
+          doc="${MENU_ROOT}/README.md"
+        else
+          doc="${MENU_ROOT}/docs/README.md"
+        fi
+        ;;
+      4)
+        if [[ -n "${lane_rel}" ]]; then
+          doc="${MENU_ROOT}/docs/README.md"
+        else
+          doc="${MENU_ROOT}/logs/README.md"
+        fi
+        ;;
+      5) doc="${MENU_ROOT}/logs/README.md" ;;
+      *) return 2 ;;
+    esac
+    menu_open_file "${doc}"
+    menu_pause
+    return 0
+  }
+
+  menu_loop "Help & docs" "${subtitle}" _menu_help_docs_items _menu_help_docs_dispatch
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

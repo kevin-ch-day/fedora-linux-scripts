@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/android_re.sh — shared Android RE user-scope install helpers
-# Version: 0.1.2
+# Version: 0.1.3
 #
 # Source from install scripts:
 #   source "${_dir}/../lib/android_re.sh"
@@ -18,6 +18,13 @@ _ANDROID_RE_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${_ANDROID_RE_LIB_DIR}/packages.sh"
 # shellcheck source=android.sh
 source "${_ANDROID_RE_LIB_DIR}/android.sh"
+
+# Set ANDROID_RE_FORCE_UPGRADE=1 (or pass --upgrade to android_re_install.sh) to re-download.
+ANDROID_RE_FORCE_UPGRADE="${ANDROID_RE_FORCE_UPGRADE:-0}"
+
+android_re_force_upgrade() {
+  [[ "${ANDROID_RE_FORCE_UPGRADE}" == 1 ]]
+}
 
 android_re_home() {
   real_home
@@ -110,7 +117,7 @@ android_re_install_apktool() {
   bin_dir="${home}/.local/bin"
   wrapper="${bin_dir}/apktool"
 
-  if [[ -x "${wrapper}" && -f "${jar_path}" ]]; then
+  if ! android_re_force_upgrade && [[ -x "${wrapper}" && -f "${jar_path}" ]]; then
     ok "apktool appears installed already: ${wrapper}"
     android_re_post_verify android_verify_apktool apktool
     return 0
@@ -166,7 +173,7 @@ android_re_install_jadx() {
   jadx_bin="${bin_dir}/jadx"
   jadx_gui_bin="${bin_dir}/jadx-gui"
 
-  if [[ -x "${jadx_bin}" ]]; then
+  if ! android_re_force_upgrade && [[ -x "${jadx_bin}" ]]; then
     ok "jadx already installed (user scope): ${jadx_bin}"
     android_re_post_verify android_verify_jadx jadx
     echo "[NEXT] jadx --version"
@@ -233,7 +240,7 @@ android_re_install_smali() {
   smali_bin="${bin_dir}/smali"
   baksmali_bin="${bin_dir}/baksmali"
 
-  if [[ -x "${smali_bin}" && -x "${baksmali_bin}" && -s "${smali_jar}" && -s "${baksmali_jar}" ]]; then
+  if ! android_re_force_upgrade && [[ -x "${smali_bin}" && -x "${baksmali_bin}" && -s "${smali_jar}" && -s "${baksmali_jar}" ]]; then
     ok "smali/baksmali already installed (user scope)"
     android_re_post_verify android_verify_smali "smali/baksmali"
     return 0
@@ -333,7 +340,7 @@ android_re_install_dex2jar() {
 
   export PATH="${bin_dir}:${PATH}"
 
-  if [[ -d "${opt_current}" ]]; then
+  if ! android_re_force_upgrade && [[ -d "${opt_current}" ]]; then
     ok "dex2jar appears installed already (user scope)"
     tool_dir="$(android_re_d2j_find_tool_dir "${opt_current}" || true)"
     if [[ -n "${tool_dir}" ]]; then

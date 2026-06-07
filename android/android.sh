@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # android.sh — Android RE lane launcher (standalone menu + CLI shortcuts)
-# Version: 0.1.0
+# Version: 0.1.2
 #
 # Run:
-#   ./android/android.sh              Interactive menu
-#   ./android/android.sh --doctor     Android-only doctor
+#   ./android/android.sh
+#   ./fedora.sh --android
+#   ./android/android.sh --doctor     Android workstation doctor
 #   ./android/android.sh verify all
 #   ./android/android.sh verify apktool
 #   ./android/android.sh --help
@@ -21,20 +22,24 @@ usage() {
   cat <<EOF
 Android RE lane launcher — core setup, RE tools, verify, doctors.
 
+From main entry: ./fedora.sh → [3]  or  ./fedora.sh --android
+
 Usage: $(basename "$0") [command|option]
 
 Options:
   --help, -h     Show this help
   --menu         Interactive menu (default)
-  --doctor       Android research doctor (no MobSF)
+  --doctor       Android workstation doctor (no MobSF)
 
 Commands:
   verify TOOL    apktool | jadx | smali | dex2jar | all
   core           Run android_dev_core_setup.sh (sudo)
-  research-doctor Full Android + MobSF doctor
+  research-doctor Full Android + MobSF doctor (rebuild finale)
+
+Fedora doctor (entry points + Android): ./fedora.sh --doctor
 
 Toolkit root: ${FEDORA_ROOT}
-See: CONSOLIDATION.md
+See: docs/GETTING-STARTED.md
 EOF
 }
 
@@ -53,13 +58,16 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --doctor)
-      exec bash "${ANDROID_LAUNCHER_DIR}/doctor_android_research.sh"
+      shift
+      exec bash "${ANDROID_LAUNCHER_DIR}/doctor_android_research.sh" "$@"
       ;;
     core)
-      exec sudo bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh"
+      shift
+      exec sudo bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" "$@"
       ;;
     research-doctor)
-      exec bash "${FEDORA_ROOT}/system/research_doctor.sh"
+      shift
+      exec bash "${FEDORA_ROOT}/system/research_doctor.sh" "$@"
       ;;
     verify)
       shift

@@ -16,7 +16,7 @@ services:
       - $HOME/MobSF/postgresql_data:/var/lib/postgresql/data:Z
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=mobsf
     networks:
       - mobsf_network
@@ -48,7 +48,7 @@ services:
       - $HOME/MobSF/mobsf_data:/home/mobsf/.MobSF:Z
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=mobsf
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -65,7 +65,7 @@ services:
       - $HOME/MobSF/mobsf_data:/home/mobsf/.MobSF:Z
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=mobsf
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432

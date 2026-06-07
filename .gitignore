@@ -2,3 +2,6 @@
 logs/*.log
 logs/archive/
 logs/backups/
+logs/security_audit/
+logs/host_context/
+logs/hardening/

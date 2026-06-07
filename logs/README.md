@@ -8,7 +8,8 @@ Operational logs for the Fedora rebuild kit. Implementation: **`lib/logging.sh`*
 logs/
 ├── README.md              # this file
 ├── system_update.log      # system/system_update.sh (always)
-├── fedora_rebuild.log     # fedora_rebuild.sh --log
+├── fedora_rebuild.log     # fedora.sh --rebuild --log
+├── fresh_install_check_YYYYMMDD_HHMMSS.log  # ./fedora.sh --baseline (timestamped)
 ├── mobsf.log              # mobsf install/reset/update (was mobsf_reset.log)
 ├── android_dev_core.log   # android/android_dev_core_setup.sh (always)
 ├── archive/               # rotated/archived copies (*.log)
@@ -76,32 +77,9 @@ sudo FEDORA_LOG_LEVEL=DEBUG FEDORA_LOG_ROTATE_MB=10 ./system/system_update.sh
 ./system/log_engine.sh status
 ```
 
-Or: **`./system/system.sh` → Logs** (or `./fedora.sh` → System → Logs)
+Or: **`./system/system.sh` → Logs**
 
-### Session format (human banner + structured lines)
-
-```text
-============================================================
-Fedora System Update
-SESSION START : 2026-06-07T12:00:00-05:00
-Session-ID    : 20260607-120000-12345
-Script        : system_update.sh
-Host          : neptune
-Invoker       : secadmin
-Log level     : INFO
-Log file      : .../fedora-linux-scripts/logs/system_update.log
-============================================================
-
-[2026-06-07T12:00:01-05:00] [INFO] [20260607-120000-12345] [system_update.sh] Session started
-[2026-06-07T12:00:02-05:00] [INFO] [20260607-120000-12345] [system_update.sh] [1/10] Refreshing metadata...
-...
-============================================================
-Status        : SUCCESS
-SESSION END   : 2026-06-07T12:05:00-05:00
-Session-ID    : 20260607-120000-12345
-Log file      : .../fedora-linux-scripts/logs/system_update.log
-============================================================
-```
+Each run writes a session banner, Session-ID, structured lines, and footer (see `lib/logging.sh`).
 
 ## Policy
 
@@ -119,11 +97,20 @@ Log file      : .../fedora-linux-scripts/logs/system_update.log
 | Script | Log file | When |
 |--------|----------|------|
 | `system/system_update.sh` | `system_update.log` | Always |
-| `fedora_rebuild.sh` | `fedora_rebuild.log` | `--log` |
+| `fedora.sh --rebuild --log` | `fedora_rebuild.log` | when `--log` passed |
 | `mobsf/mobsf_install.sh` | `mobsf.log` | Always (install/reset/update) |
 | `android/android_dev_core_setup.sh` | `android_dev_core.log` | Always |
 
 Other scripts print to terminal only unless you add `init_script_logging` or `--log`.
+
+## MobSF: two log channels
+
+| Channel | Tool | Contents |
+|---------|------|----------|
+| **Toolkit ops log** | `./system/log_engine.sh` on `mobsf.log` | install, reset, update sessions (structured) |
+| **Container stdout** | `./mobsf/mobsf_logs.sh` | live Podman service output (djangoq, nginx, …) |
+
+System lane **Logs** and MobSF menu **Logs** both reach `log_engine.sh` for `mobsf.log`; only `mobsf_logs.sh` shows container streams.
 
 ## Git
 

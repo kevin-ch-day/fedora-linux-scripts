@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/packages.sh — shared Fedora package-management helpers
-# Version: 0.2.3
+# Version: 0.2.4
 #
 # Source from task scripts (after or via common.sh):
 #   _dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +17,39 @@ FEDORA_PACKAGES_SH_LOADED=1
 _PKG_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${_PKG_LIB_DIR}/common.sh"
+
+# ---------- output (logging-aware when lib/logging.sh is active) ----------
+pkg_emit() {
+  if [[ "${FEDORA_LOG_TEE_ACTIVE:-0}" -eq 1 ]] && declare -F log_info >/dev/null 2>&1; then
+    log_info "$*"
+  else
+    printf '%s\n' "$*"
+  fi
+}
+
+# Fix .repo permissions so non-root dnf check works after sudo updates (e.g. virtualbox.repo).
+packages_fix_repo_permissions() {
+  [[ "${EUID}" -eq 0 ]] || return 0
+  local f invoker fixed=0
+  invoker="${SUDO_USER:-${FEDORA_REAL_USER:-}}"
+  shopt -s nullglob
+  for f in /etc/yum.repos.d/*.repo; do
+    [[ -f "${f}" ]] || continue
+    if [[ -n "${invoker}" && "${invoker}" != root ]] \
+       && ! sudo -u "${invoker}" test -r "${f}" 2>/dev/null; then
+      if chmod 644 "${f}" 2>/dev/null; then
+        pkg_emit "Fixed repo permissions (644): ${f}"
+        fixed=1
+      else
+        warn "Could not fix repo permissions: ${f}"
+      fi
+    elif [[ ! -r "${f}" ]]; then
+      chmod 644 "${f}" 2>/dev/null && fixed=1 || warn "Could not fix repo permissions: ${f}"
+    fi
+  done
+  shopt -u nullglob
+  (( fixed )) || return 0
+}
 
 # ---------- dnf core ----------
 require_dnf() {
@@ -132,22 +165,30 @@ dnf_upgrade_refresh() {
 
 wait_for_dnf_lock() {
   local timeout=600
-  local start now
-  echo "[lock] Waiting for dnf/rpm/PackageKit locks (max ${timeout}s)..."
+  local start now waited=0
+  pkg_emit "[lock] Waiting for dnf/rpm/PackageKit locks (max ${timeout}s)..."
   start="$(date +%s)"
 
   while true; do
     if ! pgrep -x dnf >/dev/null 2>&1 \
        && ! pgrep -x rpm >/dev/null 2>&1 \
        && ! pgrep -x PackageKit >/dev/null 2>&1; then
-      echo "[lock] No active package manager detected."
+      if (( waited > 0 )); then
+        pkg_emit "[lock] Package manager idle after ${waited}s."
+      else
+        pkg_emit "[lock] No active package manager detected."
+      fi
       return 0
     fi
     now="$(date +%s)"
-    if (( now - start >= timeout )); then
+    waited=$(( now - start ))
+    if (( waited >= timeout )); then
       die_with_hint \
         "Timed out waiting for package manager locks." \
         "Close Software / PackageKit, wait for other dnf sessions, then retry."
+    fi
+    if (( waited > 0 && waited % 15 == 0 )); then
+      pkg_emit "[lock] Still waiting (${waited}s)..."
     fi
     sleep 3
   done
@@ -167,7 +208,7 @@ dnf_upgrade() {
 }
 
 dnf_distro_sync() {
-  dnf_yes distro-sync || true
+  dnf_yes distro-sync
 }
 
 dnf_autoremove() {
@@ -179,15 +220,16 @@ dnf_clean_all() {
 }
 
 dnf_check() {
-  dnf_yes check || true
+  dnf_yes check
 }
 
 packages_preflight() {
   require_dnf
   errors_check_dnf_repos
-  echo "[preflight] Fedora release: $(cat /etc/fedora-release 2>/dev/null || echo "unknown")"
-  echo "[preflight] Kernel         : $(uname -r)"
-  echo
+  packages_fix_repo_permissions
+  pkg_emit "[preflight] Fedora release: $(cat /etc/fedora-release 2>/dev/null || echo "unknown")"
+  pkg_emit "[preflight] Kernel         : $(uname -r)"
+  printf '\n'
 }
 
 # ---------- rpm / kernel ----------
@@ -197,13 +239,13 @@ rpm_installed_kernels() {
 }
 
 kernel_prune_keep3() {
-  have rpm || { echo "Skipping kernel prune (rpm not available)."; return 0; }
+  have rpm || { pkg_emit "Skipping kernel prune (rpm not available)."; return 0; }
 
   local kernels=()
   mapfile -t kernels < <(rpm_installed_kernels || true)
 
   if (( ${#kernels[@]} <= 3 )); then
-    echo "No old kernels to remove (installed: ${#kernels[@]})."
+    pkg_emit "No old kernels to remove (installed: ${#kernels[@]})."
     return 0
   fi
 
@@ -214,42 +256,51 @@ kernel_prune_keep3() {
     remove_pkgs+=( "kernel-${kernels[$i]}" )
   done
 
-  echo "Removing old kernels (keeping latest 3):"
+  pkg_emit "Removing old kernels (keeping latest 3):"
   printf '  %s\n' "${remove_pkgs[@]}"
-  dnf_yes remove "${remove_pkgs[@]}" || true
+  dnf_yes remove "${remove_pkgs[@]}"
 }
 
 rpm_verify_report() {
-  have rpm || { echo "Skipping rpm verify (rpm not available)."; return 0; }
+  local max_lines="${1:-200}"
+  local timeout_sec="${2:-180}"
+  have rpm || { pkg_emit "Skipping rpm verify (rpm not available)."; return 0; }
 
-  echo "[rpm -Va] Verifying installed packages (filtered)..."
-  local out filtered
-  out="$(rpm -Va 2>/dev/null || true)"
+  pkg_emit "[rpm -Va] Verifying installed packages (timeout ${timeout_sec}s, up to ${max_lines} lines)..."
+  local out filtered rc=0
+  if have timeout; then
+    out="$(timeout "${timeout_sec}" rpm -Va 2>/dev/null)" || rc=$?
+    if (( rc == 124 )); then
+      warn "rpm -Va timed out after ${timeout_sec}s — partial verify only"
+      rc=0
+    fi
+  else
+    out="$(rpm -Va 2>/dev/null || true)"
+  fi
 
   if [[ -z "${out}" ]]; then
-    echo "No verification deltas detected."
+    pkg_emit "No verification deltas detected."
     return 0
   fi
 
-  # Ignore runtime path missing noise
   filtered="$(printf '%s\n' "${out}" | grep -vE '^missing\s+/(run|var/run)/' || true)"
 
   if [[ -z "${filtered}" ]]; then
-    echo "Only runtime-path missing entries detected (ignored)."
+    pkg_emit "Only runtime-path missing entries detected (ignored)."
     return 0
   fi
 
   echo
-  echo "Config file changes (usually expected if you edited configs):"
-  printf '%s\n' "${filtered}" | grep -E '^\S+\s+c\s+/' || echo "  (none)"
+  pkg_emit "Config file changes (usually expected if you edited configs):"
+  printf '%s\n' "${filtered}" | grep -E '^\S+\s+c\s+/' | head -n "${max_lines}" || echo "  (none)"
 
   echo
-  echo "Other verification deltas (review):"
-  printf '%s\n' "${filtered}" | grep -vE '^\S+\s+c\s+/' || echo "  (none)"
+  pkg_emit "Other verification deltas (review):"
+  printf '%s\n' "${filtered}" | grep -vE '^\S+\s+c\s+/' | head -n "${max_lines}" || echo "  (none)"
 }
 
 needs_reboot_check() {
-  echo "Reboot check:"
+  pkg_emit "Reboot check:"
 
   local running newest
   running="$(uname -r)"
@@ -259,19 +310,19 @@ needs_reboot_check() {
   fi
 
   if [[ -n "${newest}" ]] && [[ "${running}" != "${newest}" ]]; then
-    echo "  Reboot recommended: newest installed kernel is ${newest}, running is ${running}."
+    pkg_emit "  Reboot recommended: newest installed kernel is ${newest}, running is ${running}."
     return 0
   fi
 
   if have needs-restarting; then
     if needs-restarting -r >/dev/null 2>&1; then
-      echo "  No reboot required."
+      pkg_emit "  No reboot required."
     else
-      echo "  Reboot recommended (per needs-restarting)."
+      pkg_emit "  Reboot recommended (per needs-restarting)."
     fi
   else
-    echo "  No reboot required based on kernel check."
-    echo "  (Install dnf-plugins-core for needs-restarting accuracy on userland updates.)"
+    pkg_emit "  No reboot required based on kernel check."
+    pkg_emit "  (Install dnf-plugins-core for needs-restarting accuracy on userland updates.)"
   fi
 }
 

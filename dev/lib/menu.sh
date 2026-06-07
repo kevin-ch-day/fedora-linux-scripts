@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # dev/lib/menu.sh — Dev workstation lane menus (uses lib/menu.sh theme)
-# Version: 0.2.0
+# Version: 0.3.0
 #
 # Standalone:  ./dev/dev.sh
-# From fedora: ./fedora.sh → [2] execs ./dev/dev.sh
+# From main:   ./fedora.sh → [2] or ./fedora.sh --dev
 #
 # Do not execute directly.
 
@@ -24,27 +24,34 @@ dev_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  echo "${CYAN}${BOLD}${MENU_APP_NAME}${RESET}  ${DIM}workstation · $(real_user)${RESET}"
-  echo "Toolkit: ${MENU_ROOT}"
+  theme_banner "Development lane"
+  theme_meta_line "Host: $(hostname) · User: $(real_user)"
+  theme_meta_line "Root: ${MENU_ROOT}"
   menu_hr
   menu_print_breadcrumb
-  echo "${BOLD}${title}${RESET}"
-  [[ -n "${subtitle}" ]] && echo "${DIM}${subtitle}${RESET}"
+  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
 }
 
 dev_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "Dev Workstation" "${fedora_root}"
+  menu_init "Development lane" "${fedora_root}" 0
   menu_set_header_fn dev_menu_header
 }
 
 # ---------- Workstation ----------
 _dev_workstation_items() {
-  menu_item 1 "Git setup (prompts for name/email)"
-  menu_item 2 "Git config status (read-only)"
-  menu_item 3 "Install VS Code (sudo)"
-  menu_item 4 "Desktop: Cinnamon + fallbacks (sudo)"
-  menu_item 5 "Desktop status"
+  theme_section "Git"
+  menu_item 1 "Git setup" "prompts for name/email"
+  menu_item 2 "Git config status" "read-only"
+  theme_section "Desktop"
+  menu_item 3 "Install VS Code" "sudo"
+  menu_item 4 "Desktop: Cinnamon + fallbacks" "sudo · @cinnamon-desktop"
+  menu_item 5 "Desktop: Cinnamon only" "sudo"
+  menu_item 6 "Desktop status" "installed sessions"
+  menu_item 7 "Set Cinnamon default" "sudo"
   menu_item_back
 }
 
@@ -55,7 +62,9 @@ _dev_workstation_dispatch() {
     2) menu_run_script_scroll dev/git_setup.sh --status; menu_pause; return 0 ;;
     3) menu_run_sudo_script dev/install_vscode.sh; menu_pause; return 0 ;;
     4) menu_run_sudo_script dev/desktop_setup.sh; menu_pause; return 0 ;;
-    5) menu_run_script dev/desktop_setup.sh --status; menu_pause; return 0 ;;
+    5) menu_run_sudo_script dev/desktop_setup.sh --cinnamon-only; menu_pause; return 0 ;;
+    6) menu_run_script dev/desktop_setup.sh --status; menu_pause; return 0 ;;
+    7) menu_run_sudo_script dev/desktop_setup.sh --set-default; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -111,39 +120,17 @@ dev_menu_web_stack() {
     _dev_web_items _dev_web_dispatch
 }
 
-# ---------- Help & docs ----------
-_dev_help_items() {
-  menu_item 1 "GETTING-STARTED.md"
-  menu_item 2 "README.md (toolkit index)"
-  menu_item 3 "dev/README.md (lane guide)"
-  menu_item_back
-}
-
-_dev_help_dispatch() {
-  local doc=""
-  case "$1" in
-    0) return 1 ;;
-    1) doc="${MENU_ROOT}/GETTING-STARTED.md" ;;
-    2) doc="${MENU_ROOT}/README.md" ;;
-    3) doc="${MENU_ROOT}/dev/README.md" ;;
-    *) return 2 ;;
-  esac
-  menu_open_file "${doc}"
-  menu_pause
-  return 0
-}
-
 dev_menu_help() {
-  menu_loop "Help & docs" "guides · dev lane" \
-    _dev_help_items _dev_help_dispatch
+  menu_help_docs_loop "dev/README.md" "guides · dev lane"
 }
 
 # ---------- Main dev menu ----------
 _dev_main_items() {
-  menu_item 1 "Workstation"
-  menu_item 2 "Infrastructure"
-  menu_item 3 "Web stack"
-  menu_item 4 "Help & docs"
+  theme_section "Areas"
+  menu_item 1 "Workstation" "git · vscode · desktop"
+  menu_item 2 "Infrastructure" "podman · docker · kvm"
+  menu_item 3 "Web stack" "apache · mariadb · phpmyadmin"
+  menu_item 4 "Help & docs" "guides · getting started"
   menu_item_lane_exit
 }
 
@@ -159,7 +146,7 @@ _dev_main_dispatch() {
 }
 
 dev_main_menu() {
-  menu_loop "Dev menu" "tools · containers · LAMP" \
+  menu_loop "Development menu" "daily dev tools · not part of guided rebuild core" \
     _dev_main_items _dev_main_dispatch
 }
 

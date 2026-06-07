@@ -3,6 +3,7 @@
 # Version: 0.2.0
 #
 # Run:
+#   ./mobsf.sh status
 #   ./mobsf/mobsf_status.sh
 #   ./mobsf/mobsf_status.sh --help
 
@@ -21,7 +22,7 @@ Usage: $(basename "$0") [--help]
 Show MobSF Podman compose container status for $(real_user).
 Compose dir, UI URL, and container table.
 
-See also: ./mobsf/mobsf_doctor.sh  ./mobsf/mobsf.sh
+See also: ./mobsf.sh --doctor  ./mobsf.sh status
 EOF
       exit 0
       ;;

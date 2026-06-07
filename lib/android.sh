@@ -192,14 +192,21 @@ android_verify_dex2jar() {
   fi
 
   echo "== linked tools =="
-  local f found=0
+  local f found=0 count=0 max_show=8
   shopt -s nullglob
   for f in "${HOME}/.local/bin"/d2j-*; do
     [[ "${f}" == *.bat ]] && continue
-    printf '  %s\n' "${f}"
-    found=1
+    count=$((count + 1))
+    if (( count <= max_show )); then
+      printf '  %s\n' "${f}"
+      found=1
+    fi
   done
   shopt -u nullglob
+  if (( count > max_show )); then
+    printf '  ... and %d more d2j-* tools in ~/.local/bin\n' "$(( count - max_show ))"
+    found=1
+  fi
   (( found )) || echo "  (none)"
 
   echo "== OK =="
@@ -242,9 +249,24 @@ android_check_version() {
     return 0
   fi
 
-  local out=""
-  if out="$("$@" 2>&1 | head -n 1)" && [[ -n "${out}" ]]; then
-    printf '  [OK] %-12s %s\n' "${label}:" "${out}"
+  local raw line=""
+  raw="$("$@" 2>&1)" || true
+  if [[ -z "${raw}" ]]; then
+    printf '  [WARN] %-12s no version output\n' "${label}:"
+    return 0
+  fi
+  if grep -qiE 'traceback \(most recent|modulenotfounderror|importerror|no such option' <<< "${raw}"; then
+    line="$(printf '%s\n' "${raw}" | sed -n '/./p' | grep -iE 'modulenotfounderror|importerror|no such option' | head -n 1 || true)"
+    [[ -n "${line}" ]] || line="$(printf '%s\n' "${raw}" | sed -n '/./p' | tail -n 1)"
+    printf '  [WARN] %-12s broken (%s)\n' "${label}:" "${line}"
+    if [[ "${label}" == "Mitmproxy" ]]; then
+      printf '         [HINT] pip3 install --upgrade --force-reinstall mitmproxy\n'
+    fi
+    return 0
+  fi
+  line="$(printf '%s\n' "${raw}" | sed -n '/./p' | tail -n 1)"
+  if [[ -n "${line}" ]]; then
+    printf '  [OK] %-12s %s\n' "${label}:" "${line}"
   else
     printf '  [WARN] %-12s no version output\n' "${label}:"
   fi
@@ -313,7 +335,6 @@ doctor_android_research() {
   android_core_tool_status || rc=1
   echo
 
-  echo "== ADB =="
   android_adb_status || rc=1
   echo
 

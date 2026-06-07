@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# mobsf.sh — MobSF lane launcher (standalone menu + CLI shortcuts)
-# Version: 0.1.0
+# mobsf.sh — MobSF stack launcher (menu + CLI shortcuts)
+# Version: 0.1.2
 #
+# Preferred entry: ./mobsf.sh (repo root wrapper)
 # Run:
 #   ./mobsf/mobsf.sh              Interactive MobSF menu
 #   ./mobsf/mobsf.sh --doctor     Readiness check
@@ -19,14 +20,16 @@ source "${MOBSF_LAUNCHER_DIR}/lib/menu.sh"
 
 mobsf_usage() {
   cat <<EOF
-MobSF lane launcher — Podman stack for static APK analysis.
+MobSF stack launcher — Podman stack for static APK analysis.
+
+Preferred: ./mobsf.sh (from repo root)
 
 Usage: $(basename "$0") [command|option]
 
 Options:
   --help, -h     Show this help
   --menu         Interactive menu (default)
-  --doctor       Run mobsf_doctor.sh
+  --doctor       Run mobsf_doctor.sh (--dynamic for ADB/gateway checks)
 
 Commands:
   install        Bootstrap stack (sudo -E)
@@ -36,6 +39,7 @@ Commands:
   logs           Tail mobsf service logs
   update         Pull images + migrate (sudo -E)
   cleanup        Remove orphan MobSF containers
+  autostart      systemd user unit (install|remove|status)
 
 Web UI: http://127.0.0.1:8080/  ·  login: mobsf / mobsf
 
@@ -86,10 +90,15 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --doctor)
-      exec bash "${MOBSF_LAUNCHER_DIR}/mobsf_doctor.sh"
+      shift
+      exec bash "${MOBSF_LAUNCHER_DIR}/mobsf_doctor.sh" "$@"
+      ;;
+    autostart)
+      shift
+      exec bash "${MOBSF_LAUNCHER_DIR}/mobsf_autostart.sh" "$@"
       ;;
     install|start|stop|status|logs|update|cleanup)
-      mobsf_exec_cli "$@"
+      mobsf_exec_cli "$1" "${@:2}"
       ;;
     *)
       die "Unknown option: $1 (try --help)"

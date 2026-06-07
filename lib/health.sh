@@ -254,10 +254,6 @@ health_post_update_snapshot() {
   fi
 }
 
-health_quick_snapshot() {
-  health_post_update_snapshot
-}
-
 health_top_processes() {
   local count="${1:-15}"
   echo "Top processes by CPU:"

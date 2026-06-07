@@ -2,7 +2,7 @@
 
 Git, VS Code, containers/KVM, and optional LAMP/phpMyAdmin stack.
 
-**Menu:** `./dev/dev.sh` · **From picker:** `./fedora.sh` → [2]
+**Menu:** `./dev/dev.sh` · **From main entry:** `./fedora.sh` → `[2]` or `./fedora.sh --dev`
 
 ---
 
@@ -23,7 +23,7 @@ sudo ./dev/phpmyadmin_setup.sh
 ./dev/web_stack_doctor.sh
 ```
 
-Rebuild sequence runs KVM setup early: `./fedora_rebuild.sh`
+Rebuild sequence runs KVM setup early: `./fedora.sh --rebuild`
 
 ---
 
@@ -36,19 +36,31 @@ dev/dev.sh
 └── [3] Web stack         LAMP · phpMyAdmin · doctor · remove info.php
 ```
 
-CLI shortcuts: `./dev/dev.sh git|vscode|desktop|desktop-status|kvm|lamp|phpmyadmin|web-doctor`
+CLI shortcuts: `./dev/dev.sh git|vscode|desktop|desktop-cinnamon|desktop-default|desktop-status|kvm|lamp|phpmyadmin|web-doctor`
 
-### Desktop environments
+### Desktop environments (Cinnamon)
 
-Cinnamon is the recommended daily driver. The setup script also installs **GNOME** and **XFCE** as fallbacks — pick any session from the gear icon on the login screen.
+**Cinnamon** is the recommended daily driver on this workstation — traditional layout, maintained by the Linux Mint project and packaged for Fedora as `@cinnamon-desktop`.
+
+Official Fedora options:
+
+| Method | Command / link |
+|--------|----------------|
+| **This repo** | `sudo ./dev/desktop_setup.sh` — `@cinnamon-desktop` + GNOME/XFCE fallbacks + optional default session |
+| **dnf only** | `sudo dnf install @cinnamon-desktop` then pick Cinnamon on the login screen |
+| **Live spin** | [Fedora Cinnamon Spin](https://spins.fedoraproject.org/) (try or install Cinnamon-only media) |
+| **Netinstall** | Select the Cinnamon desktop group during a netinstall |
+
+This toolkit wraps the dnf group install and adds fallbacks for recovery:
 
 ```bash
-sudo ./dev/desktop_setup.sh              # install all
+sudo ./dev/desktop_setup.sh              # Cinnamon + GNOME + XFCE; sets Cinnamon default
 sudo ./dev/desktop_setup.sh --cinnamon-only
-./dev/desktop_setup.sh --status
+sudo ./dev/desktop_setup.sh --set-default   # Cinnamon default only (no install)
+./dev/desktop_setup.sh --status           # list sessions (no sudo)
 ```
 
-Switch session without reinstalling: log out → login screen → session menu → Cinnamon / GNOME / XFCE.
+After install: log out → login screen → session menu (gear icon) → **Cinnamon**. More: [Fedora Wiki — Cinnamon](https://fedoraproject.org/wiki/Cinnamon) · [Cinnamon Spices](https://cinnamon-spices.linuxmint.com/) (themes, applets, extensions).
 
 ---
 
@@ -70,20 +82,8 @@ Or: dev menu → Web stack → [4] Remove public info.php
 
 ---
 
-## Doctors & status
-
-| Command | Purpose |
-|---------|---------|
-| `./dev/web_stack_doctor.sh` | Apache/MariaDB/PHP/phpMyAdmin HTTP checks |
-| `./dev/dev.sh` → Infrastructure [2] | Research stack service status (via `lib/services.sh`) |
-
-Full Android + MobSF doctor: `./system/research_doctor.sh`
+Web stack doctor: `./dev/web_stack_doctor.sh` · Fedora doctor: `./fedora.sh --doctor` · Full research: `./system/research_doctor.sh`
 
 ---
 
-## Libraries used
-
-- `lib/packages.sh` — DNF install helpers
-- `lib/services.sh` — systemctl, LAMP/MobSF container status
-
-See [GETTING-STARTED.md](../GETTING-STARTED.md) · [CONSOLIDATION.md](../CONSOLIDATION.md) and [README.md](../README.md).
+See [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) · [docs/README.md](../docs/README.md)

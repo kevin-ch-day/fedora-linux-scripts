@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# mobsf/lib/menu.sh — MobSF lane interactive menus (uses lib/menu.sh theme)
-# Version: 0.1.1
+# mobsf/lib/menu.sh — MobSF stack interactive menus (uses lib/menu.sh theme)
+# Version: 0.2.1
 #
-# Standalone:  ./mobsf/mobsf.sh
-# From fedora: ./fedora.sh → [4] execs ./mobsf/mobsf.sh
+# Entry: ./mobsf.sh (repo root) or ./mobsf/mobsf.sh
 #
 # Do not execute directly.
 
@@ -26,18 +25,21 @@ mobsf_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  echo "${CYAN}${BOLD}${MENU_APP_NAME}${RESET}  ${DIM}Podman stack · $(real_user)${RESET}"
-  echo "UI: ${MOBSF_UI_URL}  ·  login: mobsf / mobsf"
+  theme_banner "MobSF stack"
+  theme_meta_line "User: $(real_user) · UI: ${MOBSF_UI_URL:-http://127.0.0.1:8080/}"
   if have podman; then
     mobsf_init_paths
-    echo "Compose: ${MOBSF_COMPOSE_DIR_RESOLVED}"
+    theme_meta_line "Compose: ${MOBSF_COMPOSE_DIR_RESOLVED}"
   else
-    echo "Compose: (podman not installed)"
+    theme_meta_line "Compose: (podman not installed)"
   fi
+  theme_meta_line "Login: mobsf / mobsf"
   menu_hr
   menu_print_breadcrumb
-  echo "${BOLD}${title}${RESET}"
-  [[ -n "${subtitle}" ]] && echo "${DIM}${subtitle}${RESET}"
+  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
 }
 
 mobsf_menu_init() {
@@ -57,10 +59,11 @@ mobsf_menu_open_ui() {
 
 # ---------- Stack control ----------
 _mobsf_stack_items() {
-  menu_item 1 "Start stack"
+  theme_section "Daily use"
+  menu_item 1 "Start stack" "sudo -E if needed"
   menu_item 2 "Stop stack"
   menu_item 3 "Container status"
-  menu_item 4 "Open web UI in browser"
+  menu_item 4 "Open web UI" "browser"
   menu_item_back
 }
 
@@ -82,8 +85,10 @@ mobsf_menu_stack() {
 
 # ---------- Setup ----------
 _mobsf_setup_items() {
-  menu_item 1 "Install / bootstrap (first time, sudo -E)"
-  menu_item 2 "Doctor — readiness check"
+  menu_item 1 "Install / bootstrap" "first time · sudo -E"
+  theme_section "After install"
+  theme_note_kv "Start stack" "menu [1] Stack control"
+  theme_note_kv "Doctor" "./mobsf.sh --doctor"
   menu_item_back
 }
 
@@ -91,22 +96,47 @@ _mobsf_setup_dispatch() {
   case "$1" in
     0) return 1 ;;
     1) menu_run_sudo_env_script mobsf/mobsf_install.sh; menu_pause; return 0 ;;
-    2) menu_run_script_scroll mobsf/mobsf_doctor.sh; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 mobsf_menu_setup() {
-  menu_loop "Setup" "install and verify the Podman stack" \
+  menu_loop "Setup" "first-time install and bootstrap" \
     _mobsf_setup_items _mobsf_setup_dispatch
+}
+
+# ---------- Doctor ----------
+_mobsf_doctor_items() {
+  menu_item 1 "Static stack readiness" "default · same as --doctor"
+  menu_item 2 "Dynamic analysis" "ADB · gateway"
+  menu_item 3 "Full check" "static + dynamic"
+  menu_item_back
+}
+
+_mobsf_doctor_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll mobsf/mobsf_doctor.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll mobsf/mobsf_doctor.sh --dynamic-only; menu_pause; return 0 ;;
+    3) menu_run_script_scroll mobsf/mobsf_doctor.sh --dynamic; menu_pause; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+mobsf_menu_doctor() {
+  menu_loop "Doctor" "same as ./mobsf.sh --doctor" \
+    _mobsf_doctor_items _mobsf_doctor_dispatch
 }
 
 # ---------- Maintenance ----------
 _mobsf_maint_items() {
-  menu_item 1 "Update images + migrate (sudo -E)"
-  menu_item 2 "Reset stack — nuke data (sudo -E)"
-  menu_item 3 "Reset stack — keep scan data (sudo -E)"
-  menu_item 4 "Remove orphan MobSF containers"
+  theme_section "Routine"
+  menu_item 1 "Update images + migrate" "sudo -E"
+  menu_item 3 "Reset — keep scan data" "recommended recovery"
+  menu_item 4 "Remove orphan containers"
+  menu_item 5 "Login autostart" "systemd user unit"
+  theme_section "Danger zone"
+  menu_item 2 "Reset — nuke all data" "sudo -E · destroys DB"
   menu_item_back
 }
 
@@ -134,6 +164,15 @@ _mobsf_maint_dispatch() {
       return 0
       ;;
     4) menu_run_script mobsf/mobsf_cleanup.sh; menu_pause; return 0 ;;
+    5)
+      menu_run_script mobsf/mobsf_autostart.sh status
+      echo
+      if confirm "Install/update MobSF login autostart unit?"; then
+        menu_run_script mobsf/mobsf_autostart.sh install
+      fi
+      menu_pause
+      return 0
+      ;;
     *) return 2 ;;
   esac
 }
@@ -145,10 +184,12 @@ mobsf_menu_maintenance() {
 
 # ---------- Logs ----------
 _mobsf_logs_items() {
-  menu_item 1 "Service logs — mobsf container (last 80 lines)"
-  menu_item 2 "Ops log — tail mobsf.log (last 50)"
-  menu_item 3 "Ops log — follow live (Ctrl+C to stop)"
-  menu_item 4 "Ops log — errors / issues (last 80)"
+  theme_section "Container"
+  menu_item 1 "Service logs (mobsf)" "last 80 lines"
+  theme_section "Ops log (logs/mobsf.log)"
+  menu_item 2 "Tail mobsf.log" "last 50"
+  menu_item 3 "Follow mobsf.log" "Ctrl+C to stop"
+  menu_item 4 "Errors / issues" "last 80"
   menu_item_back
 }
 
@@ -170,12 +211,9 @@ mobsf_menu_logs() {
 
 # ---------- Documentation ----------
 _mobsf_docs_items() {
-  menu_item 1 "README (overview)"
-  menu_item 2 "INSTALL"
-  menu_item 3 "OPERATIONS"
-  menu_item 4 "STACK (architecture)"
-  menu_item 5 "TROUBLESHOOTING"
-  menu_item 6 "lib/ module reference"
+  menu_item 1 "GUIDE (overview + install + ops)"
+  menu_item 2 "STACK (architecture + lib)"
+  menu_item 3 "TROUBLESHOOTING"
   menu_item_back
 }
 
@@ -183,12 +221,9 @@ _mobsf_docs_dispatch() {
   local doc=""
   case "$1" in
     0) return 1 ;;
-    1) doc="${MENU_ROOT}/mobsf/README.md" ;;
-    2) doc="${MENU_ROOT}/mobsf/INSTALL.md" ;;
-    3) doc="${MENU_ROOT}/mobsf/OPERATIONS.md" ;;
-    4) doc="${MENU_ROOT}/mobsf/STACK.md" ;;
-    5) doc="${MENU_ROOT}/mobsf/TROUBLESHOOTING.md" ;;
-    6) doc="${MENU_ROOT}/mobsf/lib/README.md" ;;
+    1) doc="${MENU_ROOT}/mobsf/GUIDE.md" ;;
+    2) doc="${MENU_ROOT}/mobsf/STACK.md" ;;
+    3) doc="${MENU_ROOT}/mobsf/TROUBLESHOOTING.md" ;;
     *) return 2 ;;
   esac
   menu_open_file "${doc}"
@@ -202,29 +237,34 @@ mobsf_menu_docs() {
 
 # ---------- Main MobSF menu ----------
 _mobsf_main_items() {
-  menu_item 1 "Stack control"
-  menu_item 2 "Setup"
-  menu_item 3 "Maintenance"
-  menu_item 4 "Logs"
-  menu_item 5 "Documentation"
-  menu_item_lane_exit
+  theme_section "Stack"
+  menu_item 1 "Stack control" "start · stop · status · browser"
+  menu_item 2 "Setup" "first-time install (sudo -E)"
+  menu_item 3 "Doctor" "podman · compose · UI readiness"
+  theme_section "Operations"
+  menu_item 4 "Maintenance" "update · reset · cleanup"
+  menu_item 5 "Logs" "container · mobsf.log"
+  menu_item 6 "Documentation" "guide · troubleshooting"
+  theme_section "Fedora toolkit"
+  theme_note_kv "Main menu" "./fedora.sh"
+  menu_item_exit
 }
 
 _mobsf_main_dispatch() {
   case "$1" in
-    0) menu_lane_handle_main_exit ;;
+    0) info "MobSF menu closed. Run ./mobsf.sh to return."; exit 0 ;;
     1) mobsf_menu_stack; return 0 ;;
     2) mobsf_menu_setup; return 0 ;;
-    3) mobsf_menu_maintenance; return 0 ;;
-    4) mobsf_menu_logs; return 0 ;;
-    5) mobsf_menu_docs; return 0 ;;
+    3) mobsf_menu_doctor; return 0 ;;
+    4) mobsf_menu_maintenance; return 0 ;;
+    5) mobsf_menu_logs; return 0 ;;
+    6) mobsf_menu_docs; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 mobsf_main_menu() {
-  local ui="${MOBSF_UI_URL:-http://127.0.0.1:8080/}"
-  menu_loop "MobSF menu" "static analysis · ${ui}" \
+  menu_loop "MobSF menu" "separate from ./fedora.sh · UI http://127.0.0.1:8080/" \
     _mobsf_main_items _mobsf_main_dispatch
 }
 
