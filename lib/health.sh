@@ -20,6 +20,7 @@ source "${_HEALTH_LIB_DIR}/common.sh"
 
 # ---------- display / thresholds ----------
 human_pct_color() {
+  common_init_colors
   local pct="$1"
   if awk "BEGIN{exit !(${pct} >= 80)}"; then
     printf '%s' "${RED}"
@@ -265,92 +266,86 @@ health_top_processes() {
 health_print_system_info() {
   local cpu_sockets cpu_cores cpu_threads usage color default_route
 
-  _health_info_hline() { echo "${CYAN}=====================================================${RESET}"; }
-  _health_info_box_title() { echo "${CYAN}┌──────────────── $1 ─────────────────┐${RESET}"; }
-  _health_info_box_end() { echo "${CYAN}└──────────────────────────────────────────┘${RESET}"; }
-  _health_info_kv() { printf " %-10s: %s\n" "$1" "$2"; }
-  _health_info_effective_user() { id -un; }
+  common_init_colors
+  theme_set_lane system
 
-  _health_info_hline
-  echo "   Fedora System Information"
-  echo "   $(date -Is)"
-  _health_info_hline
+  theme_lane_banner "Fedora system information" system
+  theme_meta_line "$(date -Is)"
+  theme_rule '─'
 
-  echo
-  _health_info_box_title "SYSTEM"
-  _health_info_kv "Hostname" "$(health_hostname)"
-  _health_info_kv "OS" "$(health_os_pretty)"
-  _health_info_kv "Kernel" "$(health_kernel)"
-  _health_info_kv "Uptime" "$(health_uptime)"
-  _health_info_kv "Timezone" "$(health_timezone)"
-  _health_info_kv "Packages" "$(health_package_count) installed"
-  _health_info_kv "Python" "$(health_python_version)"
-  _health_info_kv "Invoker" "$(real_user)"
-  _health_info_kv "Effective" "$(_health_info_effective_user) (uid=$(id -u))"
-  _health_info_box_end
+  theme_section "System"
+  theme_kv "Hostname" "$(health_hostname)"
+  theme_kv "OS" "$(health_os_pretty)"
+  theme_kv "Kernel" "$(health_kernel)"
+  theme_kv "Uptime" "$(health_uptime)"
+  theme_kv "Timezone" "$(health_timezone)"
+  theme_kv "Packages" "$(health_package_count) installed"
+  theme_kv "Python" "$(health_python_version)"
+  theme_kv "Invoker" "$(real_user)"
+  theme_kv "Effective" "$(id -un) (uid=$(id -u))"
 
-  echo
-  _health_info_box_title "CPU"
+  theme_section "CPU"
   read -r cpu_sockets cpu_cores cpu_threads < <(health_cpu_topology)
-  _health_info_kv "Model" "$(health_cpu_model)"
-  _health_info_kv "CPUs" "$(health_cpu_count)"
-  _health_info_kv "Sockets" "${cpu_sockets}"
-  _health_info_kv "Cores/sock" "${cpu_cores}"
-  _health_info_kv "Thr/core" "${cpu_threads}"
-  _health_info_kv "Load Avg" "$(health_loadavg)"
+  theme_kv "Model" "$(health_cpu_model)"
+  theme_kv "CPUs" "$(health_cpu_count)"
+  theme_kv "Sockets" "${cpu_sockets}"
+  theme_kv "Cores/sock" "${cpu_cores}"
+  theme_kv "Thr/core" "${cpu_threads}"
+  theme_kv "Load avg" "$(health_loadavg)"
   if have mpstat; then
     if usage="$(health_cpu_usage_pct 2>/dev/null || true)" && [[ -n "${usage}" ]]; then
       color="$(human_pct_color "${usage}")"
-      _health_info_kv "Usage" "${color}${usage}%${RESET}"
+      if theme_use_color; then
+        theme_kv "Usage" "${color}${usage}%${THEME_RESET}"
+      else
+        theme_kv "Usage" "${usage}%"
+      fi
     else
-      _health_info_kv "Usage" "unknown"
+      theme_kv "Usage" "unknown"
     fi
   else
-    _health_info_kv "Usage" "install sysstat for mpstat"
+    theme_kv "Usage" "install sysstat for mpstat"
   fi
-  _health_info_box_end
 
-  echo
-  _health_info_box_title "RAM"
+  theme_section "RAM"
   if read -r mem_used mem_total mem_pct mem_avail < <(health_memory_summary); then
     color="$(human_pct_color "${mem_pct}")"
-    _health_info_kv "Memory" "${mem_used} / ${mem_total} (${color}${mem_pct}%${RESET}), Avail ${mem_avail}"
+    if theme_use_color; then
+      theme_kv "Memory" "${mem_used} / ${mem_total} (${color}${mem_pct}%${THEME_RESET}), avail ${mem_avail}"
+    else
+      theme_kv "Memory" "${mem_used} / ${mem_total} (${mem_pct}%), avail ${mem_avail}"
+    fi
     if read -r swap_used swap_total < <(health_swap_summary); then
-      _health_info_kv "Swap" "${swap_used} used / ${swap_total} total"
+      theme_kv "Swap" "${swap_used} used / ${swap_total} total"
     fi
   else
-    _health_info_kv "RAM" "free not installed"
+    theme_kv "RAM" "free not installed"
   fi
-  _health_info_box_end
 
-  echo
-  _health_info_box_title "DISK"
+  theme_section "Disk"
   if have df; then
     health_disk_mount_summary "/"
     health_disk_mount_summary "/home"
     health_disk_mount_summary "/boot"
     health_disk_mount_summary "/boot/efi"
-    echo " Mounts (top):"
+    theme_note "Mounts (top):"
     health_disk_top_mounts
   else
-    _health_info_kv "Disk" "df not installed"
+    theme_kv "Disk" "df not installed"
   fi
-  _health_info_box_end
 
-  echo
-  _health_info_box_title "NETWORK"
+  theme_section "Network"
   if have ip; then
     default_route="$(health_default_route)"
-    _health_info_kv "Default" "${default_route:-none}"
-    echo " Interfaces (IPv4):"
+    theme_kv "Default" "${default_route:-none}"
+    theme_note "Interfaces (IPv4):"
     health_ipv4_interfaces
   else
-    _health_info_kv "Network" "ip not installed"
+    theme_kv "Network" "ip not installed"
   fi
-  _health_info_box_end
 
   echo
-  echo "${GREEN}Done.${RESET}"
+  theme_result_ready "System information complete"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

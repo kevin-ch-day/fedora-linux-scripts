@@ -195,6 +195,21 @@ log_session_banner() {
   local title="${1:-Fedora toolkit script}"
   local script_name="${2:-${0##*/}}"
 
+  if [[ -t 1 ]]; then
+    common_init_colors
+    theme_plain_banner "${title}"
+    theme_meta_line "SESSION START : $(_log_timestamp)"
+    theme_meta_line "Session-ID    : ${FEDORA_LOG_SESSION_ID}"
+    theme_meta_line "Script        : ${script_name}"
+    theme_meta_line "Host          : $(hostname)"
+    theme_meta_line "Invoker       : $(real_user)"
+    theme_meta_line "Log level     : ${FEDORA_LOG_LEVEL}"
+    theme_meta_line "Log file      : ${LOG_FILE}"
+    echo
+    log_info "Session started"
+    return 0
+  fi
+
   echo "============================================================"
   echo "${title}"
   echo "SESSION START : $(_log_timestamp)"
@@ -219,6 +234,21 @@ log_session_footer() {
   fi
 
   echo
+  if [[ -t 1 ]]; then
+    common_init_colors
+    theme_rule '─'
+    if [[ "${rc}" -eq 0 ]]; then
+      ok "Status: SUCCESS"
+    else
+      err "Status: FAILED (exit code: ${rc})"
+    fi
+    theme_meta_line "SESSION END   : $(_log_timestamp)"
+    theme_meta_line "Session-ID    : ${FEDORA_LOG_SESSION_ID}"
+    theme_meta_line "Log file      : ${LOG_FILE}"
+    theme_rule '─'
+    return 0
+  fi
+
   echo "============================================================"
   if [[ "${rc}" -eq 0 ]]; then
     echo "Status        : SUCCESS"
@@ -397,6 +427,8 @@ log_summary() {
     return 1
   fi
 
+  common_init_colors
+
   local starts success fail errors warns size_mb
   starts=$(grep -c 'SESSION START' "${path}" 2>/dev/null || true); starts=${starts:-0}
   success=$(grep -c 'Status        : SUCCESS' "${path}" 2>/dev/null || true); success=${success:-0}
@@ -415,14 +447,27 @@ log_summary() {
     fi
   fi
 
-  echo "Log summary: ${path}"
-  echo "  Size           : ${size_human}"
-  echo "  Sessions start : ${starts}"
-  echo "  Success        : ${success}"
-  echo "  Failed         : ${fail}"
-  echo "  [ERROR] lines  : ${errors}"
-  echo "  [WARN] lines   : ${warns}"
-  echo "  Last modified  : $(stat -c '%y' "${path}" 2>/dev/null | cut -d. -f1 || echo unknown)"
+  if theme_use_color; then
+    theme_lane_banner "Log summary" system
+    theme_meta_line "${path}"
+    theme_rule '─'
+    theme_kv "Size" "${size_human}"
+    theme_kv "Sessions" "${starts} started"
+    theme_kv "Success" "${success}"
+    theme_kv "Failed" "${fail}"
+    theme_kv "Errors" "${errors} lines"
+    theme_kv "Warnings" "${warns} lines"
+    theme_kv "Modified" "$(stat -c '%y' "${path}" 2>/dev/null | cut -d. -f1 || echo unknown)"
+  else
+    echo "Log summary: ${path}"
+    echo "  Size           : ${size_human}"
+    echo "  Sessions start : ${starts}"
+    echo "  Success        : ${success}"
+    echo "  Failed         : ${fail}"
+    echo "  [ERROR] lines  : ${errors}"
+    echo "  [WARN] lines   : ${warns}"
+    echo "  Last modified  : $(stat -c '%y' "${path}" 2>/dev/null | cut -d. -f1 || echo unknown)"
+  fi
 }
 
 log_grep_issues() {

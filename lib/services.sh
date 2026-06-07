@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/services.sh — systemd and common service visibility helpers
-# Version: 0.2.5
+# Version: 0.2.6
 #
 # Do not execute directly.
 
@@ -83,7 +83,7 @@ services_status_containers() {
   echo "Containers:"
   service_status_line docker "Docker"
   service_status_line podman "Podman"
-  if have podman; then
+  if cmd_available podman; then
     printf '  %-14s %s\n' "Podman info:" "$(podman info --format '{{.Host.OS}}' 2>/dev/null || echo unavailable)"
   fi
 }
@@ -121,10 +121,9 @@ services_mobsf_brief() {
 web_stack_doctor() {
   local rc=0
 
-  echo "============================================================"
-  echo "Web stack doctor (LAMP / phpMyAdmin)"
-  echo "============================================================"
-  echo
+  common_init_colors
+  theme_set_lane dev
+  theme_report_header "Web stack doctor" "LAMP · MariaDB · PHP · phpMyAdmin"
   services_status_web_stack
   echo
 
@@ -139,7 +138,7 @@ web_stack_doctor() {
     fi
   fi
 
-  if have curl; then
+  if cmd_available curl; then
     if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1/ 2>/dev/null; then
       ok "http://127.0.0.1/ reachable"
     else
@@ -162,19 +161,21 @@ web_stack_doctor() {
   fi
 
   echo
-  if have mysql; then
-    ok "mysql client: $(mysql --version 2>&1 | head -n 1)"
+  local mysql_bin php_bin
+  if mysql_bin="$(cmd_binary_path mysql 2>/dev/null)"; then
+    ok "mysql client: $("${mysql_bin}" --version 2>&1 | head -n 1)"
   else
     warn "mysql client not on PATH"
     rc=1
   fi
-  if have php; then
-    ok "php: $(php -v 2>&1 | head -n 1)"
+  if php_bin="$(cmd_binary_path php 2>/dev/null)"; then
+    ok "php: $("${php_bin}" -v 2>&1 | head -n 1)"
   else
     warn "php not on PATH"
     rc=1
   fi
-  echo "============================================================"
+  echo
+  theme_rule '─'
   if (( rc == 0 )); then
     ok "Web stack doctor: READY"
   else

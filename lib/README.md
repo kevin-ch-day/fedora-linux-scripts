@@ -7,7 +7,7 @@ Do not execute directly — each file guards with `FEDORA_*_SH_LOADED`.
 
 ```
 common.sh          Base helpers (paths, messaging, real_user, sudo)
-theme.sh           Console colors and menu styling
+theme.sh           Console colors and menu styling (lane accents, gauges, status lines)
 logging.sh         Report paths under logs/ or /data/logs/
 health.sh          Host identity, CPU/RAM/disk, basic network
 services.sh        systemd unit visibility, web stack doctor
@@ -83,6 +83,15 @@ system_state_log_root [subdir]
 | `FEDORA_HARDENING_LOG_ROOT` | Hardening baseline log root |
 | `FEDORA_SECURITY_AUDIT_ROOT` | Audit report root |
 | `NO_COLOR` / `FEDORA_NO_COLOR=1` | Plain text output |
+| `FEDORA_THEME` | `dark` (default, black-terminal palette) or `light` |
+| `FEDORA_THEME_WIDTH` | Rule/box width in columns (default `54`) |
+| `FEDORA_THEME_DENSITY` | `normal` (default) or `compact` — tighter menus/sections |
+
+Preview all elements: `./theme_preview.sh`
+
+Lane picker items use `menu_item_lane` (accent `[n]` + lane icon). Round 2 / destructive
+system menu entries use `menu_item_danger`. Tool/version rows use `theme_tool_row`.
+Summary panels auto-color pass/fail via `theme_summary_box` (`Key: value` lines).
 
 ## Adding new smart checks
 

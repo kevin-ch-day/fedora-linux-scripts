@@ -45,23 +45,23 @@ REAL_HOME="$(real_home)"
 
 # ---------- pip helpers (user scope only) ----------
 pip_user_upgrade_tools() {
-  have python3 || return 0
-  have pip3 || { warn "pip3 not found; skipping pip upgrades"; return 0; }
+  pkg_present python3 python3 || return 0
+  pkg_present python3-pip pip3 || { warn "pip3 not found; skipping pip upgrades"; return 0; }
   run_as_real_user python3 -m pip install --user --upgrade pip setuptools wheel >/dev/null
   ok "pip user tools upgraded (pip/setuptools/wheel)"
 }
 
 pip_user_install() {
   local pkg="$1"
-  have python3 || { warn "python3 not installed; skipping: ${pkg}"; return 0; }
-  have pip3 || { warn "pip3 not installed; skipping: ${pkg}"; return 0; }
+  pkg_present python3 python3 || { warn "python3 not installed; skipping: ${pkg}"; return 0; }
+  pkg_present python3-pip pip3 || { warn "pip3 not installed; skipping: ${pkg}"; return 0; }
   run_as_real_user python3 -m pip install --user --upgrade "$pkg" >/dev/null
   ok "pip user install: ${pkg}"
 }
 
 # ---------- flatpak helpers ----------
 flatpak_ensure_flathub() {
-  have flatpak || return 0
+  pkg_present flatpak flatpak || return 0
   if flatpak remotes | awk '{print $1}' | grep -qx flathub; then
     ok "Flatpak flathub already configured"
   else
@@ -72,7 +72,7 @@ flatpak_ensure_flathub() {
 
 flatpak_install_optional() {
   local ref="$1"
-  have flatpak || { warn "flatpak not installed; skipping ${ref}"; return 0; }
+  pkg_present flatpak flatpak || { warn "flatpak not installed; skipping ${ref}"; return 0; }
   if flatpak info "$ref" >/dev/null 2>&1; then
     ok "Flatpak already installed: ${ref}"
     return 0
@@ -176,7 +176,7 @@ pip_user_install mitmproxy || true
 echo
 
 info "Installing Node global tooling (apk-mitm, optional)..."
-if have npm; then
+if cmd_available npm || pkg_present nodejs-npm npm; then
   if run_as_real_user npm -g list apk-mitm >/dev/null 2>&1; then
     ok "apk-mitm already installed globally"
   else

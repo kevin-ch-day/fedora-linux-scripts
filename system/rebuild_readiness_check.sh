@@ -60,11 +60,12 @@ _check() {
   fi
 }
 
-theme_banner "Rebuild readiness check"
-theme_meta_line "Host: $(health_hostname) · User: $(real_user)"
-theme_meta_line "Toolkit root: ${FEDORA_ROOT}"
-theme_rule '─'
-echo
+theme_init
+theme_set_lane rebuild
+
+theme_report_header "Rebuild readiness check" \
+  "Host: $(health_hostname) · User: $(real_user)" \
+  "Toolkit root: ${FEDORA_ROOT}"
 
 _check "Fedora detected" "$(baseline_fedora_release_line)" baseline_is_fedora
 

@@ -23,9 +23,8 @@ fedora_entry_points_check() {
   local n=0
 
   if [[ "${FEDORA_ENTRY_POINTS_BANNER:-0}" == 1 ]]; then
-    echo "============================================================"
-    echo "Entry points"
-    echo "============================================================"
+    common_init_colors
+    theme_section "Entry points"
   fi
 
   for path in fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do

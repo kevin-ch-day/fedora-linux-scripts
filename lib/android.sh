@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/android.sh — Android security / RE tool checks and diagnostics
-# Version: 0.2.4
+# Version: 0.2.5
 #
 # Do not execute directly.
 
@@ -12,6 +12,17 @@ FEDORA_ANDROID_SH_LOADED=1
 _AND_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${_AND_LIB_DIR}/common.sh"
+# shellcheck source=theme.sh
+source "${_AND_LIB_DIR}/theme.sh"
+
+_android_theme_init() {
+  common_init_colors
+  theme_set_lane android
+}
+
+_android_verify_fail() {
+  theme_tool_row err "$1" "${2:-}"
+}
 
 # Do not source ~/.bashrc (Fedora /etc/bashrc can trip nounset under set -u).
 android_user_path_export() {
@@ -80,99 +91,119 @@ EOF
 
 # ---------- RE tool verification ----------
 android_verify_apktool() {
+  _android_theme_init
   android_user_path_export
 
-  echo "== apktool =="
-  command -v apktool >/dev/null 2>&1 || { echo "[ERROR] apktool not found on PATH"; return 2; }
+  theme_verify_heading "apktool"
+  if ! command -v apktool >/dev/null 2>&1; then
+    _android_verify_fail "apktool" "not found on PATH"
+    return 2
+  fi
   apktool --version
 
-  echo "== paths =="
+  theme_section "Paths"
   command -v apktool
 
-  echo "== jar =="
+  theme_section "JAR"
   local jar="${HOME}/.local/opt/apktool/apktool.jar"
-  [[ -f "${jar}" ]] || { echo "[ERROR] missing jar: ${jar}"; return 3; }
+  if [[ ! -f "${jar}" ]]; then
+    _android_verify_fail "jar" "missing ${jar}"
+    return 3
+  fi
   ls -lh "${jar}"
 
-  echo "== OK =="
+  theme_status_ok "apktool verified"
 }
 
 android_verify_jadx() {
+  _android_theme_init
   android_user_path_export
 
-  echo "== jadx =="
-  command -v jadx >/dev/null 2>&1 || { echo "[ERROR] jadx not found on PATH"; return 2; }
+  theme_verify_heading "jadx"
+  if ! command -v jadx >/dev/null 2>&1; then
+    _android_verify_fail "jadx" "not found on PATH"
+    return 2
+  fi
   jadx --version
 
-  echo "== jadx-gui =="
-  command -v jadx-gui >/dev/null 2>&1 || { echo "[ERROR] jadx-gui not found on PATH"; return 2; }
+  theme_section "jadx-gui"
+  if ! command -v jadx-gui >/dev/null 2>&1; then
+    _android_verify_fail "jadx-gui" "not found on PATH"
+    return 2
+  fi
   jadx-gui --version
 
-  echo "== paths =="
+  theme_section "Paths"
   command -v jadx jadx-gui
 
-  echo "== install dir =="
+  theme_section "Install dir"
   if [[ -d "${HOME}/.local/opt/jadx" ]]; then
-    echo "[OK] ${HOME}/.local/opt/jadx exists"
+    theme_status_ok "${HOME}/.local/opt/jadx exists"
   else
-    echo "[ERROR] opt dir missing"
+    _android_verify_fail "opt dir" "missing"
     return 3
   fi
 
-  echo "== jar presence =="
-  ls -lh "${HOME}/.local/opt/jadx/lib/"*.jar 2>/dev/null | head || {
-    echo "[WARN] no jars under lib/"
-  }
+  theme_section "JAR presence"
+  ls -lh "${HOME}/.local/opt/jadx/lib/"*.jar 2>/dev/null | head || theme_status_warn "no jars under lib/"
 
-  echo "== OK =="
+  theme_status_ok "jadx verified"
 }
 
 android_verify_smali() {
+  _android_theme_init
   android_user_path_export
 
-  echo "== smali =="
-  command -v smali >/dev/null 2>&1 || { echo "[ERROR] smali not found on PATH"; return 2; }
+  theme_verify_heading "smali / baksmali"
+  if ! command -v smali >/dev/null 2>&1; then
+    _android_verify_fail "smali" "not found on PATH"
+    return 2
+  fi
   smali --version
 
-  echo "== baksmali =="
-  command -v baksmali >/dev/null 2>&1 || { echo "[ERROR] baksmali not found on PATH"; return 2; }
+  theme_section "baksmali"
+  if ! command -v baksmali >/dev/null 2>&1; then
+    _android_verify_fail "baksmali" "not found on PATH"
+    return 2
+  fi
   baksmali --version
 
-  echo "== paths =="
+  theme_section "Paths"
   command -v smali baksmali
 
-  echo "== jars =="
+  theme_section "JARs"
   shopt -s nullglob
   local jars=( "${HOME}/.local/opt/smali/"*.jar )
   shopt -u nullglob
   if ((${#jars[@]} == 0)); then
-    echo "[ERROR] no jars under ${HOME}/.local/opt/smali/"
+    _android_verify_fail "jars" "none under ${HOME}/.local/opt/smali/"
     return 3
   fi
   ls -lh "${jars[@]}"
 
-  echo "== OK =="
+  theme_status_ok "smali/baksmali verified"
 }
 
 android_verify_dex2jar() {
+  _android_theme_init
   android_user_path_export
 
-  echo "== dex2jar (d2j tools) =="
+  theme_verify_heading "dex2jar (d2j tools)"
   local tool found=0
   for tool in d2j-dex2jar d2j-jar2dex d2j-apk-sign; do
     if command -v "${tool}" >/dev/null 2>&1; then
-      echo "[OK] ${tool}: $(command -v "${tool}")"
+      theme_status_ok "${tool}: $(command -v "${tool}")"
       found=$((found + 1))
     else
-      echo "[ERROR] ${tool} not found on PATH"
+      _android_verify_fail "${tool}" "not found on PATH"
     fi
   done
 
-  echo "== install dir =="
+  theme_section "Install dir"
   if [[ -d "${HOME}/.local/opt/dex2jar/current" ]]; then
-    echo "[OK] ${HOME}/.local/opt/dex2jar/current exists"
+    theme_status_ok "${HOME}/.local/opt/dex2jar/current exists"
   else
-    echo "[ERROR] dex2jar install dir missing"
+    _android_verify_fail "dex2jar" "install dir missing"
     return 3
   fi
 
@@ -184,35 +215,36 @@ android_verify_dex2jar() {
   fi
 
   if command -v d2j-dex2jar >/dev/null 2>&1 && d2j-dex2jar -h >/dev/null 2>&1; then
-    echo "[OK] d2j-dex2jar runnable"
+    theme_status_ok "d2j-dex2jar runnable"
   elif command -v d2j-dex2jar.sh >/dev/null 2>&1 && d2j-dex2jar.sh -h >/dev/null 2>&1; then
-    echo "[OK] d2j-dex2jar.sh runnable"
+    theme_status_ok "d2j-dex2jar.sh runnable"
   else
-    echo "[WARN] d2j-dex2jar present but did not run cleanly"
+    theme_status_warn "d2j-dex2jar present but did not run cleanly"
   fi
 
-  echo "== linked tools =="
+  theme_section "Linked tools"
   local f found=0 count=0 max_show=8
   shopt -s nullglob
   for f in "${HOME}/.local/bin"/d2j-*; do
     [[ "${f}" == *.bat ]] && continue
     count=$((count + 1))
     if (( count <= max_show )); then
-      printf '  %s\n' "${f}"
+      theme_note "${f}"
       found=1
     fi
   done
   shopt -u nullglob
   if (( count > max_show )); then
-    printf '  ... and %d more d2j-* tools in ~/.local/bin\n' "$(( count - max_show ))"
+    theme_note "... and $(( count - max_show )) more d2j-* tools in ~/.local/bin"
     found=1
   fi
-  (( found )) || echo "  (none)"
+  (( found )) || theme_note "(none)"
 
-  echo "== OK =="
+  theme_status_ok "dex2jar verified"
 }
 
 android_verify_all_re_tools() {
+  _android_theme_init
   local rc=0
   local -a names=(apktool jadx "smali/baksmali" dex2jar)
   local -a fns=(android_verify_apktool android_verify_jadx android_verify_smali android_verify_dex2jar)
@@ -221,9 +253,7 @@ android_verify_all_re_tools() {
   for i in "${!names[@]}"; do
     name="${names[$i]}"
     fn="${fns[$i]}"
-    echo "--------------------------------------------------"
-    echo "Verify: ${name}"
-    echo "--------------------------------------------------"
+    theme_report_section "Verify: ${name}"
     if ! "${fn}"; then
       rc=1
     fi
@@ -231,9 +261,9 @@ android_verify_all_re_tools() {
   done
 
   if (( rc == 0 )); then
-    echo "[OK] All Android RE tools verified."
+    theme_result_ready "All Android RE tools verified"
   else
-    echo "[WARN] One or more Android RE tools failed verification."
+    theme_result_issues "One or more Android RE tools failed verification"
   fi
   return "${rc}"
 }
@@ -244,37 +274,37 @@ android_check_version() {
   shift
   local bin="$1"
 
-  if ! have "${bin}"; then
-    printf '  [--] %-12s not installed\n' "${label}:"
+  if ! cmd_available "${bin}"; then
+    theme_tool_row miss "${label}" "not installed"
     return 0
   fi
 
   local raw line=""
   raw="$("$@" 2>&1)" || true
   if [[ -z "${raw}" ]]; then
-    printf '  [WARN] %-12s no version output\n' "${label}:"
+    theme_tool_row warn "${label}" "no version output"
     return 0
   fi
   if grep -qiE 'traceback \(most recent|modulenotfounderror|importerror|no such option' <<< "${raw}"; then
     line="$(printf '%s\n' "${raw}" | sed -n '/./p' | grep -iE 'modulenotfounderror|importerror|no such option' | head -n 1 || true)"
     [[ -n "${line}" ]] || line="$(printf '%s\n' "${raw}" | sed -n '/./p' | tail -n 1)"
-    printf '  [WARN] %-12s broken (%s)\n' "${label}:" "${line}"
+    theme_tool_row warn "${label}" "broken (${line})"
     if [[ "${label}" == "Mitmproxy" ]]; then
-      printf '         [HINT] pip3 install --upgrade --force-reinstall mitmproxy\n'
+      theme_note "pip3 install --upgrade --force-reinstall mitmproxy"
     fi
     return 0
   fi
   line="$(printf '%s\n' "${raw}" | sed -n '/./p' | tail -n 1)"
   if [[ -n "${line}" ]]; then
-    printf '  [OK] %-12s %s\n' "${label}:" "${line}"
+    theme_tool_row ok "${label}" "${line}"
   else
-    printf '  [WARN] %-12s no version output\n' "${label}:"
+    theme_tool_row warn "${label}" "no version output"
   fi
 }
 
 android_core_tool_status() {
   local rc=0
-  if ! have java; then
+  if ! cmd_available java; then
     warn "Java not on PATH (install java-21-openjdk)"
     rc=1
   fi
@@ -283,7 +313,7 @@ android_core_tool_status() {
   android_check_version Frida frida --version
   android_check_version Objection objection version
   android_check_version Mitmproxy mitmproxy --version
-  if ! have sdkmanager; then
+  if ! cmd_available sdkmanager; then
     warn "sdkmanager not on PATH (run android_dev_core_setup.sh)"
     rc=1
   else
@@ -293,31 +323,33 @@ android_core_tool_status() {
 }
 
 android_adb_status() {
-  echo "== ADB =="
-  if ! have adb; then
-    echo "[ERROR] adb not found on PATH"
-    echo "[HINT] Install android-tools (dnf) or run android_dev_core_setup.sh"
+  _android_theme_init
+
+  theme_verify_heading "ADB"
+  if ! cmd_available adb; then
+    _android_verify_fail "adb" "not found on PATH"
+    theme_note "Install android-tools (dnf) or run android_dev_core_setup.sh"
     return 2
   fi
 
-  echo "Path: $(command -v adb)"
+  theme_kv "Path" "$(cmd_binary_path adb)"
   adb version 2>&1 | head -n 2
 
   echo
-  echo "== Connected devices =="
+  theme_section "Connected devices"
   adb devices -l
 
   echo
-  echo "== USB / udev hints =="
+  theme_section "USB / udev hints"
   if [[ -d /etc/udev/rules.d ]]; then
     local rules
     rules="$(grep -l 'android\|adb' /etc/udev/rules.d/*.rules 2>/dev/null | head -n 3 || true)"
     if [[ -n "${rules}" ]]; then
-      echo "[OK] Found udev rules:"
-      printf '  %s\n' ${rules}
+      theme_status_ok "Found udev rules"
+      printf '%s\n' ${rules} | sed 's/^/    /'
     else
-      echo "[WARN] No obvious Android udev rules in /etc/udev/rules.d/"
-      echo "[HINT] Fedora usually ships android-tools; replug device after setup."
+      theme_status_warn "No obvious Android udev rules in /etc/udev/rules.d/"
+      theme_note "Fedora usually ships android-tools; replug device after setup."
     fi
   fi
 }
@@ -325,29 +357,29 @@ android_adb_status() {
 doctor_android_research() {
   local rc=0
 
-  echo "============================================================"
-  echo "Android Research Workstation Doctor"
-  echo "Host: $(hostname)  User: $(real_user)"
-  echo "============================================================"
-  echo
+  common_init_colors
+  theme_set_lane android
+  theme_report_header "Android Research Workstation Doctor" \
+    "Host: $(hostname) · User: $(real_user)"
 
-  echo "== Core tooling =="
+  theme_section "Core tooling"
   android_core_tool_status || rc=1
   echo
 
   android_adb_status || rc=1
   echo
 
-  echo "== Reverse-engineering tools =="
+  theme_section "Reverse-engineering tools"
   android_verify_all_re_tools || rc=1
 
-  echo "============================================================"
+  echo
+  theme_rule '─'
   if (( rc == 0 )); then
-    echo "Result: READY (all checks passed)"
+    theme_result_ready "Result: READY (all checks passed)"
   else
-    echo "Result: ISSUES FOUND (review output above)"
+    theme_result_issues "Result: ISSUES FOUND (review output above)"
   fi
-  echo "============================================================"
+  theme_rule '─'
   return "${rc}"
 }
 

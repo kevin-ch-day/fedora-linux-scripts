@@ -251,29 +251,34 @@ host_context_print_summary() {
   zone="$(network_firewall_strict_zone_name)"
   def="$(network_firewall_default_zone 2>/dev/null || echo unknown)"
 
-  echo "Host context"
-  echo "  Hostname     : $(health_hostname)"
-  echo "  OS           : $(system_state_os_label | tr -d '\n')"
-  echo "  Session      : $(users_session_label | tr -d '\n')"
-  echo "  Invoker      : $(users_invoker_summary)"
-  echo "  Research     : $(host_context_is_research_host && echo yes || echo no)"
-  echo "  Posture      : $(host_context_posture_summary | tr -d '\n')"
-  echo "  Login users  : $(users_detect_login)"
-  echo "  Wheel users  : $(users_detect_wheel 2>/dev/null || echo none)"
-  echo "  SELinux      : $(system_state_selinux_mode)"
-  echo "  Sudo         : $(system_state_sudo_available && echo available || echo missing) ($(system_state_sudo_passwordless && echo passwordless || echo needs password))"
-  echo "  /data        : $(system_state_data_mounted && system_state_mount_line /data || echo not mounted)"
-  echo "  firewalld    : $(network_firewall_active && echo running || echo inactive)"
-  echo "  FW default   : ${def} ($(network_firewall_zone_readable && echo readable || echo sudo needed))"
-  echo "  FW strict    : ${zone} ($(network_firewall_zone_is_strict "${def}" 2>/dev/null && echo ok || echo review))"
-  echo "  Listeners    : $(network_listener_summary | tr '\n' ' ') unexpected_public=$(network_unexpected_public_count)"
-  echo "  Wi-Fi radio  : $(network_wifi_radio_state 2>/dev/null || echo unknown)"
-  echo "  Wired link   : $(network_wired_ethernet_connected && echo connected || echo none)"
-  echo "  Failed units : $(system_state_failed_units_count)"
+  common_init_colors
+  theme_section "Host context"
+  theme_kv "Hostname" "$(health_hostname)"
+  theme_kv "OS" "$(system_state_os_label | tr -d '\n')"
+  theme_kv "Session" "$(users_session_label | tr -d '\n')"
+  theme_kv "Invoker" "$(users_invoker_summary)"
+  theme_kv "Research" "$(host_context_is_research_host && echo yes || echo no)"
+  theme_kv "Posture" "$(host_context_posture_summary | tr -d '\n')"
+  theme_kv "Login users" "$(users_detect_login)"
+  theme_kv "Wheel users" "$(users_detect_wheel 2>/dev/null || echo none)"
+  theme_kv "SELinux" "$(system_state_selinux_mode)"
+  theme_kv "Sudo" "$(system_state_sudo_available && echo available || echo missing) ($(system_state_sudo_passwordless && echo passwordless || echo needs password))"
+  theme_kv "/data" "$(system_state_data_mounted && system_state_mount_line /data || echo not mounted)"
+  theme_kv "firewalld" "$(network_firewall_active && echo running || echo inactive)"
+  theme_kv "FW default" "${def} ($(network_firewall_zone_readable && echo readable || echo sudo needed))"
+  theme_kv "FW strict" "${zone} ($(network_firewall_zone_is_strict "${def}" 2>/dev/null && echo ok || echo review))"
+  theme_kv "Listeners" "$(network_listener_summary | tr '\n' ' ') unexpected_public=$(network_unexpected_public_count)"
+  theme_kv "Wi-Fi radio" "$(network_wifi_radio_state 2>/dev/null || echo unknown)"
+  theme_kv "Wired link" "$(network_wired_ethernet_connected && echo connected || echo none)"
+  theme_kv "Failed units" "$(system_state_failed_units_count)"
   if host_context_is_research_host; then
     while IFS= read -r issue; do
       [[ -n "${issue}" ]] || continue
-      echo "  ! ${issue}"
+      if [[ "${THEME_USE_COLOR:-0}" -eq 1 ]]; then
+        printf '  %s!%s %s%s%s\n' "${THEME_WARN}" "${THEME_RESET}" "${THEME_FG}" "${issue}" "${THEME_RESET}"
+      else
+        echo "  ! ${issue}"
+      fi
     done < <(host_context_research_issues)
   fi
 }

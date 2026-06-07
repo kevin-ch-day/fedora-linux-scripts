@@ -291,7 +291,7 @@ assert_readable() {
 assert_cmds() {
   local c=""
   for c in "$@"; do
-    have "${c}" || die "Missing required command: ${c}"
+    cmd_available "${c}" || die "Missing required command: ${c}"
   done
 }
 

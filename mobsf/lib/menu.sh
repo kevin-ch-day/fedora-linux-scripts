@@ -25,9 +25,9 @@ mobsf_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_banner "MobSF stack"
+  theme_lane_banner "MobSF stack" mobsf
   theme_meta_line "User: $(real_user) · UI: ${MOBSF_UI_URL:-http://127.0.0.1:8080/}"
-  if have podman; then
+  if cmd_available podman; then
     mobsf_init_paths
     theme_meta_line "Compose: ${MOBSF_COMPOSE_DIR_RESOLVED}"
   else
@@ -36,7 +36,7 @@ mobsf_menu_header() {
   theme_meta_line "Login: mobsf / mobsf"
   menu_hr
   menu_print_breadcrumb
-  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
   fi
@@ -45,6 +45,7 @@ mobsf_menu_header() {
 mobsf_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
   menu_init "MobSF" "${fedora_root}"
+  theme_set_lane mobsf
   menu_set_header_fn mobsf_menu_header
 }
 
@@ -70,7 +71,7 @@ _mobsf_stack_items() {
 _mobsf_stack_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_env_script mobsf/mobsf_start.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_env_script_scroll mobsf/mobsf_start.sh; menu_pause; return 0 ;;
     2) menu_run_script mobsf/mobsf_stop.sh; menu_pause; return 0 ;;
     3) menu_run_script mobsf/mobsf_status.sh; menu_pause; return 0 ;;
     4) mobsf_menu_open_ui; menu_pause; return 0 ;;
@@ -95,7 +96,7 @@ _mobsf_setup_items() {
 _mobsf_setup_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_env_script mobsf/mobsf_install.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_env_script_scroll mobsf/mobsf_install.sh; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -136,18 +137,18 @@ _mobsf_maint_items() {
   menu_item 4 "Remove orphan containers"
   menu_item 5 "Login autostart" "systemd user unit"
   theme_section "Danger zone"
-  menu_item 2 "Reset — nuke all data" "sudo -E · destroys DB"
+  menu_item_danger 2 "Reset — nuke all data" "sudo -E · destroys DB"
   menu_item_back
 }
 
 _mobsf_maint_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_env_script mobsf/mobsf_update.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_env_script_scroll mobsf/mobsf_update.sh; menu_pause; return 0 ;;
     2)
       warn "This removes ALL MobSF scan data and the Postgres database."
       if confirm "NUKE MobSF data and reset stack?"; then
-        menu_run_sudo_env_script mobsf/mobsf_reset.sh
+        menu_run_sudo_env_script_scroll mobsf/mobsf_reset.sh
       else
         info "Cancelled — no changes made"
       fi
@@ -156,7 +157,7 @@ _mobsf_maint_dispatch() {
       ;;
     3)
       if confirm "Reset MobSF stack but keep scan data?"; then
-        menu_run_sudo_env_script mobsf/mobsf_reset.sh --keep
+        menu_run_sudo_env_script_scroll mobsf/mobsf_reset.sh --keep
       else
         info "Cancelled — no changes made"
       fi
@@ -238,11 +239,11 @@ mobsf_menu_docs() {
 # ---------- Main MobSF menu ----------
 _mobsf_main_items() {
   theme_section "Stack"
-  menu_item 1 "Stack control" "start · stop · status · browser"
-  menu_item 2 "Setup" "first-time install (sudo -E)"
-  menu_item 3 "Doctor" "podman · compose · UI readiness"
+  menu_item_lane 1 mobsf "Stack control" "start · stop · status · browser"
+  menu_item_lane 2 mobsf "Setup" "first-time install (sudo -E)"
+  menu_item_lane 3 mobsf "Doctor" "podman · compose · UI readiness"
   theme_section "Operations"
-  menu_item 4 "Maintenance" "update · reset · cleanup"
+  menu_item_lane 4 mobsf "Maintenance" "update · reset · cleanup"
   menu_item 5 "Logs" "container · mobsf.log"
   menu_item 6 "Documentation" "guide · troubleshooting"
   theme_section "Fedora toolkit"

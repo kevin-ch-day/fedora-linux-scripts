@@ -24,12 +24,12 @@ android_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_banner "Android RE lane"
+  theme_lane_banner "Android RE lane" android
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Home: $(real_home) · RE tools: ~/.local/bin"
   menu_hr
   menu_print_breadcrumb
-  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
   fi
@@ -38,6 +38,7 @@ android_menu_header() {
 android_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
   menu_init "Android RE lane" "${fedora_root}" 0
+  theme_set_lane android
   menu_set_header_fn android_menu_header
 }
 
@@ -50,7 +51,7 @@ _android_setup_items() {
 _android_setup_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script android/android_dev_core_setup.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_script_scroll android/android_dev_core_setup.sh; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -178,10 +179,10 @@ android_menu_doctors() {
 
 _android_main_items() {
   theme_section "Workflow"
-  menu_item 1 "Setup" "core packages · sdk · pip tools"
-  menu_item 2 "RE tool installs" "apktool · jadx · smali · dex2jar"
-  menu_item 3 "Verify" "check ~/.local installs"
-  menu_item 4 "Doctors & ADB" "health · devices"
+  menu_item_lane 1 android "Setup" "core packages · sdk · pip tools"
+  menu_item_lane 2 android "RE tool installs" "apktool · jadx · smali · dex2jar"
+  menu_item_lane 3 android "Verify" "check ~/.local installs"
+  menu_item_lane 4 android "Doctors & ADB" "health · devices"
   menu_item 5 "Lane guide" "android/README.md"
   theme_section "Fedora doctor"
   theme_note_kv "Full check" "./fedora.sh --doctor"

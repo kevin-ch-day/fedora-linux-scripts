@@ -64,7 +64,7 @@ mobsf_show_status() {
   echo "  Compose : ${MOBSF_COMPOSE_DIR_RESOLVED}"
   echo "  UI      : ${MOBSF_UI_URL}"
   echo
-  if ! have podman; then
+  if ! cmd_available podman; then
     err "podman not installed"
     return 1
   fi
@@ -79,7 +79,7 @@ mobsf_cleanup_orphans() {
   local -a ids=() seen=()
   local -a services=(postgres nginx mobsf djangoq)
 
-  if ! have podman; then
+  if ! cmd_available podman; then
     warn "podman not installed — nothing to clean"
     return 0
   fi

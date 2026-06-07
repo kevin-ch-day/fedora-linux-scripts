@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/common.sh — shared Fedora toolkit helpers
-# Version: 0.2.3
+# Version: 0.2.5
 #
 # Source from task scripts:
 #   _dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,26 +33,75 @@ have() {
   command -v "$1" >/dev/null 2>&1
 }
 
-# ---------- messaging ----------
+# Resolve a binary on PATH or under standard sbin/bin dirs (sudo-safe).
+cmd_binary_path() {
+  local bin="$1"
+  local p dir
+  p="$(command -v "${bin}" 2>/dev/null || true)"
+  [[ -n "${p}" ]] && { printf '%s\n' "${p}"; return 0; }
+  for dir in /usr/bin /usr/sbin /sbin /bin; do
+    [[ -x "${dir}/${bin}" ]] && { printf '%s/%s\n' "${dir}" "${bin}"; return 0; }
+  done
+  return 1
+}
+
+cmd_available() {
+  cmd_binary_path "$1" >/dev/null 2>&1
+}
+
+# ---------- messaging (themed when TTY + colors enabled) ----------
+_msg_maybe_init_theme() {
+  [[ -t 1 || -t 2 ]] || return 0
+  [[ -n "${NO_COLOR:-}" || "${FEDORA_NO_COLOR:-}" == 1 ]] && return 0
+  if [[ -z "${FEDORA_THEME_SH_LOADED:-}" ]]; then
+    # shellcheck source=theme.sh
+    source "${_FEDORA_LIB_DIR}/theme.sh"
+  fi
+  if [[ "${THEME_USE_COLOR:-0}" -eq 0 ]]; then
+    theme_init
+  fi
+}
+
 die() {
+  _msg_maybe_init_theme
   err "$@"
   exit 1
 }
 
 info() {
-  printf '[INFO] %s\n' "$*"
+  _msg_maybe_init_theme
+  if [[ "${THEME_USE_COLOR:-0}" -eq 1 ]]; then
+    theme_msg_info "$*"
+  else
+    printf '[INFO] %s\n' "$*"
+  fi
 }
 
 ok() {
-  printf '[OK]   %s\n' "$*"
+  _msg_maybe_init_theme
+  if [[ "${THEME_USE_COLOR:-0}" -eq 1 ]]; then
+    theme_msg_ok "$*"
+  else
+    printf '[OK]   %s\n' "$*"
+  fi
 }
 
 warn() {
-  printf '[WARN] %s\n' "$*"
+  _msg_maybe_init_theme
+  if [[ "${THEME_USE_COLOR:-0}" -eq 1 ]]; then
+    theme_msg_warn "$*"
+  else
+    printf '[WARN] %s\n' "$*"
+  fi
 }
 
 err() {
-  printf '[ERROR] %s\n' "$*" >&2
+  _msg_maybe_init_theme
+  if [[ "${THEME_USE_COLOR:-0}" -eq 1 ]]; then
+    theme_msg_err "$*"
+  else
+    printf '[ERROR] %s\n' "$*" >&2
+  fi
 }
 
 # ---------- colors (TTY-safe; empty when not a terminal) ----------
@@ -61,7 +110,9 @@ common_init_colors() {
     # shellcheck source=theme.sh
     source "${_FEDORA_LIB_DIR}/theme.sh"
   fi
-  theme_init
+  if declare -f theme_init >/dev/null 2>&1; then
+    theme_init
+  fi
 }
 
 # ---------- privilege / user context ----------
@@ -130,7 +181,7 @@ user_add_supplementary_group() {
 }
 
 need_cmd() {
-  have "$1" || die "Missing required command: $1"
+  cmd_available "$1" || die "Missing required command: $1"
 }
 
 # Ensure ~/.local/bin exists and is on PATH in the real user's ~/.bashrc.

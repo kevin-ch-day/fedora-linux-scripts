@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/baseline.sh — fresh-install host baseline and rebuild readiness helpers
-# Version: 0.1.1
+# Version: 0.1.2
 #
 # Source from system/fresh_install_check.sh and system/rebuild_readiness_check.sh.
 # Checks are read-only by default. baseline_try_fix_dnf_repos() is an optional
@@ -23,10 +23,8 @@ source "${_BASELINE_LIB_DIR}/services.sh"
 
 # ---------- report helpers ----------
 baseline_section() {
-  echo
-  echo "============================================================"
-  echo "$1"
-  echo "============================================================"
+  common_init_colors
+  theme_report_section "$1"
 }
 
 baseline_run_cmd() {
@@ -36,8 +34,9 @@ baseline_run_cmd() {
 }
 
 baseline_run_cmd_optional() {
-  if have "$1"; then
-    baseline_run_cmd "$@"
+  local bin
+  if bin="$(cmd_binary_path "$1" 2>/dev/null)"; then
+    baseline_run_cmd "${bin}" "${@:2}"
   else
     echo "(not installed: $1)"
   fi
@@ -108,11 +107,18 @@ baseline_dnf_check_ok() {
 
 # Repo files root-only (e.g. mode 600) break user-level dnf check.
 baseline_unreadable_repo_files() {
-  local f
+  local f invoker
   shopt -s nullglob
-  for f in /etc/yum.repos.d/*.repo; do
-    [[ -r "${f}" ]] || printf '%s\n' "${f}"
-  done
+  invoker="${SUDO_USER:-${FEDORA_REAL_USER:-}}"
+  if [[ "${EUID}" -eq 0 && -n "${invoker}" && "${invoker}" != root ]]; then
+    for f in /etc/yum.repos.d/*.repo; do
+      sudo -u "${invoker}" test -r "${f}" 2>/dev/null || printf '%s\n' "${f}"
+    done
+  else
+    for f in /etc/yum.repos.d/*.repo; do
+      [[ -r "${f}" ]] || printf '%s\n' "${f}"
+    done
+  fi
   shopt -u nullglob
 }
 
@@ -145,10 +151,11 @@ baseline_toolkit_lane_dirs_ok() {
 
 baseline_cmd_version() {
   local cmd="$1"
+  local bin
   shift
-  if have "${cmd}"; then
+  if bin="$(cmd_binary_path "${cmd}" 2>/dev/null)"; then
     printf '%s: ' "${cmd}"
-    "$cmd" "$@" 2>&1 | head -n 1
+    "${bin}" "$@" 2>&1 | head -n 1
   else
     printf '%s: (not installed)\n' "${cmd}"
   fi
@@ -167,6 +174,8 @@ baseline_collect_fresh_install() {
     git python3 pip3 gcc g++ make cmake java mysql curl wget unzip tar rsync htop btop tree vim nano
   )
   local cmd
+
+  common_init_colors
 
   baseline_section "Identity"
   baseline_run_cmd_optional hostnamectl
@@ -258,10 +267,10 @@ baseline_collect_fresh_install() {
 
   baseline_section "Core commands (presence)"
   for cmd in "${core_cmds[@]}"; do
-    if have "${cmd}"; then
-      printf '[OK]   %s\n' "${cmd}"
+    if cmd_available "${cmd}"; then
+      ok "${cmd}"
     else
-      printf '[MISS] %s\n' "${cmd}"
+      theme_msg_miss "${cmd}"
     fi
   done
 
@@ -271,13 +280,13 @@ baseline_collect_fresh_install() {
   baseline_cmd_version git --version
   baseline_cmd_version gcc --version
   baseline_cmd_version g++ --version
-  if have java; then
+  if cmd_available java; then
     echo -n "java: "
-    java -version 2>&1 | head -n 1
+    "$(cmd_binary_path java)" -version 2>&1 | head -n 1
   else
     echo "java: (not installed)"
   fi
-  if have mysql; then
+  if cmd_available mysql; then
     baseline_cmd_version mysql --version
   else
     echo "mysql: (not installed)"

@@ -113,14 +113,13 @@ run_as_real_user python3 -m pip install --user mysql-connector-python
 run_as_real_user python3 -m pip install --user SQLAlchemy PyMySQL
 ok "Python MySQL connectors installed (mysql.connector, SQLAlchemy, PyMySQL)"
 
-echo
 echo "[SETUP] Doctor summary:"
-command -v python3 >/dev/null && ok "python3"
-command -v pip3 >/dev/null && ok "pip3"
+if pkg_binary_path python3 >/dev/null 2>&1; then ok "python3"; else warn "python3 missing"; fi
+if pkg_binary_path pip3 >/dev/null 2>&1 || pkg_binary_path pip >/dev/null 2>&1; then ok "pip"; else warn "pip missing"; fi
 run_as_real_user python3 -c "import mysql.connector" 2>/dev/null && ok "mysql.connector (Python)" || warn "mysql.connector missing"
-mysql --version >/dev/null 2>&1 && ok "mysql (cli)" || warn "mysql missing"
-php -v >/dev/null 2>&1 && ok "php" || warn "php missing"
-httpd -v >/dev/null 2>&1 && ok "apache httpd" || warn "httpd missing"
+if pkg_binary_path mysql >/dev/null 2>&1; then ok "mysql (cli)"; else warn "mysql missing"; fi
+if pkg_binary_path php >/dev/null 2>&1; then ok "php"; else warn "php missing"; fi
+if pkg_binary_path httpd >/dev/null 2>&1 || pkg_present httpd apache; then ok "apache httpd"; else warn "httpd missing"; fi
 
 ok "LAMP + Python-MySQL setup complete!"
 echo

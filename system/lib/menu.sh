@@ -28,13 +28,13 @@ system_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_banner "System lane"
+  theme_lane_banner "System lane" system
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Root: ${MENU_ROOT}"
   theme_meta_line "Logs: $(log_dir)"
   menu_hr
   menu_print_breadcrumb
-  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
   fi
@@ -43,6 +43,7 @@ system_menu_header() {
 system_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
   menu_init "System lane" "${fedora_root}" 0
+  theme_set_lane system
   menu_set_header_fn system_menu_header
 }
 
@@ -67,8 +68,8 @@ _system_cleanup_dispatch() {
     2) menu_run_script system/cleanup.sh --all-logs --quiet; menu_pause; return 0 ;;
     3) menu_run_script system/cleanup.sh --archive --file system_update.log --quiet; menu_pause; return 0 ;;
     4) menu_run_script system/cleanup.sh --rotate --file system_update.log --max-mb 10 --quiet; menu_pause; return 0 ;;
-    5) menu_run_sudo_script system/cleanup.sh --dnf; menu_pause; return 0 ;;
-    6) menu_run_sudo_script system/fix_dnf_repo_permissions.sh; menu_pause; return 0 ;;
+    5) menu_run_sudo_script_scroll system/cleanup.sh --dnf; menu_pause; return 0 ;;
+    6) menu_run_sudo_script_scroll system/fix_dnf_repo_permissions.sh; menu_pause; return 0 ;;
     7) services_show_failed_units; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
@@ -85,10 +86,10 @@ _system_hardening_items() {
   menu_item 1 "OS hardening Round 1" "sudo · auto-detect · idempotent"
   menu_item 4 "Round 1 status" "read-only · what's applied"
   theme_section "Round 2 — strict profile"
-  menu_item 5 "OS hardening Round 2" "sudo · firewall + services"
-  menu_item 7 "Strict firewall (SSH only)" "custom zone · wired NM"
-  menu_item 8 "Listening hardening" "MariaDB · Avahi · LLMNR · BT/Wi-Fi"
-  menu_item 6 "Wired only (BT/Wi-Fi off)" "wired Ethernet · mask BT"
+  menu_item_danger 5 "OS hardening Round 2" "sudo · firewall + services"
+  menu_item_danger 7 "Strict firewall (SSH only)" "custom zone · wired NM"
+  menu_item_danger 8 "Listening hardening" "MariaDB · Avahi · LLMNR · BT/Wi-Fi"
+  menu_item_danger 6 "Wired only (BT/Wi-Fi off)" "wired Ethernet · mask BT"
   theme_section "Audit"
   menu_item 9 "Security audit" "read-only · findings · full report"
   menu_item 10 "Audit summary" "fast · live findings only"
@@ -103,11 +104,11 @@ _system_hardening_items() {
 _system_hardening_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_script system/hardening_round1.sh; menu_pause; return 0 ;;
-    5) menu_run_script system/hardening_round2.sh; menu_pause; return 0 ;;
-    6) menu_run_script system/hardening_wired_only.sh; menu_pause; return 0 ;;
-    7) menu_run_script system/hardening_firewall_strict.sh; menu_pause; return 0 ;;
-    8) menu_run_script system/hardening_listening.sh; menu_pause; return 0 ;;
+    1) menu_run_script_scroll system/hardening_round1.sh; menu_pause; return 0 ;;
+    5) menu_run_script_scroll system/hardening_round2.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/hardening_wired_only.sh; menu_pause; return 0 ;;
+    7) menu_run_script_scroll system/hardening_firewall_strict.sh; menu_pause; return 0 ;;
+    8) menu_run_script_scroll system/hardening_listening.sh; menu_pause; return 0 ;;
     9) menu_run_script_scroll system/security_audit.sh; return 0 ;;
     10) menu_run_script_scroll system/security_audit.sh --summary; return 0 ;;
     11) menu_run_script_scroll system/security_audit.sh --plan; return 0 ;;
@@ -195,14 +196,14 @@ system_menu_help() {
 }
 
 _system_main_items() {
-  menu_item 1 "Host information" "system snapshot"
-  menu_item 2 "Fresh install baseline" "report → logs/"
-  menu_item 3 "Rebuild readiness" "pre-rebuild validation"
-  menu_item 4 "Update Fedora" "sudo · scroll · log"
-  menu_item 5 "View logs" "log_engine · tail · follow"
+  menu_item_lane 1 system "Host information" "system snapshot"
+  menu_item_lane 2 system "Fresh install baseline" "report → logs/"
+  menu_item_lane 3 system "Rebuild readiness" "pre-rebuild validation"
+  menu_item_lane 4 system "Update Fedora" "sudo · scroll · log"
+  menu_item_lane 5 system "View logs" "log_engine · tail · follow"
   menu_item 6 "Backup current state" "export for reinstall"
-  menu_item 7 "Cleanup" "logs · dnf · repo fix"
-  menu_item 8 "OS hardening" "Round 1 · services audit"
+  menu_item_lane 7 system "Cleanup" "logs · dnf · repo fix"
+  menu_item_lane 8 system "OS hardening" "Round 1 · services audit"
   menu_item_lane_exit
 }
 
@@ -219,7 +220,7 @@ _system_main_dispatch() {
       return 0
       ;;
     5) system_menu_logs; return 0 ;;
-    6) menu_run_script system/backup_state.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
     7) system_menu_cleanup; return 0 ;;
     8) system_menu_hardening; return 0 ;;
     *) return 2 ;;

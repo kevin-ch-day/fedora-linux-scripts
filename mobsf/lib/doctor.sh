@@ -6,22 +6,21 @@ mobsf_doctor() {
   local rc=0 issues=0
   mobsf_init_paths
 
-  echo "============================================================"
-  echo "MobSF Doctor (Fedora / Podman)"
-  echo "User: $(real_user)  SELinux: $(getenforce 2>/dev/null || echo unknown)"
-  echo "============================================================"
-  echo
+  common_init_colors
+  theme_set_lane mobsf
+  theme_report_header "MobSF Doctor" \
+    "Fedora / Podman · User: $(real_user) · SELinux: $(getenforce 2>/dev/null || echo unknown)"
 
-  echo "== Tools =="
-  if have podman; then ok "podman: $(podman --version 2>&1 | head -1)"; else err "podman missing"; rc=1; issues=$((issues+1)); fi
-  if have podman-compose; then
+  theme_section "Tools"
+  if cmd_available podman; then ok "podman: $(podman --version 2>&1 | head -1)"; else err "podman missing"; rc=1; issues=$((issues+1)); fi
+  if cmd_available podman-compose; then
     ok "podman-compose: $(podman-compose --version 2>&1 | sed -n '/podman-compose/p' | head -n 1 || podman-compose --version 2>&1 | tail -n 1)"
   else
     err "podman-compose missing (dnf install podman-compose)"; rc=1; issues=$((issues+1))
   fi
   echo
 
-  echo "== Paths =="
+  theme_section "Paths"
   printf '  compose dir : %s\n' "${MOBSF_COMPOSE_DIR_RESOLVED}"
   if [[ -f "${MOBSF_COMPOSE_FILE}" ]]; then
     ok "docker-compose.yml present"
@@ -44,7 +43,7 @@ mobsf_doctor() {
   done
   echo
 
-  echo "== Compose guardrails =="
+  theme_section "Compose guardrails"
   if [[ -f "${MOBSF_COMPOSE_FILE}" ]]; then
     if mobsf_compose_check "${MOBSF_COMPOSE_FILE}"; then
       ok "compose file passes Fedora guardrails"
@@ -65,7 +64,7 @@ mobsf_doctor() {
   fi
   echo
 
-  echo "== Containers =="
+  theme_section "Containers"
   local svc name running=0
   for svc in postgres mobsf djangoq nginx; do
     name="$(mobsf_container_for_service "${svc}")"
@@ -84,7 +83,7 @@ mobsf_doctor() {
   (( running == 4 )) || rc=1
   echo
 
-  echo "== HTTP =="
+  theme_section "HTTP"
   if mobsf_check_ui_http; then
     ok "UI OK: ${MOBSF_LOGIN_URL}"
   else
@@ -93,15 +92,16 @@ mobsf_doctor() {
   fi
   echo
 
-  echo "============================================================"
+  echo
+  theme_rule '─'
   if (( rc == 0 )); then
-    echo "Result: READY"
+    ok "Result: READY"
   else
-    echo "Result: ISSUES (${issues} check(s) failed)"
-    echo "[HINT] Fresh install: sudo -E ./mobsf/mobsf_install.sh"
-    echo "[HINT] Reset stack:    sudo -E ./mobsf/mobsf_reset.sh --keep"
+    warn "Result: ISSUES (${issues} check(s) failed)"
+    info "Fresh install: sudo -E ./mobsf/mobsf_install.sh"
+    info "Reset stack:    sudo -E ./mobsf/mobsf_reset.sh --keep"
   fi
-  echo "============================================================"
+  theme_rule '─'
   return "${rc}"
 }
 
@@ -110,7 +110,7 @@ mobsf_doctor_brief() {
   local rc=0 running=0 svc name
   mobsf_init_paths
 
-  if ! have podman || ! have podman-compose; then
+  if ! cmd_available podman || ! cmd_available podman-compose; then
     warn "MobSF: podman/podman-compose not installed"
     return 0
   fi
@@ -142,15 +142,13 @@ mobsf_doctor_dynamic() {
   mobsf_init_paths
   fedora_root="$(cd -- "${MOBSF_BUNDLE_DIR}/.." && pwd)"
 
-  echo "============================================================"
-  echo "MobSF Dynamic Analysis Readiness"
-  echo "User: $(real_user)  Host: $(hostname)"
-  echo "============================================================"
-  echo
+  common_init_colors
+  theme_set_lane mobsf
+  theme_report_header "MobSF Dynamic Analysis Readiness" \
+    "User: $(real_user) · Host: $(hostname)"
   info "Prerequisite: static MobSF stack running and UI reachable."
-  echo
 
-  echo "== Static stack =="
+  theme_section "Static stack"
   if mobsf_compose_installed && mobsf_check_ui_http; then
     ok "UI reachable: ${MOBSF_LOGIN_URL}"
   else
@@ -160,7 +158,7 @@ mobsf_doctor_dynamic() {
   fi
   echo
 
-  echo "== Compose bundle =="
+  theme_section "Compose bundle"
   if [[ -f "${MOBSF_COMPOSE_FILE}" ]]; then
     if grep -q 'host\.docker\.internal:host-gateway' "${MOBSF_COMPOSE_FILE}" 2>/dev/null; then
       ok "extra_hosts host.docker.internal present"
@@ -183,7 +181,7 @@ mobsf_doctor_dynamic() {
   fi
   echo
 
-  echo "== Host tooling (ADB / Frida) =="
+  theme_section "Host tooling (ADB / Frida)"
   # shellcheck source=../../lib/android.sh
   source "${fedora_root}/lib/android.sh"
   android_user_path_export
@@ -215,21 +213,21 @@ mobsf_doctor_dynamic() {
   fi
   echo
 
-  echo "== Next steps =="
-  echo "  1. Rooted emulator or device visible to host adb"
-  echo "  2. Set MOBSF_ANALYZER_IDENTIFIER in ~/MobSF/compose/docker-compose.yml"
-  echo "  3. Redeploy stack: ./mobsf.sh reset --keep"
-  echo "  4. See mobsf/STACK.md — Dynamic analysis"
-  echo
+  theme_section "Next steps"
+  theme_note "1. Rooted emulator or device visible to host adb"
+  theme_note "2. Set MOBSF_ANALYZER_IDENTIFIER in ~/MobSF/compose/docker-compose.yml"
+  theme_note "3. Redeploy stack: ./mobsf.sh reset --keep"
+  theme_note "4. See mobsf/STACK.md — Dynamic analysis"
 
-  echo "============================================================"
+  echo
+  theme_rule '─'
   if (( rc == 0 && issues == 0 )); then
-    echo "Result: READY"
+    ok "Result: READY"
   elif (( rc == 0 )); then
-    echo "Result: PARTIAL (${issues} advisory item(s))"
+    warn "Result: PARTIAL (${issues} advisory item(s))"
   else
-    echo "Result: ISSUES (${issues} item(s) need attention)"
+    warn "Result: ISSUES (${issues} item(s) need attention)"
   fi
-  echo "============================================================"
+  theme_rule '─'
   return "${rc}"
 }

@@ -24,10 +24,12 @@ if [[ "${FEDORA_REBUILD_VIA_FEDORA:-}" != 1 ]]; then
 fi
 # shellcheck source=lib/common.sh
 source "${FEDORA_ROOT}/lib/common.sh"
+# shellcheck source=lib/theme.sh
+source "${FEDORA_ROOT}/lib/theme.sh"
+theme_init
+theme_set_lane rebuild
 # shellcheck source=lib/logging.sh
 source "${FEDORA_ROOT}/lib/logging.sh"
-
-errors_init_script "fedora_rebuild.sh"
 
 AUTO_YES=0
 DRY_RUN=0
@@ -139,10 +141,7 @@ run_step() {
   REBUILD_STEP=$(( REBUILD_STEP + 1 ))
 
   echo
-  echo "============================================================"
-  echo "STEP [${REBUILD_STEP}/${REBUILD_TOTAL}]: ${title}"
-  echo "Script: ${rel}"
-  echo "============================================================"
+  theme_report_step "${REBUILD_STEP}" "${REBUILD_TOTAL}" "${title}" "Script: ${rel}"
 
   if (( USE_LOG )); then
     log_step "${REBUILD_STEP}" "${REBUILD_TOTAL}" "STEP: ${title} (${rel})"

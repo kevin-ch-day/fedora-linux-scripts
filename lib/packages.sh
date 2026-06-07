@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/packages.sh — shared Fedora package-management helpers
-# Version: 0.2.4
+# Version: 0.2.7
 #
 # Source from task scripts (after or via common.sh):
 #   _dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +53,18 @@ packages_fix_repo_permissions() {
 
 # ---------- dnf core ----------
 require_dnf() {
-  have dnf || die "dnf not found."
+  cmd_available dnf || die "dnf not found."
+}
+
+_pkg_fixup_repo_permissions_after_dnf() {
+  if [[ "${EUID}" -eq 0 ]]; then
+    packages_fix_repo_permissions
+    return 0
+  fi
+  # Avoid a second password prompt after user-level sudo dnf.
+  if sudo -n true 2>/dev/null; then
+    sudo -n bash -c "source '${_PKG_LIB_DIR}/packages.sh'; packages_fix_repo_permissions" 2>/dev/null || true
+  fi
 }
 
 _dnf_run() {
@@ -66,6 +77,7 @@ _dnf_run() {
     run_or_die "${ctx}" sudo dnf -y "$@"
   fi
   errors_clear_hint
+  _pkg_fixup_repo_permissions_after_dnf
 }
 
 # Public alias for task scripts (group install, etc.).
@@ -78,48 +90,71 @@ dnf_yes() {
 }
 
 dnf_installed() {
-  dnf list installed "$1" >/dev/null 2>&1
+  dnf list installed "$1" >/dev/null 2>&1 && return 0
+  rpm -q "$1" >/dev/null 2>&1
+}
+
+# True when the RPM is installed or a common binary path exists (sudo PATH-safe).
+pkg_present() {
+  local pkg="$1"
+  local bin="${2:-${pkg}}"
+  dnf_installed "${pkg}" && return 0
+  pkg_binary_path "${bin}" >/dev/null 2>&1
+}
+
+pkg_binary_path() {
+  cmd_binary_path "$1"
 }
 
 # Install a package via dnf if not already installed.
 pkg_install_if_missing() {
   local pkg="$1"
-  if dnf_installed "${pkg}"; then
+  if pkg_present "${pkg}"; then
     ok "${pkg} already installed"
     return 0
   fi
   info "Installing ${pkg}..."
   _dnf_run "Failed to install ${pkg}" install "${pkg}"
+  if ! pkg_present "${pkg}"; then
+    die "Installed ${pkg} but it is still not present (check package name or binary path)"
+  fi
   ok "${pkg} installed"
 }
 
 # Install package when available; skip quietly when repo lacks it.
 pkg_install_optional() {
   local pkg="$1"
-  if dnf_installed "${pkg}"; then
+  if pkg_present "${pkg}"; then
     ok "${pkg} already installed"
     return 0
   fi
   if dnf -q list --available "${pkg}" >/dev/null 2>&1; then
     info "Installing ${pkg}..."
     _dnf_run "Failed to install ${pkg}" install "${pkg}" >/dev/null
-    ok "${pkg} installed"
+    if pkg_present "${pkg}"; then
+      ok "${pkg} installed"
+    else
+      warn "Installed ${pkg} but presence check failed (binary may use a different name)"
+    fi
   else
     warn "Skipping (not available): ${pkg}"
   fi
 }
 
-# Install a dnf package if a command is missing from PATH.
+# Install a dnf package if a command is missing from PATH (sudo/PATH-safe).
 pkg_install_cmd_if_missing() {
   local cmd="$1"
   local pkg="${2:-$1}"
-  if have "${cmd}"; then
-    ok "${cmd} already available"
+  if pkg_present "${pkg}" "${cmd}"; then
+    ok "${cmd} already available (${pkg} installed)"
     return 0
   fi
   require_dnf
   info "Installing ${pkg} (dnf) for command ${cmd}..."
   _dnf_run "Failed to install ${pkg} for command ${cmd}" install "${pkg}" >/dev/null
+  if ! pkg_present "${pkg}" "${cmd}"; then
+    die "Installed ${pkg} but ${cmd} is still not available (check PATH or package contents)"
+  fi
   ok "${pkg} installed"
 }
 
@@ -134,7 +169,7 @@ pkg_install_batch_if_available() {
   local p
 
   for p in "${pkgs[@]}"; do
-    if dnf_installed "${p}"; then
+    if pkg_present "${p}"; then
       ok "${p} already installed"
       continue
     fi

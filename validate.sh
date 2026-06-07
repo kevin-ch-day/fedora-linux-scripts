@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # validate.sh — Repo health checks (syntax, entry points, optional ShellCheck)
-# Version: 0.1.4
+# Version: 0.1.5
 #
 # Run from repo root:
 #   ./validate.sh
@@ -16,6 +16,7 @@ source "${VALIDATE_ROOT}/lib/common.sh"
 QUICK=0
 DO_SHELLCHECK=0
 DO_SMOKE=0
+DO_INSTALL_AUDIT=0
 FAILURES=0
 
 usage() {
@@ -28,6 +29,7 @@ Options:
   --quick          Skip ShellCheck (default when shellcheck missing)
   --shellcheck     Run ShellCheck at -S warning on active scripts
   --smoke          Run ./smoke_test.sh --quick after static checks
+  --install-audit  Run ./install_audit.sh --quick after static checks
   --help, -h       Show this help
 
   Checks:
@@ -37,6 +39,7 @@ Options:
   - docs/GETTING-STARTED.md and docs/README.md present
   - optional: shellcheck -S warning
   - optional: ./smoke_test.sh --quick
+  - optional: ./install_audit.sh --quick
 EOF
 }
 
@@ -46,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --quick) QUICK=1; shift ;;
     --shellcheck) DO_SHELLCHECK=1; shift ;;
     --smoke) DO_SMOKE=1; shift ;;
+    --install-audit) DO_INSTALL_AUDIT=1; shift ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
 done
@@ -63,13 +67,17 @@ _validate_ok() {
   ok "$*"
 }
 
-echo "============================================================"
-echo "Fedora toolkit validation"
-echo "Root: ${VALIDATE_ROOT}"
-echo "============================================================"
+# shellcheck source=lib/theme.sh
+source "${VALIDATE_ROOT}/lib/theme.sh"
+theme_init
+theme_set_lane audit
 
+theme_lane_banner "Fedora toolkit validation" audit
+theme_meta_line "Root: ${VALIDATE_ROOT}"
+theme_rule '─'
 echo
-info "Syntax (bash -n, excluding legacy/)..."
+
+theme_report_section "Syntax (bash -n, excluding legacy/)"
 syntax_fail=0
 while IFS= read -r -d '' script; do
   if ! bash -n "${script}" 2>/dev/null; then
@@ -79,8 +87,7 @@ while IFS= read -r -d '' script; do
 done < <(find "${VALIDATE_ROOT}" -name '*.sh' -type f ! -path "${VALIDATE_ROOT}/legacy/*" -print0)
 (( syntax_fail == 0 )) && _validate_ok "bash -n passed for active scripts"
 
-echo
-info "Entry points..."
+theme_report_section "Entry points"
 _ep_failures=0
 # shellcheck source=lib/entry_points.sh
 source "${VALIDATE_ROOT}/lib/entry_points.sh"
@@ -88,16 +95,14 @@ if ! fedora_entry_points_check "${VALIDATE_ROOT}" _ep_failures; then
   FAILURES=$((FAILURES + _ep_failures))
 fi
 
-echo
-info "CI workflow..."
+theme_report_section "CI workflow"
 if [[ -f "${VALIDATE_ROOT}/.github/workflows/validate.yml" ]]; then
   _validate_ok ".github/workflows/validate.yml present"
 else
   _validate_fail "missing: .github/workflows/validate.yml"
 fi
 
-echo
-info "MobSF compose secrets..."
+theme_report_section "MobSF compose secrets"
 compose_file="${VALIDATE_ROOT}/mobsf/compose/docker-compose.yml"
 if [[ -f "${compose_file}" ]] && grep -q '\${POSTGRES_PASSWORD}' "${compose_file}"; then
   _validate_ok "compose uses \${POSTGRES_PASSWORD}"
@@ -107,8 +112,7 @@ else
   _validate_fail "compose POSTGRES_PASSWORD pattern not recognized"
 fi
 
-echo
-info "Documentation..."
+theme_report_section "Documentation"
 for doc in docs/README.md docs/GETTING-STARTED.md docs/AUDIT.md mobsf/GUIDE.md; do
   if [[ -f "${VALIDATE_ROOT}/${doc}" ]]; then
     _validate_ok "${doc}"
@@ -118,8 +122,7 @@ for doc in docs/README.md docs/GETTING-STARTED.md docs/AUDIT.md mobsf/GUIDE.md; 
 done
 
 if (( DO_SHELLCHECK )); then
-  echo
-  info "ShellCheck (-S warning, excluding legacy/)..."
+  theme_report_section "ShellCheck (-S warning, excluding legacy/)"
   if sc_out="$(find "${VALIDATE_ROOT}" -name '*.sh' -type f ! -path "${VALIDATE_ROOT}/legacy/*" -print0 \
     | xargs -0 shellcheck -S warning 2>&1)"; then
     _validate_ok "ShellCheck clean"
@@ -133,8 +136,7 @@ elif (( QUICK == 0 )); then
 fi
 
 if (( DO_SMOKE )); then
-  echo
-  info "Smoke tests (./smoke_test.sh --quick)..."
+  theme_report_section "Smoke tests (./smoke_test.sh --quick)"
   if bash "${VALIDATE_ROOT}/smoke_test.sh" --quick; then
     _validate_ok "smoke_test.sh --quick passed"
   else
@@ -142,11 +144,26 @@ if (( DO_SMOKE )); then
   fi
 fi
 
+if (( DO_INSTALL_AUDIT )); then
+  theme_report_section "Install audit (./install_audit.sh --quick)"
+  if bash "${VALIDATE_ROOT}/install_audit.sh" --quick; then
+    _validate_ok "install_audit.sh --quick passed"
+  else
+    _validate_fail "install_audit.sh --quick failed"
+  fi
+fi
+
 echo
-echo "============================================================"
 if (( FAILURES == 0 )); then
-  ok "Validation passed"
+  theme_summary_box "Validation summary" \
+    "Result: passed" \
+    "Issues: 0" \
+    "Next: ./fedora.sh --check"
   exit 0
 fi
+theme_summary_box "Validation summary" \
+  "Result: FAILED" \
+  "Issues: ${FAILURES}" \
+  "Next: fix issues above and re-run ./validate.sh"
 err "Validation failed (${FAILURES} issue(s))"
 exit 1

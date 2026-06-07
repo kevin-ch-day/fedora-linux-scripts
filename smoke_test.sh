@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # smoke_test.sh — dynamic CLI smoke tests (read-only, no sudo prompts)
-# Version: 0.2.1
+# Version: 0.2.2
 #
 # Run from repo root:
 #   ./smoke_test.sh
@@ -128,7 +128,10 @@ _smoke_run_summary() {
   return 1
 }
 
-theme_banner "Fedora toolkit smoke tests"
+theme_init
+theme_set_lane audit
+
+theme_lane_banner "Fedora toolkit smoke tests" audit
 theme_meta_line "Root: ${ROOT}"
 if (( CI )); then
   theme_meta_line "Mode: CI (host-specific checks skipped)"
@@ -140,7 +143,7 @@ fi
 theme_rule '─'
 echo
 
-info "Help and CLI dispatch..."
+theme_report_section "Help and CLI dispatch"
 _smoke_run "fedora.sh --help" 0 bash "${ROOT}/fedora.sh" --help
 _smoke_run "fedora.sh --check bad option" 1 bash "${ROOT}/fedora.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
@@ -158,25 +161,25 @@ if (( CI == 0 )); then
 fi
 
 if (( CI == 0 )) && [[ -z "${FEDORA_SKIP_CHECK_SMOKE:-}" ]]; then
-  info "Readiness checks..."
+  theme_report_section "Readiness checks"
   _smoke_run "fedora.sh --rebuild-check" 1 bash "${ROOT}/fedora.sh" --rebuild-check
   _smoke_run_summary "fedora.sh --check" "Check complete" bash "${ROOT}/fedora.sh" --check
 fi
 
 if (( QUICK == 0 && CI == 0 )); then
-  info "Doctor runs..."
+  theme_report_section "Doctor runs"
   _smoke_run "fedora.sh --doctor" 0 bash "${ROOT}/fedora.sh" --doctor
   _smoke_run "android.sh --doctor" 0 bash "${ROOT}/android/android.sh" --doctor
   _smoke_run "mobsf.sh --doctor" 1 bash "${ROOT}/mobsf.sh" --doctor
 else
-  info "Doctors skipped (--quick)"
+  theme_report_section "Doctors skipped (--quick)"
 fi
 
 if (( CI )); then
-  info "Host-specific checks skipped (--ci)"
+  theme_note "Host-specific checks skipped (--ci)"
 fi
 
-info "CLI arg passthrough and errors..."
+theme_report_section "CLI arg passthrough and errors"
 _smoke_run "system.sh update --help" 0 bash "${ROOT}/system/system.sh" update --help
 _smoke_run "dev.sh git --help" 0 bash "${ROOT}/dev/dev.sh" git --help
 _smoke_run "dev.sh git non-interactive" 1 bash "${ROOT}/dev/dev.sh" git </dev/null
@@ -184,13 +187,13 @@ _smoke_run "android verify missing tool" 1 bash "${ROOT}/android/android.sh" ver
 _smoke_run "log_engine unknown command" 2 bash "${ROOT}/system/log_engine.sh" bogus
 _smoke_run "mobsf.sh unknown option" 1 bash "${ROOT}/mobsf.sh" --not-a-flag
 
-info "Verify and validate..."
+theme_report_section "Verify and validate"
 if (( CI == 0 )); then
   _smoke_run "android verify all" 0 bash "${ROOT}/android/android.sh" verify all
 fi
-_smoke_run "validate.sh --quick" 0 bash "${ROOT}/validate.sh" --quick
+_smoke_run "validate.sh --quick --install-audit" 0 bash "${ROOT}/validate.sh" --quick --install-audit
 
-info "Interactive menus (non-interactive input)..."
+theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "fedora.sh main menu" "${ROOT}/fedora.sh" '0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
@@ -208,11 +211,9 @@ if (( FAILS == 0 )); then
 fi
 
 theme_summary_box "Smoke test summary" \
-  "Result:  FAILED" \
-  "Runs:    ${RUNS}" \
-  "Failed:  ${FAILS}" \
-  "Review failed checks above"
-for n in "${FAIL_NAMES[@]}"; do
-  echo "  · ${n}"
-done
+  "Result: FAILED" \
+  "Runs: ${RUNS}" \
+  "Failed: ${FAILS}" \
+  "Next: review failed checks below"
+theme_fail_list "${FAIL_NAMES[@]}"
 exit 1

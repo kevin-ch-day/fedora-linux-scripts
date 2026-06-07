@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install_vscode.sh — Install Visual Studio Code from Microsoft repo
-# Version: 0.3.0
+# Version: 0.3.1
 #
 # Run:
 #   sudo ./dev/install_vscode.sh
@@ -13,6 +13,7 @@ _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${_SCRIPT_DIR}/../lib/packages.sh"
 
 VSCODE_REPO="/etc/yum.repos.d/vscode.repo"
+VSCODE_PKG=code
 SKIP_CHECK_UPDATE=0
 
 usage() {
@@ -20,6 +21,7 @@ usage() {
 Usage: $(basename "$0") [options]
 
 Install Visual Studio Code from packages.microsoft.com (gpgcheck=1).
+Idempotent: exits 0 if code is already installed.
 
 Options:
   --help, -h              Show this help
@@ -27,6 +29,13 @@ Options:
 
 Run with sudo.
 EOF
+}
+
+vscode_report_installed() {
+  local path ver
+  path="$(pkg_binary_path "${VSCODE_PKG}" 2>/dev/null || echo /usr/bin/${VSCODE_PKG})"
+  ver="$("${path}" --version 2>/dev/null | head -n 1 || rpm -q "${VSCODE_PKG}" 2>/dev/null || echo unknown)"
+  ok "Visual Studio Code already installed: ${path} (${ver})"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -40,6 +49,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 require_root "Run with sudo: sudo ./dev/install_vscode.sh"
+
+if pkg_present "${VSCODE_PKG}"; then
+  vscode_report_installed
+  exit 0
+fi
 
 info "Importing Microsoft GPG key..."
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
@@ -64,10 +78,12 @@ if (( SKIP_CHECK_UPDATE == 0 )); then
   dnf check-update -y || warn "dnf check-update returned non-zero (continuing)"
 fi
 
-pkg_install_if_missing code
+pkg_install_if_missing "${VSCODE_PKG}"
 
-if have code; then
-  ok "Visual Studio Code installation complete: $(command -v code)"
-else
-  die "Visual Studio Code installation failed"
+if pkg_present "${VSCODE_PKG}"; then
+  path="$(pkg_binary_path "${VSCODE_PKG}" 2>/dev/null || echo /usr/bin/${VSCODE_PKG})"
+  ok "Visual Studio Code installation complete: ${path}"
+  exit 0
 fi
+
+die "Visual Studio Code installation failed"

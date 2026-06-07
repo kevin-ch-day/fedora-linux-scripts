@@ -17,7 +17,7 @@ mobsf_systemd_write_unit() {
   unit_path="$(mobsf_systemd_unit_path)"
   compose_dir="$(mobsf_systemd_compose_workdir)"
   home="$(real_home)"
-  pc="$(command -v podman-compose)"
+  pc="$(cmd_binary_path podman-compose 2>/dev/null || true)"
 
   [[ -n "${pc}" ]] || die "podman-compose not found — install podman-compose first"
   [[ -f "${compose_dir}/docker-compose.yml" ]] || die "Compose not found — run ./mobsf.sh install first"

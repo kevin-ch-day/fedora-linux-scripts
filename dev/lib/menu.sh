@@ -24,12 +24,12 @@ dev_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_banner "Development lane"
+  theme_lane_banner "Development lane" dev
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Root: ${MENU_ROOT}"
   menu_hr
   menu_print_breadcrumb
-  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
   fi
@@ -38,6 +38,7 @@ dev_menu_header() {
 dev_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
   menu_init "Development lane" "${fedora_root}" 0
+  theme_set_lane dev
   menu_set_header_fn dev_menu_header
 }
 
@@ -60,11 +61,11 @@ _dev_workstation_dispatch() {
     0) return 1 ;;
     1) menu_run_script dev/git_setup.sh; menu_pause; return 0 ;;
     2) menu_run_script_scroll dev/git_setup.sh --status; menu_pause; return 0 ;;
-    3) menu_run_sudo_script dev/install_vscode.sh; menu_pause; return 0 ;;
-    4) menu_run_sudo_script dev/desktop_setup.sh; menu_pause; return 0 ;;
-    5) menu_run_sudo_script dev/desktop_setup.sh --cinnamon-only; menu_pause; return 0 ;;
+    3) menu_run_sudo_script_scroll dev/install_vscode.sh; menu_pause; return 0 ;;
+    4) menu_run_sudo_script_scroll dev/desktop_setup.sh; menu_pause; return 0 ;;
+    5) menu_run_sudo_script_scroll dev/desktop_setup.sh --cinnamon-only; menu_pause; return 0 ;;
     6) menu_run_script dev/desktop_setup.sh --status; menu_pause; return 0 ;;
-    7) menu_run_sudo_script dev/desktop_setup.sh --set-default; menu_pause; return 0 ;;
+    7) menu_run_sudo_script_scroll dev/desktop_setup.sh --set-default; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -84,7 +85,7 @@ _dev_infra_items() {
 _dev_infra_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script dev/fedora_container_kvm_setup.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_script_scroll dev/fedora_container_kvm_setup.sh; menu_pause; return 0 ;;
     2) services_status_research_stack; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
@@ -107,10 +108,10 @@ _dev_web_items() {
 _dev_web_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script dev/lamp_python_setup.sh; menu_pause; return 0 ;;
-    2) menu_run_sudo_script dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
+    1) menu_run_sudo_script_scroll dev/lamp_python_setup.sh; menu_pause; return 0 ;;
+    2) menu_run_sudo_script_scroll dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
     3) menu_run_script_scroll dev/web_stack_doctor.sh; menu_pause; return 0 ;;
-    4) menu_run_sudo_script dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
+    4) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -127,9 +128,9 @@ dev_menu_help() {
 # ---------- Main dev menu ----------
 _dev_main_items() {
   theme_section "Areas"
-  menu_item 1 "Workstation" "git · vscode · desktop"
-  menu_item 2 "Infrastructure" "podman · docker · kvm"
-  menu_item 3 "Web stack" "apache · mariadb · phpmyadmin"
+  menu_item_lane 1 dev "Workstation" "git · vscode · desktop"
+  menu_item_lane 2 dev "Infrastructure" "podman · docker · kvm"
+  menu_item_lane 3 dev "Web stack" "apache · mariadb · phpmyadmin"
   menu_item 4 "Help & docs" "guides · getting started"
   menu_item_lane_exit
 }

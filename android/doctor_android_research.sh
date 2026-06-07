@@ -34,17 +34,19 @@ doctor_android_research || rc=1
 if (( WITH_MOBSF )); then
   # shellcheck source=../mobsf/lib/mobsf.sh
   source "${FEDORA_ROOT}/mobsf/lib/mobsf.sh"
+  common_init_colors
+  theme_set_lane mobsf
   echo
-  echo "== MobSF (optional) =="
+  theme_section "MobSF (optional)"
   mobsf_doctor_brief || rc=1
   echo
-  echo "============================================================"
+  theme_rule '─'
   if (( rc == 0 )); then
-    echo "Combined result: READY (Android + MobSF)"
+    ok "Combined result: READY (Android + MobSF)"
   else
-    echo "Combined result: ISSUES FOUND"
+    warn "Combined result: ISSUES FOUND"
   fi
-  echo "============================================================"
+  theme_rule '─'
 fi
 
 exit "${rc}"

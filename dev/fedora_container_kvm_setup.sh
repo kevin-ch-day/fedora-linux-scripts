@@ -62,9 +62,9 @@ echo
 
 info "Installing containers..."
 pkg_install_optional podman
-if (( INSTALL_DOCKER )); then
+  if (( INSTALL_DOCKER )); then
   pkg_install_optional docker
-  if have docker && have systemctl; then
+  if pkg_present docker docker && have systemctl; then
     service_enable_now docker
     user_add_supplementary_group "${INVOKER}" docker
   else

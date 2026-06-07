@@ -88,6 +88,9 @@ Lane (non-interactive):
 Options:
   --help, -h         Show this help
   --no-color         Plain text output (also: NO_COLOR=1)
+  FEDORA_THEME       dark (default) or light — console color palette
+  FEDORA_THEME_DENSITY  normal (default) or compact — menu spacing
+  ./theme_preview.sh Preview all theme elements
   --check            Validate + smoke + rebuild readiness (add --full or --fix-repos)
   --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
   --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
@@ -161,20 +164,20 @@ done
 
 fedora_main_header() {
   menu_clear_screen
-  theme_banner "${MENU_APP_NAME}"
+  theme_lane_banner "${MENU_APP_NAME}" main
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Root: ${MENU_ROOT}"
 }
 
 _fedora_main_items() {
   theme_section "Main lanes"
-  menu_item 1 "System" "host · updates · logs · cleanup"
-  menu_item 2 "Development" "git · vscode · kvm · lamp"
-  menu_item 3 "Android RE" "sdk · apktool · jadx · frida · verify"
+  menu_item_lane 1 system "System" "host · updates · logs · cleanup"
+  menu_item_lane 2 dev "Development" "git · vscode · kvm · lamp"
+  menu_item_lane 3 android "Android RE" "sdk · apktool · jadx · frida · verify"
   theme_section "Setup and health"
-  menu_item 4 "Guided rebuild" "full workstation setup"
-  menu_item 5 "Fedora doctor" "repo · lanes · workstation health"
-  menu_item 6 "Toolkit check" "validate · smoke · rebuild readiness"
+  menu_item_lane 4 rebuild "Guided rebuild" "full workstation setup"
+  menu_item_lane 5 audit "Fedora doctor" "repo · lanes · workstation health"
+  menu_item_lane 6 audit "Toolkit check" "validate · smoke · rebuild readiness"
   theme_section "Separate tools"
   theme_note_kv "MobSF stack" "./mobsf.sh"
   theme_section "Shortcuts"
@@ -212,6 +215,7 @@ _fedora_main_dispatch() {
 
 main_menu() {
   menu_set_header_fn fedora_main_header
+  theme_set_lane main
   menu_loop "Main menu" "" _fedora_main_items _fedora_main_dispatch
 }
 

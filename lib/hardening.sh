@@ -263,16 +263,16 @@ hardening_print_round1_status() {
       firewall) label="firewalld + fstrim + ssh" ;;
     esac
     case "${status}" in
-      ok) ok "${label}" ;;
-      needs) warn "${label} — not applied or incomplete" ;;
-      *) info "${label} — ${status}" ;;
+      ok) theme_status_ok "${label}" ;;
+      needs) theme_status_warn "${label} — not applied or incomplete" ;;
+      *) theme_status_info "${label} — ${status}" ;;
     esac
   done
   echo
   if hardening_round1_complete; then
-    ok "Round 1: complete on this host"
+    theme_status_ok "Round 1: complete on this host"
   else
-    info "Round 1: incomplete — run ./system/hardening_round1.sh --yes"
+    theme_status_info "Round 1: incomplete — run ./system/hardening_round1.sh --yes"
   fi
   local latest
   if latest="$(hardening_latest_baseline_report 2>/dev/null)"; then

@@ -51,6 +51,12 @@ research_doctor_run() {
   local do_mobsf="${3:-1}"
   local rc=0
 
+  theme_init
+  theme_set_lane audit
+  theme_report_header "Fedora doctor" \
+    "Host: $(hostname) · User: $(real_user)" \
+    "Android: $(( do_android )) · MobSF: $(( do_mobsf ))"
+
   try_run research_check_entry_points "${fedora_root}" || rc=1
   echo
 

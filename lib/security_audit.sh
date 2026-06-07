@@ -93,10 +93,8 @@ security_audit_run() {
 }
 
 security_audit_section() {
-  echo
-  echo "================================================================================"
-  echo "$1"
-  echo "================================================================================"
+  common_init_colors
+  theme_report_section "$1"
 }
 
 security_audit_latest_findings_path() {

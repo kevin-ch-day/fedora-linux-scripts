@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # lib/menu.sh — interactive TUI menu helpers for the Fedora toolkit
-# Version: 0.4.0
+# Version: 0.4.2
 #
+# Screen clear is off by default (output accumulates for dev/tuning).
+# Set FEDORA_MENU_CLEAR=1 to restore full-screen redraws.
 # Source from launchers (fedora.sh):
 #   source "${FEDORA_ROOT}/lib/menu.sh"
 #   menu_init "Fedora Toolkit" "${FEDORA_ROOT}"
@@ -64,16 +66,17 @@ menu_print_breadcrumb() {
   local crumb
   crumb="$(menu_breadcrumb_text)"
   if [[ -n "${crumb}" ]]; then
-    theme_meta_line "${crumb}"
+    theme_breadcrumb "${crumb}"
   fi
 }
 
 menu_clear_screen() {
-  if (( MENU_SCROLL_MODE )); then
-    echo
-    theme_meta_line "── scroll mode (output kept above) ──"
-  elif [[ -t 1 ]]; then
+  if [[ "${FEDORA_MENU_CLEAR:-0}" == 1 ]] && [[ -t 1 ]]; then
     clear 2>/dev/null || printf '\033[H\033[J' || true
+    return 0
+  fi
+  if (( MENU_SCROLL_MODE )); then
+    theme_scroll_marker
   fi
 }
 
@@ -81,12 +84,12 @@ menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_banner "${MENU_APP_NAME}"
+  theme_lane_banner "${MENU_APP_NAME}"
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Root: ${MENU_ROOT}"
   menu_hr
   menu_print_breadcrumb
-  echo "${THEME_BOLD}${title}${THEME_RESET}"
+  theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
   fi
@@ -97,6 +100,29 @@ menu_item() {
   local label="$2"
   local hint="${3:-}"
   theme_option "${num}" "${label}" "${hint}"
+}
+
+menu_item_danger() {
+  local num="$1"
+  local label="$2"
+  local hint="${3:-}"
+  theme_option "${num}" "${label}" "${hint}" danger
+}
+
+menu_item_lane() {
+  local num="$1"
+  local lane="$2"
+  local label="$3"
+  local hint="${4:-}"
+  theme_option_lane "${num}" "${lane}" "${label}" "${hint}"
+}
+
+menu_item_lane_danger() {
+  local num="$1"
+  local lane="$2"
+  local label="$3"
+  local hint="${4:-}"
+  theme_option_lane "${num}" "${lane}" "${label}" "${hint}" danger
 }
 
 menu_item_back() {

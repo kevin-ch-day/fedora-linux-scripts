@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/check.sh — unified toolkit readiness checks
-# Version: 0.2.1
+# Version: 0.2.2
 #
 # Source after lib/common.sh.
 # Used by: ./fedora.sh --check
@@ -38,7 +38,8 @@ fedora_toolkit_check() {
   fi
 
   theme_init
-  theme_banner "Fedora toolkit check"
+  theme_set_lane audit
+  theme_lane_banner "Fedora toolkit check" audit
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Context: $(host_context_posture_summary | tr -d '\n')"
   theme_meta_line "Root: ${root}"
@@ -51,19 +52,34 @@ fedora_toolkit_check() {
   theme_rule '─'
   echo
 
+  local unreadable_repos=""
+  unreadable_repos="$(baseline_unreadable_repo_files 2>/dev/null || true)"
+  if [[ -n "${unreadable_repos}" ]]; then
+    if (( fix_repos )); then
+      info "Unreadable DNF repo files detected — will fix before rebuild check"
+      printf '%s\n' "${unreadable_repos}" | sed 's/^/  /'
+      echo
+    else
+      warn "DNF repo files not readable as $(real_user) — rebuild check may fail"
+      printf '%s\n' "${unreadable_repos}" | sed 's/^/  /'
+      info "Fix: ./fedora.sh --check --fix-repos   or   sudo ./fedora.sh --fix-repos"
+      echo
+    fi
+  fi
+
   step=$((step + 1))
-  info "Step ${step}/${steps} — repo validation..."
-  bash "${root}/validate.sh" --quick || val_ec=$?
+  theme_report_progress "${step}" "${steps}" "Repo validation"
+  bash "${root}/validate.sh" --quick --install-audit || val_ec=$?
   echo
 
   step=$((step + 1))
-  info "Step ${step}/${steps} — smoke tests..."
+  theme_report_progress "${step}" "${steps}" "Smoke tests"
   FEDORA_SKIP_CHECK_SMOKE=1 bash "${root}/smoke_test.sh" "${smoke_args[@]}" || smoke_ec=$?
   echo
 
   if (( full_smoke )); then
     step=$((step + 1))
-    info "Step ${step}/${steps} — Fedora doctor..."
+    theme_report_progress "${step}" "${steps}" "Fedora doctor"
     bash "${root}/system/research_doctor.sh" --android-only || doctor_ec=$?
     echo
   fi
@@ -79,7 +95,7 @@ fedora_toolkit_check() {
   fi
 
   step=$((step + 1))
-  info "Step ${step}/${steps} — rebuild readiness..."
+  theme_report_progress "${step}" "${steps}" "Rebuild readiness"
   bash "${root}/system/rebuild_readiness_check.sh" || ready_ec=$?
   echo
 
