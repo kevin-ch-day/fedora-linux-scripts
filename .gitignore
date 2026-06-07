@@ -1,0 +1,4 @@
+# Operational logs (see logs/README.md)
+logs/*.log
+logs/archive/
+logs/backups/
