@@ -82,7 +82,11 @@ _log_emit() {
   local line
   line="$(_log_format_line "${level}" "$@")"
   if [[ "${FEDORA_LOG_TEE_ACTIVE}" -eq 1 ]]; then
-    printf '%s\n' "${line}"
+    if [[ "${FEDORA_LOG_TERMINAL_STRUCTURED:-1}" == 0 ]] && [[ -n "${LOG_FILE:-}" ]]; then
+      printf '%s\n' "${line}" >> "${LOG_FILE}"
+    else
+      printf '%s\n' "${line}"
+    fi
   elif [[ -n "${LOG_FILE:-}" ]]; then
     printf '%s\n' "${line}" >> "${LOG_FILE}"
   else

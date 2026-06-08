@@ -1,3 +1,8 @@
+# Fedora toolkit runtime output
+runtime/
+!runtime/
+runtime/health/
+
 # Operational logs (see logs/README.md)
 logs/*.log
 logs/archive/
@@ -5,3 +10,43 @@ logs/backups/
 logs/security_audit/
 logs/host_context/
 logs/hardening/
+!logs/README.md
+
+# Local environment overrides
+.env
+.env.*
+*.local
+
+# Python cache / local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.venv/
+venv/
+
+# Node / frontend local deps
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Generic build / coverage artifacts
+build/
+dist/
+coverage/
+htmlcov/
+*.cover
+*.coverage
+.coverage*
+
+# Editor / OS clutter
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

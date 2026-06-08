@@ -4,8 +4,8 @@
 Host    : neptune
 OS      : Fedora Linux 44 (Workstation Edition)
 Kernel  : 7.0.11-200.fc44.x86_64
-Uptime  : 3 hours, 10 minutes
-Generated: 2026-06-08T00:25:56-05:00
+Uptime  : 3 hours, 26 minutes
+Generated: 2026-06-08T00:41:41-05:00
 Compact : Health: OK · root 11% used · RAM 24Gi available · /data mounted
 ──────────────────────────────────────────────────────
 
@@ -13,10 +13,10 @@ Compact : Health: OK · root 11% used · RAM 24Gi available · /data mounted
 Host    : neptune
 Fedora  : Fedora Linux 44 (Workstation Edition)
 Kernel  : 7.0.11-200.fc44.x86_64
-Uptime  : 3 hours, 10 minutes
+Uptime  : 3 hours, 26 minutes
 
 [Memory]
-OK   RAM   31Gi total · 6.7Gi used · 24Gi available
+OK   RAM   31Gi total · 6.9Gi used · 24Gi available
 OK   Swap  8.0Gi total · 0B used · 8.0Gi free
 
 [Filesystems]
@@ -36,13 +36,13 @@ HDD  sdb   3.6T  DATA drive
 [Large system areas]
 40M	/etc
 447M	/opt
-7.8G	/var
+7.7G	/var
 14G	/usr
 
 [Large home areas]
-2.5M	/home/linuxadmin/GitHub
+2.7M	/home/linuxadmin/GitHub
 16M	/home/linuxadmin/.dbclient
-99M	/home/linuxadmin/.codex
+98M	/home/linuxadmin/.codex
 147M	/home/linuxadmin/Android
 1.9G	/home/linuxadmin/.cache
 2.1G	/home/linuxadmin/.vscode
@@ -54,14 +54,14 @@ OK   DNF cache    0
 OK   Journal      95.6M
 
 [Top memory groups]
-chrome 4737.9M RSS
-code 2235.3M RSS
-java 663.9M RSS
+chrome 4837.1M RSS
+code 2219.4M RSS
+java 664.0M RSS
 dnf5daemon-serv 233.2M RSS
-cinnamon 221.8M RSS
-codex 210.5M RSS
+cinnamon 231.2M RSS
+codex 211.6M RSS
 gnome-text-edit 179.6M RSS
-bash 118.8M RSS
+Xorg 113.3M RSS
 
 [Summary]
 OK Disk space summary computed from key mounts.

@@ -248,7 +248,7 @@ _system_main_items() {
   menu_item_lane 3 system "Fresh install baseline" "report → logs/"
   menu_item_lane 4 system "Rebuild readiness" "pre-rebuild validation"
   theme_section "Operations"
-  menu_item_lane 5 system "Update Fedora" "sudo · scroll · log"
+  menu_item_lane 5 system "Update Fedora" "quiet summary · full log saved"
   menu_item_lane 6 system "View logs" "log_engine · tail · follow"
   menu_item 7 "Backup current state" "export for reinstall"
   menu_item_lane 8 system "Cleanup" "logs · dnf · repo fix"

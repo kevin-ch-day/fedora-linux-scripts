@@ -197,6 +197,44 @@ if (( CI == 0 )); then
 fi
 _smoke_run "validate.sh --quick --install-audit" 0 bash "${ROOT}/validate.sh" --quick --install-audit
 
+theme_report_section "Update workflow"
+RUNS=$((RUNS + 1))
+update_quiet_out="$(NO_COLOR=1 FEDORA_UPDATE_TEST_MODE=1 bash "${ROOT}/system/system_update.sh" --quick 2>&1)" || update_quiet_ec=$?
+update_quiet_ec="${update_quiet_ec:-0}"
+if [[ "${update_quiet_ec}" -eq 0 ]] \
+  && ! grep -qE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T' <<< "${update_quiet_out}" \
+  && ! grep -q 'SESSION START\|SESSION END\|Session-ID' <<< "${update_quiet_out}" \
+  && grep -q '\[Status\]' <<< "${update_quiet_out}" \
+  && grep -q '^Log  ' <<< "${update_quiet_out}"; then
+  ok "system_update quiet output stays compact"
+else
+  FAILS=$((FAILS + 1))
+  FAIL_NAMES+=("system_update quiet output stays compact")
+  warn "system_update quiet output included log noise or missed summary"
+  printf '%s\n' "${update_quiet_out}" | tail -n 8 | sed 's/^/    /'
+fi
+RUNS=$((RUNS + 1))
+update_verbose_out="$(NO_COLOR=1 FEDORA_UPDATE_TEST_MODE=1 FEDORA_VERBOSE=1 bash "${ROOT}/system/system_update.sh" --quick 2>&1)" || update_verbose_ec=$?
+update_verbose_ec="${update_verbose_ec:-0}"
+if [[ "${update_verbose_ec}" -eq 0 ]] && grep -q 'Updating and loading repositories:' <<< "${update_verbose_out}"; then
+  ok "system_update verbose mode streams detailed output"
+else
+  FAILS=$((FAILS + 1))
+  FAIL_NAMES+=("system_update verbose mode streams detailed output")
+  warn "system_update verbose mode did not show detailed output"
+fi
+RUNS=$((RUNS + 1))
+update_log_path="${ROOT}/logs/system_update.log"
+if [[ -f "${update_log_path}" ]] \
+  && grep -q 'SESSION START' "${update_log_path}" \
+  && grep -q 'Updating and loading repositories:' "${update_log_path}"; then
+  ok "system_update log keeps full detail"
+else
+  FAILS=$((FAILS + 1))
+  FAIL_NAMES+=("system_update log keeps full detail")
+  warn "system_update log missing session metadata or detailed output"
+fi
+
 theme_report_section "Health snapshot"
 _smoke_run "health snapshot refresh" 0 bash "${ROOT}/system/health_snapshot.sh" --refresh --quiet
 _smoke_run "health snapshot show" 0 bash "${ROOT}/system/health_snapshot.sh" --show
