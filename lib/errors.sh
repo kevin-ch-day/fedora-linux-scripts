@@ -116,10 +116,10 @@ error_cleanup_add() {
 
 errors_mktemp_dir() {
   local __var="${1:?variable name required}"
-  local tmp=""
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/fedora-toolkit.XXXXXX")"
-  error_cleanup_add "rm -rf -- '${tmp}'"
-  printf -v "${__var}" '%s' "${tmp}"
+  local _tmp_dir=""
+  _tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/fedora-toolkit.XXXXXX")"
+  error_cleanup_add "rm -rf -- '${_tmp_dir}'"
+  printf -v "${__var}" '%s' "${_tmp_dir}"
 }
 
 errors_hint() {

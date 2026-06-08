@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# system.sh — System lane launcher (host, maintenance, logs)
+# system.sh — System maintenance launcher (host, maintenance, logs)
 # Version: 0.1.6
 #
 # Run:
@@ -19,10 +19,10 @@ source "${SYSTEM_LAUNCHER_DIR}/lib/menu.sh"
 
 usage() {
   cat <<EOF
-System lane — host maintenance, baseline, updates, logs, cleanup.
+System maintenance — host maintenance, baseline, updates, logs, cleanup.
 
 From main entry: ./fedora.sh → [1]  or  ./fedora.sh --system
-Fedora doctor: ./fedora.sh --doctor  or  ./fedora.sh → [5]
+System health check: ./fedora.sh --doctor  or  ./fedora.sh → [8]
 
 Usage: $(basename "$0") [command|option]
 
@@ -43,7 +43,6 @@ Commands:
   listening-harden  MariaDB localhost · Avahi · LLMNR · BT/Wi-Fi
   security-audit    Read-only full security audit → logs/
   audit-summary     Fast live findings + action plan
-  audit-plan        Ordered remediation plan only
   audit-plan        Ordered remediation plan from live findings
   host-context      Live host snapshot (users · network · posture)
   wired-only        Disable Bluetooth + Wi-Fi (wired Ethernet hosts)
@@ -51,8 +50,6 @@ Commands:
   doctor         Fedora doctor (same as ./fedora.sh --doctor)
   research-doctor Full research doctor (Android + MobSF — rebuild finale)
   logs           Open logs submenu
-
-MobSF stack: ./mobsf.sh --doctor
 
 Toolkit root: ${FEDORA_ROOT}
 EOF
@@ -127,10 +124,6 @@ while [[ $# -gt 0 ]]; do
     audit-summary)
       shift
       exec bash "${SYSTEM_LAUNCHER_DIR}/security_audit.sh" --summary "$@"
-      ;;
-    audit-plan)
-      shift
-      exec bash "${SYSTEM_LAUNCHER_DIR}/security_audit.sh" --plan "$@"
       ;;
     audit-plan)
       shift

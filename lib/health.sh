@@ -36,6 +36,26 @@ health_hostname() {
   hostname
 }
 
+health_session_kind() {
+  if [[ -n "${SSH_CONNECTION:-}" ]]; then
+    printf 'ssh\n'
+  elif [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+    printf 'local-gui\n'
+  else
+    printf 'tty/unknown\n'
+  fi
+}
+
+health_sudo_mode() {
+  if ! have sudo; then
+    printf 'missing\n'
+  elif sudo -n true 2>/dev/null; then
+    printf 'passwordless\n'
+  else
+    printf 'needs password\n'
+  fi
+}
+
 health_os_pretty() {
   if [[ -r /etc/os-release ]]; then
     # shellcheck disable=SC1091
@@ -214,6 +234,14 @@ health_root_disk_pct() {
   df -P / 2>/dev/null | awk 'NR==2{gsub(/%/,"",$5); print $5+0}' || printf '0\n'
 }
 
+health_data_mount_summary() {
+  if have findmnt && findmnt -n /data >/dev/null 2>&1; then
+    findmnt -no SOURCE,FSTYPE,TARGET /data 2>/dev/null || printf 'mounted\n'
+  else
+    printf 'not mounted\n'
+  fi
+}
+
 # ---------- network ----------
 health_default_route() {
   ip route show default 2>/dev/null | head -n 1 || true
@@ -346,6 +374,42 @@ health_print_system_info() {
 
   echo
   theme_result_ready "System information complete"
+}
+
+health_print_runtime_awareness() {
+  local mem_used mem_total mem_pct mem_avail
+  local swap_used swap_total
+  local root_pct root_line color
+
+  theme_section "Runtime awareness"
+  theme_kv "Session" "$(health_session_kind)"
+  theme_kv "Sudo" "$(health_sudo_mode)"
+
+  if read -r mem_used mem_total mem_pct mem_avail < <(health_memory_summary 2>/dev/null); then
+    color="$(human_pct_color "${mem_pct}")"
+    if theme_use_color; then
+      theme_kv "Memory" "${mem_used} / ${mem_total} (${color}${mem_pct}%${THEME_RESET}), avail ${mem_avail}"
+    else
+      theme_kv "Memory" "${mem_used} / ${mem_total} (${mem_pct}%), avail ${mem_avail}"
+    fi
+  fi
+  if read -r swap_used swap_total < <(health_swap_summary 2>/dev/null); then
+    theme_kv "Swap" "${swap_used} used / ${swap_total} total"
+  fi
+
+  root_pct="$(health_root_disk_pct 2>/dev/null || echo 0)"
+  root_line="$(df -h / 2>/dev/null | awk 'NR==2{print $3 " used of " $2 " (" $5 ")"}' || true)"
+  if [[ -n "${root_line}" ]]; then
+    color="$(human_pct_color "${root_pct}")"
+    if theme_use_color; then
+      theme_kv "Root disk" "${root_line/(${root_pct}%)/(${color}${root_pct}%${THEME_RESET})}"
+    else
+      theme_kv "Root disk" "${root_line}"
+    fi
+  fi
+
+  theme_kv "/data" "$(health_data_mount_summary)"
+  theme_kv "Failed units" "$(health_failed_systemd_units_count)"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

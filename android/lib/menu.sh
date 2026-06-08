@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# android/lib/menu.sh — Android lane interactive menus (uses lib/menu.sh theme)
+# android/lib/menu.sh — Android RE & MobSF interactive menus (uses lib/menu.sh theme)
 # Version: 0.3.1
 #
 # Standalone:  ./android/android.sh
@@ -23,12 +23,37 @@ source "${_FEDORA_ROOT}/lib/menu.sh"
 android_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
+  local page_title="${title}"
   menu_clear_screen
-  theme_lane_banner "Android RE lane" android
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Home: $(real_home) · RE tools: ~/.local/bin"
+  theme_lane_banner "Android RE & MobSF" android
+  if menu_is_submenu; then
+    theme_meta_line "Path: $(menu_path_text)"
+  else
+    theme_meta_line "User: $(real_user) · Android tools: ~/.local/bin"
+  fi
   menu_hr
-  menu_print_breadcrumb
+  if [[ "${title}" == "Core setup" ]]; then
+    page_title="Android core setup"
+  fi
+  theme_page_title "${page_title}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
+}
+
+android_menu_main_header() {
+  local title="$1"
+  local subtitle="${2:-}"
+  menu_clear_screen
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s◈ Android RE & MobSF%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '◈ Android RE & MobSF\n'
+  fi
+  theme_meta_line "Android reverse engineering and mobile analysis"
+  theme_meta_line "Path: $(menu_path_text)"
+  menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
@@ -37,27 +62,31 @@ android_menu_header() {
 
 android_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "Android RE lane" "${fedora_root}" 0
+  menu_init "Android RE & MobSF" "${fedora_root}" 0
   theme_set_lane android
   menu_set_header_fn android_menu_header
 }
 
 # ---------- Core setup ----------
 _android_setup_items() {
-  menu_item 1 "Install Android core tools (sudo)"
+  theme_section "Install"
+  menu_item 1 "Install Android core tools" "packages · SDK cmdline-tools · pip tools"
+  theme_section "Checks"
+  menu_item 2 "Show Android core status" "versions · PATH · installed tools"
   menu_item_back
 }
 
 _android_setup_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script_scroll android/android_dev_core_setup.sh; menu_pause; return 0 ;;
+    1) FEDORA_ANDROID_MENU_MODE=1 menu_run_sudo_env_script_scroll android/android_dev_core_setup.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll android/android_dev_core_setup.sh --status; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 android_menu_setup() {
-  menu_loop "Setup" "core packages · SDK · pip tools" \
+  menu_loop "Core setup" "adb · sdkmanager · Android Studio · frida · objection · mitmproxy" \
     _android_setup_items _android_setup_dispatch
 }
 
@@ -178,14 +207,18 @@ android_menu_doctors() {
 }
 
 _android_main_items() {
-  theme_section "Workflow"
-  menu_item_lane 1 android "Setup" "core packages · sdk · pip tools"
-  menu_item_lane 2 android "RE tool installs" "apktool · jadx · smali · dex2jar"
-  menu_item_lane 3 android "Verify" "check ~/.local installs"
-  menu_item_lane 4 android "Doctors & ADB" "health · devices"
-  menu_item 5 "Lane guide" "android/README.md"
-  theme_section "Fedora doctor"
-  theme_note_kv "Full check" "./fedora.sh --doctor"
+  theme_section "Setup"
+  menu_item 1 "Install Android core tools" "adb · sdkmanager · Python tools · Android Studio"
+  menu_item 2 "Install APK RE tools" "apktool · jadx · smali · dex2jar"
+  theme_section "Checks"
+  menu_item 3 "Verify Android RE environment" "adb · java · sdkmanager · frida · objection"
+  menu_item 4 "ADB and device checks" "devices · udev · permissions"
+  theme_section "Mobile analysis"
+  menu_item 5 "MobSF stack" "setup · start · stop · status"
+  theme_section "Maintenance"
+  menu_item 6 "Repair Node/npm tooling" "npm · node · apk-mitm"
+  theme_section "Docs"
+  menu_item 7 "Lane guide" "android/README.md"
   menu_item_lane_exit
 }
 
@@ -194,16 +227,21 @@ _android_main_dispatch() {
     0) menu_lane_handle_main_exit ;;
     1) android_menu_setup; return 0 ;;
     2) android_menu_re_install; return 0 ;;
-    3) android_menu_verify; return 0 ;;
-    4) android_menu_doctors; return 0 ;;
-    5) menu_open_file "${MENU_ROOT}/android/README.md"; menu_pause; return 0 ;;
+    3) menu_run_script_scroll android/doctor_android_research.sh; menu_pause; return 0 ;;
+    4) android_adb_status; menu_pause; return 0 ;;
+    5) menu_run_script mobsf.sh; menu_pause; return 0 ;;
+    6) FEDORA_ANDROID_MENU_MODE=1 menu_run_sudo_env_script_scroll android/android_dev_core_setup.sh --repair-node; menu_pause; return 0 ;;
+    7) menu_open_file "${MENU_ROOT}/android/README.md"; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 android_main_menu() {
-  menu_loop "Android RE menu" "security research · reverse engineering" \
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn android_menu_main_header
+  menu_loop "Android RE & MobSF" "sdk · adb · apk tools · dynamic tools · mobsf" \
     _android_main_items _android_main_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

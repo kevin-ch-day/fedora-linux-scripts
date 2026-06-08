@@ -94,7 +94,7 @@ _smoke_menu() {
   else
     ec=$?
   fi
-  if [[ "${ec}" -eq 0 ]] && grep -qE 'Choice:|Back to lane picker|Main menu closed|MobSF menu closed|Returned to shell' <<< "${out}"; then
+  if [[ "${ec}" -eq 0 ]] && grep -qE 'Choice(:| ›)|Back to lane picker|Main menu closed|MobSF menu closed|Returned to shell' <<< "${out}"; then
     ok "${name} (interactive menu OK)"
     return 0
   fi
@@ -151,19 +151,23 @@ if (( CI == 0 )); then
   _smoke_run "system.sh doctor" 0 bash "${ROOT}/system/system.sh" doctor
 fi
 _smoke_run "fedora.sh unknown option" 1 bash "${ROOT}/fedora.sh" --not-a-flag
-if (( CI == 0 )); then
+if (( CI == 0 && QUICK == 0 )); then
   _smoke_run "fedora.sh --baseline" 0 bash "${ROOT}/fedora.sh" --baseline
   _smoke_run_summary "security_audit --plan" "Recommended action plan" \
     bash "${ROOT}/system/security_audit.sh" --plan
   _smoke_run_summary "security_audit --findings" "Smart findings" \
     bash "${ROOT}/system/security_audit.sh" --findings
   _smoke_run "host_context.sh" 0 bash "${ROOT}/system/host_context.sh" --summary </dev/null
+elif (( CI == 0 )); then
+  theme_note "Skipping baseline/security audit/host context in quick mode"
 fi
 
-if (( CI == 0 )) && [[ -z "${FEDORA_SKIP_CHECK_SMOKE:-}" ]]; then
+if (( CI == 0 && QUICK == 0 )) && [[ -z "${FEDORA_SKIP_CHECK_SMOKE:-}" ]]; then
   theme_report_section "Readiness checks"
-  _smoke_run "fedora.sh --rebuild-check" 1 bash "${ROOT}/fedora.sh" --rebuild-check
+  _smoke_run_summary "fedora.sh --rebuild-check" "Next step:" bash "${ROOT}/fedora.sh" --rebuild-check
   _smoke_run_summary "fedora.sh --check" "Check complete" bash "${ROOT}/fedora.sh" --check
+elif (( CI == 0 )); then
+  theme_report_section "Readiness checks skipped (--quick)"
 fi
 
 if (( QUICK == 0 && CI == 0 )); then
@@ -193,8 +197,39 @@ if (( CI == 0 )); then
 fi
 _smoke_run "validate.sh --quick --install-audit" 0 bash "${ROOT}/validate.sh" --quick --install-audit
 
+theme_report_section "Health snapshot"
+_smoke_run "health snapshot refresh" 0 bash "${ROOT}/system/health_snapshot.sh" --refresh --quiet
+_smoke_run "health snapshot show" 0 bash "${ROOT}/system/health_snapshot.sh" --show
+RUNS=$((RUNS + 1))
+health_ec=0
+health_out="$(bash "${ROOT}/system/health_snapshot.sh" --show 2>&1)" || health_ec=$?
+if [[ "${health_ec}" -eq 0 ]] \
+  && ! grep -qE 'tmpfs|devtmpfs|efivarfs' <<< "${health_out}" \
+  && grep -q '\[Top memory groups\]' <<< "${health_out}"; then
+  ok "health snapshot output filtered (no tmpfs/devtmpfs/efivarfs noise)"
+else
+  FAILS=$((FAILS + 1))
+  FAIL_NAMES+=("health snapshot output filtered")
+  warn "health snapshot output filtered — unexpected filesystem noise"
+fi
+RUNS=$((RUNS + 1))
+startup_out="$(printf '0\n' | bash "${ROOT}/fedora.sh" 2>&1)" || startup_ec=$?
+startup_ec="${startup_ec:-0}"
+if [[ "${startup_ec}" -eq 0 ]] \
+  && grep -q 'Health: ' <<< "${startup_out}" \
+  && ! grep -q '\[Memory\]' <<< "${startup_out}"; then
+  ok "fedora.sh startup stays quiet (compact health line only)"
+else
+  FAILS=$((FAILS + 1))
+  FAIL_NAMES+=("fedora.sh startup stays quiet")
+  warn "fedora.sh startup health output too noisy or missing"
+fi
+
 theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "fedora.sh main menu" "${ROOT}/fedora.sh" '0\n'
+_smoke_menu "fedora.sh system area back path" "${ROOT}/fedora.sh" '1\n0\n0\n'
+_smoke_menu "fedora.sh android area back path" "${ROOT}/fedora.sh" '6\n0\n0\n'
+_smoke_menu "fedora.sh system disk/memory route" "${ROOT}/fedora.sh" '1\n2\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
 _smoke_menu "android.sh from picker" "${ROOT}/android/android.sh" '0\n' 1

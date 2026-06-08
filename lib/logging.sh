@@ -194,6 +194,31 @@ fix_script_log_ownership() {
 log_session_banner() {
   local title="${1:-Fedora toolkit script}"
   local script_name="${2:-${0##*/}}"
+  local banner_lines
+
+  banner_lines=$(
+    cat <<EOF
+============================================================
+${title}
+SESSION START : $(_log_timestamp)
+Session-ID    : ${FEDORA_LOG_SESSION_ID}
+Script        : ${script_name}
+Host          : $(hostname)
+Invoker       : $(real_user)
+Log level     : ${FEDORA_LOG_LEVEL}
+Log file      : ${LOG_FILE}
+============================================================
+
+EOF
+  )
+
+  if [[ "${FEDORA_LOG_TERMINAL_BANNER:-1}" == 0 ]]; then
+    if [[ -n "${LOG_FILE:-}" ]]; then
+      printf '%s' "${banner_lines}" >> "${LOG_FILE}"
+    fi
+    log_info "Session started"
+    return 0
+  fi
 
   if [[ -t 1 ]]; then
     common_init_colors
@@ -210,17 +235,7 @@ log_session_banner() {
     return 0
   fi
 
-  echo "============================================================"
-  echo "${title}"
-  echo "SESSION START : $(_log_timestamp)"
-  echo "Session-ID    : ${FEDORA_LOG_SESSION_ID}"
-  echo "Script        : ${script_name}"
-  echo "Host          : $(hostname)"
-  echo "Invoker       : $(real_user)"
-  echo "Log level     : ${FEDORA_LOG_LEVEL}"
-  echo "Log file      : ${LOG_FILE}"
-  echo "============================================================"
-  echo
+  printf '%s' "${banner_lines}"
   log_info "Session started"
 }
 

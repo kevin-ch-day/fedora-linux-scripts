@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# android.sh — Android RE lane launcher (standalone menu + CLI shortcuts)
+# android.sh — Android RE & MobSF launcher (standalone menu + CLI shortcuts)
 # Version: 0.1.2
 #
 # Run:
@@ -20,9 +20,9 @@ source "${ANDROID_LAUNCHER_DIR}/lib/menu.sh"
 
 usage() {
   cat <<EOF
-Android RE lane launcher — core setup, RE tools, verify, doctors.
+Android RE & MobSF launcher — core setup, RE tools, verification, and mobile analysis.
 
-From main entry: ./fedora.sh → [3]  or  ./fedora.sh --android
+From main entry: ./fedora.sh → [6]  or  ./fedora.sh --android
 
 Usage: $(basename "$0") [command|option]
 
@@ -34,6 +34,8 @@ Options:
 Commands:
   verify TOOL    apktool | jadx | smali | dex2jar | all
   core           Run android_dev_core_setup.sh (sudo)
+  core-status    Show Android core status
+  repair-node    Repair node/npm + apk-mitm tooling (sudo)
   research-doctor Full Android + MobSF doctor (rebuild finale)
 
 Fedora doctor (entry points + Android): ./fedora.sh --doctor
@@ -64,6 +66,14 @@ while [[ $# -gt 0 ]]; do
     core)
       shift
       exec sudo bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" "$@"
+      ;;
+    core-status)
+      shift
+      exec bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" --status "$@"
+      ;;
+    repair-node)
+      shift
+      exec sudo -E bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" --repair-node "$@"
       ;;
     research-doctor)
       shift

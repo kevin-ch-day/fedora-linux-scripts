@@ -102,8 +102,10 @@ android_re_with_tempdir() {
   (
     set -euo pipefail
     local tmp=""
+    local fn="$1"
+    shift
     errors_mktemp_dir tmp
-    "$@" "${tmp}"
+    "${fn}" "${tmp}" "$@"
   )
 }
 
@@ -140,7 +142,8 @@ _android_re_install_apktool_download() {
   local url url_candidates=() download_ok=0 u
 
   info "Resolving latest apktool jar URL..."
-  if url="$(android_re_release_asset_url "iBotPeaches/Apktool" '^apktool_.*\.jar$' 2>/dev/null || true)"; then
+  url="$(android_re_release_asset_url "iBotPeaches/Apktool" '^apktool_.*\.jar$' 2>/dev/null || true)"
+  if [[ -n "${url}" ]]; then
     url_candidates=("${url}")
   else
     warn "GitHub API lookup failed — falling back to known mirrors."

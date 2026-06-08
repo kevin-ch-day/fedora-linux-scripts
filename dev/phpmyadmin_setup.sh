@@ -54,8 +54,9 @@ if (( UPGRADE )); then
 fi
 
 info "Installing phpMyAdmin and required packages..."
-for pkg in phpmyadmin php-mbstring php-zip php-gd php-json php-curl php-xml; do
-  pkg_install_if_missing "${pkg}"
+pkg_install_rpm_if_missing phpMyAdmin
+for pkg in php-mbstring php-zip php-gd php-curl php-xml; do
+  pkg_install_rpm_if_missing "${pkg}"
 done
 
 info "Configuring Apache for phpMyAdmin..."

@@ -14,6 +14,8 @@ _AND_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${_AND_LIB_DIR}/common.sh"
 # shellcheck source=theme.sh
 source "${_AND_LIB_DIR}/theme.sh"
+# shellcheck source=host_context.sh
+source "${_AND_LIB_DIR}/host_context.sh"
 
 _android_theme_init() {
   common_init_colors
@@ -22,6 +24,22 @@ _android_theme_init() {
 
 _android_verify_fail() {
   theme_tool_row err "$1" "${2:-}"
+}
+
+android_install_hint() {
+  local tool="$1"
+  case "${tool}" in
+    apktool|jadx|smali|dex2jar)
+      theme_note "Install: ./android/android_re_install.sh ${tool}"
+      ;;
+    "smali/baksmali")
+      theme_note "Install: ./android/android_re_install.sh smali"
+      ;;
+    all)
+      theme_note "Install all: ./android/android_re_install.sh all"
+      theme_note "Menu: Android RE > RE tool installs > Install all + verify all"
+      ;;
+  esac
 }
 
 # Do not source ~/.bashrc (Fedora /etc/bashrc can trip nounset under set -u).
@@ -97,9 +115,13 @@ android_verify_apktool() {
   theme_verify_heading "apktool"
   if ! command -v apktool >/dev/null 2>&1; then
     _android_verify_fail "apktool" "not found on PATH"
+    android_install_hint apktool
     return 2
   fi
-  apktool --version
+  if ! apktool --version; then
+    _android_verify_fail "apktool" "command exists but did not run cleanly"
+    return 2
+  fi
 
   theme_section "Paths"
   command -v apktool
@@ -122,16 +144,24 @@ android_verify_jadx() {
   theme_verify_heading "jadx"
   if ! command -v jadx >/dev/null 2>&1; then
     _android_verify_fail "jadx" "not found on PATH"
+    android_install_hint jadx
     return 2
   fi
-  jadx --version
+  if ! jadx --version; then
+    _android_verify_fail "jadx" "command exists but did not run cleanly"
+    return 2
+  fi
 
   theme_section "jadx-gui"
   if ! command -v jadx-gui >/dev/null 2>&1; then
     _android_verify_fail "jadx-gui" "not found on PATH"
+    android_install_hint jadx
     return 2
   fi
-  jadx-gui --version
+  if ! jadx-gui --version; then
+    _android_verify_fail "jadx-gui" "command exists but did not run cleanly"
+    return 2
+  fi
 
   theme_section "Paths"
   command -v jadx jadx-gui
@@ -157,16 +187,24 @@ android_verify_smali() {
   theme_verify_heading "smali / baksmali"
   if ! command -v smali >/dev/null 2>&1; then
     _android_verify_fail "smali" "not found on PATH"
+    android_install_hint "smali/baksmali"
     return 2
   fi
-  smali --version
+  if ! smali --version; then
+    _android_verify_fail "smali" "command exists but did not run cleanly"
+    return 2
+  fi
 
   theme_section "baksmali"
   if ! command -v baksmali >/dev/null 2>&1; then
     _android_verify_fail "baksmali" "not found on PATH"
+    android_install_hint "smali/baksmali"
     return 2
   fi
-  baksmali --version
+  if ! baksmali --version; then
+    _android_verify_fail "baksmali" "command exists but did not run cleanly"
+    return 2
+  fi
 
   theme_section "Paths"
   command -v smali baksmali
@@ -204,6 +242,7 @@ android_verify_dex2jar() {
     theme_status_ok "${HOME}/.local/opt/dex2jar/current exists"
   else
     _android_verify_fail "dex2jar" "install dir missing"
+    android_install_hint dex2jar
     return 3
   fi
 
@@ -264,6 +303,7 @@ android_verify_all_re_tools() {
     theme_result_ready "All Android RE tools verified"
   else
     theme_result_issues "One or more Android RE tools failed verification"
+    android_install_hint all
   fi
   return "${rc}"
 }
@@ -305,7 +345,7 @@ android_check_version() {
 android_core_tool_status() {
   local rc=0
   if ! cmd_available java; then
-    warn "Java not on PATH (install java-21-openjdk)"
+    warn "Java not on PATH (install OpenJDK or run android_dev_core_setup.sh)"
     rc=1
   fi
   android_check_version Java java -version
@@ -323,6 +363,7 @@ android_core_tool_status() {
 }
 
 android_adb_status() {
+  local mode="${1:-full}"
   _android_theme_init
 
   theme_verify_heading "ADB"
@@ -335,9 +376,16 @@ android_adb_status() {
   theme_kv "Path" "$(cmd_binary_path adb)"
   adb version 2>&1 | head -n 2
 
-  echo
-  theme_section "Connected devices"
-  adb devices -l
+  if [[ "${mode}" == "full" ]]; then
+    echo
+    theme_section "Connected devices"
+    adb devices -l
+  else
+    echo
+    theme_section "Connected devices"
+    theme_note "Skipped in doctor mode to avoid starting the ADB daemon."
+    theme_note "Use Android menu > Doctors & ADB > ADB to enumerate devices."
+  fi
 
   echo
   theme_section "USB / udev hints"
@@ -361,12 +409,18 @@ doctor_android_research() {
   theme_set_lane android
   theme_report_header "Android Research Workstation Doctor" \
     "Host: $(hostname) · User: $(real_user)"
+  if [[ "${FEDORA_SKIP_RUNTIME_AWARENESS:-0}" != 1 ]]; then
+    health_print_runtime_awareness
+    echo
+    host_context_remediation_notes
+    echo
+  fi
 
   theme_section "Core tooling"
   android_core_tool_status || rc=1
   echo
 
-  android_adb_status || rc=1
+  android_adb_status brief || rc=1
   echo
 
   theme_section "Reverse-engineering tools"

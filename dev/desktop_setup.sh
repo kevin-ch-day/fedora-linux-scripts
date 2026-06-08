@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# desktop_setup.sh — Cinnamon primary desktop + fallback environments
-# Version: 0.1.1
+# desktop_setup.sh — Cinnamon primary desktop + optional alternate environments
+# Version: 0.2.0
 #
-# Installs Fedora @cinnamon-desktop (same as: dnf install @cinnamon-desktop)
-# plus optional GNOME/XFCE fallbacks. See dev/README.md § Desktop environments.
+# Installs Fedora desktop profiles using group names when available, then
+# package fallbacks. Default behavior installs Cinnamon plus GNOME/XFCE.
+# See dev/README.md § Desktop environments.
 #
 # Run:
 #   sudo ./dev/desktop_setup.sh
@@ -17,10 +18,13 @@ _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/packages.sh
 source "${_SCRIPT_DIR}/../lib/packages.sh"
 
-INSTALL_CINNAMON=1
-INSTALL_FALLBACKS=1
-SET_DEFAULT=0
 STATUS_ONLY=0
+SET_DEFAULT=0
+DEFAULT_SESSION="cinnamon"
+INSTALL_PROFILES=1
+PROFILE_SELECTION_CHANGED=0
+
+SELECTED_PROFILES=(cinnamon gnome xfce)
 
 # DNF group identifiers (first match wins). Used via nameref in desktop_install_profile.
 # shellcheck disable=SC2034
@@ -57,34 +61,162 @@ GNOME_PKGS=(
 XFCE_PKGS=(
   xfce4-session xfce4-panel xfce4-terminal thunar
 )
+# shellcheck disable=SC2034
+KDE_GROUPS=(
+  kde-desktop
+  '@kde-desktop-environment'
+)
+# shellcheck disable=SC2034
+KDE_PKGS=(
+  plasma-desktop sddm konsole dolphin
+)
+# shellcheck disable=SC2034
+MATE_GROUPS=(
+  '@mate-desktop'
+  mate-desktop
+)
+# shellcheck disable=SC2034
+MATE_PKGS=(
+  mate-session-manager mate-panel caja pluma marco
+)
+# shellcheck disable=SC2034
+LXQT_GROUPS=(
+  '@lxqt-desktop'
+  lxqt-desktop
+)
+# shellcheck disable=SC2034
+LXQT_PKGS=(
+  lxqt-session lxqt-panel pcmanfm-qt qterminal sddm
+)
+# shellcheck disable=SC2034
+BUDGIE_GROUPS=(
+  budgie-desktop
+  '@budgie-desktop'
+)
+# shellcheck disable=SC2034
+BUDGIE_PKGS=(
+  budgie-desktop budgie-control-center nautilus gnome-terminal
+)
+# shellcheck disable=SC2034
+COSMIC_GROUPS=(
+  cosmic-desktop
+  '@cosmic-desktop'
+)
+# shellcheck disable=SC2034
+COSMIC_PKGS=(
+  cosmic-session cosmic-files
+)
+# shellcheck disable=SC2034
+SWAY_GROUPS=(
+  swaywm-extended
+  '@swaywm-extended'
+)
+# shellcheck disable=SC2034
+SWAY_PKGS=(
+  sway swaybg swaylock swayidle waybar foot
+)
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Install desktop environments for $(real_user):
-  Primary:  Cinnamon via @cinnamon-desktop (Fedora group; see dev/README.md)
-  Fallback: GNOME, XFCE (login-screen session picker)
+Install desktop environments for $(real_user).
+Default profiles: Cinnamon + GNOME + XFCE.
+
+Available profiles:
+  cinnamon, gnome, xfce, kde, mate, lxqt, budgie, cosmic, sway
 
 Options:
   --help, -h          Show this help
   --status            List installed sessions (no install)
   --cinnamon-only     Install Cinnamon only
   --fallbacks-only    Install GNOME + XFCE only (skip Cinnamon)
+  --profiles LIST     Add profiles (comma-separated)
+  --only-profiles LIST  Replace default install set with profiles in LIST
   --set-default       Set Cinnamon as default session for $(real_user)
-  --skip-default      Do not set Cinnamon as default after install
+  --default-session NAME  Set default session name after install
+  --skip-default      Do not change default session after install
 
 Run with sudo for install/default. --status works without sudo.
 EOF
+}
+
+parse_profiles_csv() {
+  local csv="$1"
+  local out_name="$2"
+  local -n _out_ref="${out_name}"
+  local item
+  IFS=',' read -r -a _out_ref <<< "${csv}"
+  for item in "${!_out_ref[@]}"; do
+    _out_ref[$item]="$(printf '%s' "${_out_ref[$item]}" | tr '[:upper:]' '[:lower:]' | xargs)"
+  done
+}
+
+desktop_normalize_session() {
+  case "${1,,}" in
+    cinnamon|cinnamon-wayland|cinnamon2d) printf 'cinnamon\n' ;;
+    gnome|gnome-classic) printf 'gnome\n' ;;
+    xfce|xfce4) printf 'xfce\n' ;;
+    kde|plasma|plasma-desktop) printf 'plasma\n' ;;
+    mate) printf 'mate\n' ;;
+    lxqt) printf 'lxqt\n' ;;
+    budgie|budgie-desktop) printf 'budgie-desktop\n' ;;
+    cosmic) printf 'cosmic\n' ;;
+    sway) printf 'sway\n' ;;
+    *) printf '%s\n' "${1,,}" ;;
+  esac
+}
+
+desktop_profile_known() {
+  case "$1" in
+    cinnamon|gnome|xfce|kde|mate|lxqt|budgie|cosmic|sway) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+desktop_add_profile_list() {
+  local profile
+  for profile in "$@"; do
+    [[ -n "${profile}" ]] || continue
+    desktop_profile_known "${profile}" || die "Unknown desktop profile: ${profile}"
+    if [[ " ${SELECTED_PROFILES[*]} " != *" ${profile} "* ]]; then
+      SELECTED_PROFILES+=("${profile}")
+    fi
+  done
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
     --status) STATUS_ONLY=1; shift ;;
-    --cinnamon-only) INSTALL_FALLBACKS=0; shift ;;
-    --fallbacks-only) INSTALL_CINNAMON=0; shift ;;
+    --cinnamon-only) SELECTED_PROFILES=(cinnamon); INSTALL_PROFILES=1; PROFILE_SELECTION_CHANGED=1; shift ;;
+    --fallbacks-only) SELECTED_PROFILES=(gnome xfce); INSTALL_PROFILES=1; PROFILE_SELECTION_CHANGED=1; shift ;;
+    --profiles)
+      [[ $# -ge 2 ]] || die "--profiles requires a comma-separated value"
+      _desktop_profiles=()
+      parse_profiles_csv "$2" _desktop_profiles
+      desktop_add_profile_list "${_desktop_profiles[@]}"
+      INSTALL_PROFILES=1
+      PROFILE_SELECTION_CHANGED=1
+      shift 2
+      ;;
+    --only-profiles)
+      [[ $# -ge 2 ]] || die "--only-profiles requires a comma-separated value"
+      SELECTED_PROFILES=()
+      _desktop_profiles=()
+      parse_profiles_csv "$2" _desktop_profiles
+      desktop_add_profile_list "${_desktop_profiles[@]}"
+      INSTALL_PROFILES=1
+      PROFILE_SELECTION_CHANGED=1
+      shift 2
+      ;;
     --set-default) SET_DEFAULT=1; shift ;;
+    --default-session)
+      [[ $# -ge 2 ]] || die "--default-session requires a session name"
+      DEFAULT_SESSION="$(desktop_normalize_session "$2")"
+      SET_DEFAULT=1
+      shift 2
+      ;;
     --skip-default) SET_DEFAULT=-1; shift ;;
     *)
       die "Unknown option: $1 (try --help)"
@@ -120,6 +252,18 @@ desktop_show_status() {
     || warn "GNOME session not found"
   desktop_session_installed xfce && ok "XFCE session available" \
     || warn "XFCE session not found"
+  desktop_session_installed plasma && ok "KDE Plasma session available" \
+    || warn "KDE Plasma session not found"
+  desktop_session_installed mate && ok "MATE session available" \
+    || warn "MATE session not found"
+  desktop_session_installed lxqt && ok "LXQt session available" \
+    || warn "LXQt session not found"
+  desktop_session_installed budgie-desktop && ok "Budgie session available" \
+    || warn "Budgie session not found"
+  desktop_session_installed cosmic && ok "COSMIC session available" \
+    || warn "COSMIC session not found"
+  desktop_session_installed sway && ok "Sway session available" \
+    || warn "Sway session not found"
 
   local user home acct
   user="$(real_user)"
@@ -174,31 +318,48 @@ desktop_install_profile() {
   fi
 }
 
-desktop_set_cinnamon_default() {
-  local user home acct dmrc
+desktop_install_named_profile() {
+  local profile="$1"
+  case "${profile}" in
+    cinnamon) desktop_install_profile "Cinnamon (primary)" CINNAMON_GROUPS CINNAMON_PKGS ;;
+    gnome) desktop_install_profile "GNOME" GNOME_GROUPS GNOME_PKGS ;;
+    xfce) desktop_install_profile "XFCE" XFCE_GROUPS XFCE_PKGS ;;
+    kde) desktop_install_profile "KDE Plasma" KDE_GROUPS KDE_PKGS ;;
+    mate) desktop_install_profile "MATE" MATE_GROUPS MATE_PKGS ;;
+    lxqt) desktop_install_profile "LXQt" LXQT_GROUPS LXQT_PKGS ;;
+    budgie) desktop_install_profile "Budgie" BUDGIE_GROUPS BUDGIE_PKGS ;;
+    cosmic) desktop_install_profile "COSMIC" COSMIC_GROUPS COSMIC_PKGS ;;
+    sway) desktop_install_profile "Sway" SWAY_GROUPS SWAY_PKGS ;;
+    *) die "Unknown desktop profile: ${profile}" ;;
+  esac
+}
+
+desktop_set_default_session() {
+  local session user home acct dmrc
+  session="$(desktop_normalize_session "$1")"
   user="$(real_user)"
   home="$(real_home)"
   acct="/var/lib/AccountsService/users/${user}"
 
-  if desktop_session_installed cinnamon; then
-    ok "Cinnamon session is installed"
+  if desktop_session_installed "${session}"; then
+    ok "${session} session is installed"
   else
-    warn "Cinnamon session not found — default not changed"
+    warn "${session} session not found — default not changed"
     return 0
   fi
 
   if [[ -f "${acct}" ]]; then
     if rg -q '^XSession=' "${acct}" 2>/dev/null; then
-      sed -i 's/^XSession=.*/XSession=cinnamon/' "${acct}"
+      sed -i "s/^XSession=.*/XSession=${session}/" "${acct}"
     else
-      printf '\nXSession=cinnamon\n' >> "${acct}"
+      printf '\nXSession=%s\n' "${session}" >> "${acct}"
     fi
     if rg -q '^Session=' "${acct}" 2>/dev/null; then
-      sed -i 's/^Session=.*/Session=cinnamon/' "${acct}"
+      sed -i "s/^Session=.*/Session=${session}/" "${acct}"
     else
-      printf 'Session=cinnamon\n' >> "${acct}"
+      printf 'Session=%s\n' "${session}" >> "${acct}"
     fi
-    ok "Set AccountsService default session to cinnamon for ${user}"
+    ok "Set AccountsService default session to ${session} for ${user}"
   else
     warn "AccountsService file missing: ${acct} (skipped GDM default)"
   fi
@@ -207,19 +368,19 @@ desktop_set_cinnamon_default() {
   if [[ -d "${home}" ]]; then
     cat > "${dmrc}" <<EOF
 [Desktop]
-Session=cinnamon
+Session=${session}
 EOF
     chown "${user}:${user}" "${dmrc}" 2>/dev/null || true
     ok "Wrote ${dmrc} for LightDM"
   fi
 
   if have switchdesk; then
-    switchdesk cinnamon 2>/dev/null || true
-    ok "switchdesk cinnamon"
+    switchdesk "${session}" 2>/dev/null || true
+    ok "switchdesk ${session}"
   fi
 
   echo
-  info "Log out and back in, or pick Cinnamon from the gear icon on the login screen."
+  info "Log out and back in, or pick ${session} from the gear icon on the login screen."
 }
 
 desktop_ensure_display_manager() {
@@ -244,7 +405,14 @@ desktop_ensure_display_manager() {
     return 0
   fi
 
-  warn "No display manager enabled — install/enable gdm or lightdm if graphical login fails"
+  if dnf_installed sddm; then
+    info "Enabling SDDM..."
+    systemctl enable --now sddm.service
+    ok "SDDM enabled"
+    return 0
+  fi
+
+  warn "No display manager enabled — install/enable gdm, lightdm, or sddm if graphical login fails"
 }
 
 if (( STATUS_ONLY == 1 )); then
@@ -256,25 +424,28 @@ require_root "Run with sudo: sudo ./dev/desktop_setup.sh"
 require_dnf
 packages_preflight
 
-if (( SET_DEFAULT == 1 )) && (( INSTALL_CINNAMON == 0 )) && (( INSTALL_FALLBACKS == 0 )); then
-  desktop_set_cinnamon_default
+if (( SET_DEFAULT == 1 )) && (( PROFILE_SELECTION_CHANGED == 0 )); then
+  INSTALL_PROFILES=0
+fi
+
+if (( INSTALL_PROFILES == 1 )) && ((${#SELECTED_PROFILES[@]} == 0)); then
+  die "No desktop profiles selected"
+fi
+
+if (( INSTALL_PROFILES == 0 )); then
+  desktop_set_default_session "${DEFAULT_SESSION}"
   desktop_show_status
   exit 0
 fi
 
-if (( INSTALL_CINNAMON == 1 )); then
-  desktop_install_profile "Cinnamon (primary)" CINNAMON_GROUPS CINNAMON_PKGS
-fi
-
-if (( INSTALL_FALLBACKS == 1 )); then
-  desktop_install_profile "GNOME (fallback)" GNOME_GROUPS GNOME_PKGS
-  desktop_install_profile "XFCE (fallback)" XFCE_GROUPS XFCE_PKGS
-fi
+for desktop_profile in "${SELECTED_PROFILES[@]}"; do
+  desktop_install_named_profile "${desktop_profile}"
+done
 
 desktop_ensure_display_manager
 
 if (( SET_DEFAULT != -1 )); then
-  desktop_set_cinnamon_default
+  desktop_set_default_session "${DEFAULT_SESSION}"
 fi
 
 echo

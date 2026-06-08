@@ -1,6 +1,6 @@
-# Dev Workstation Lane
+# Developer Workstation Areas
 
-Git, VS Code, containers/KVM, and optional LAMP/phpMyAdmin stack.
+Git, VS Code, containers/KVM, VirtualBox, and optional LAMP/phpMyAdmin stack.
 
 **Menu:** `./dev/dev.sh` · **From main entry:** `./fedora.sh` → `[2]` or `./fedora.sh --dev`
 
@@ -15,7 +15,9 @@ Git, VS Code, containers/KVM, and optional LAMP/phpMyAdmin stack.
 # Sudo steps
 sudo ./dev/install_vscode.sh
 sudo ./dev/desktop_setup.sh          # Cinnamon primary + GNOME/XFCE fallbacks
+sudo ./dev/desktop_setup.sh --only-profiles kde --default-session plasma
 sudo ./dev/fedora_container_kvm_setup.sh
+sudo ./dev/virtualbox_setup.sh       # RPM Fusion Free + VirtualBox host packages
 
 # Optional web stack (localhost by default)
 sudo ./dev/lamp_python_setup.sh
@@ -27,26 +29,42 @@ Rebuild sequence runs KVM setup early: `./fedora.sh --rebuild`
 
 ---
 
-## Menu structure
+## Direct menus
 
 ```text
 dev/dev.sh
-├── [1] Workstation       git · VS Code · Cinnamon + fallbacks · desktop status
-├── [2] Infrastructure    Podman/KVM · research service status
-└── [3] Web stack         LAMP · phpMyAdmin · doctor · remove info.php
+├── Developer tools               git · VS Code · shell helpers
+├── Desktop environments          Cinnamon · KDE · MATE · LXQt
+├── Virtualization & containers   Podman/KVM · Docker · VirtualBox · status
+└── Web/database stack            Apache · MariaDB · PHP · phpMyAdmin
 ```
 
-CLI shortcuts: `./dev/dev.sh git|vscode|desktop|desktop-cinnamon|desktop-default|desktop-status|kvm|lamp|phpmyadmin|web-doctor`
+CLI shortcuts: `./dev/dev.sh git|vscode|desktop|desktop-kde|desktop-mate|desktop-lxqt|desktop-budgie|desktop-cosmic|desktop-sway|desktop-cinnamon|desktop-default|desktop-status|kvm|virtualbox|lamp|phpmyadmin|web-doctor`
 
-### Desktop environments (Cinnamon)
+### VirtualBox
 
-**Cinnamon** is the recommended daily driver on this workstation — traditional layout, maintained by the Linux Mint project and packaged for Fedora as `@cinnamon-desktop`.
+The VirtualBox host packages are delivered through **RPM Fusion Free** on Fedora.
+This toolkit installs the release repo package first when needed, then installs
+`VirtualBox`, `akmod-VirtualBox`, and the kernel build prerequisites.
+
+```bash
+sudo ./dev/virtualbox_setup.sh
+./dev/dev.sh virtualbox
+```
+
+If the running kernel does not match the newest `kernel-devel`, reboot into the
+newest kernel and rerun the installer. Secure Boot can also block unsigned
+VirtualBox kernel modules.
+
+### Desktop environments
+
+**Cinnamon** is still the recommended daily driver on this workstation, but the toolkit now supports additional named desktop profiles too: `gnome`, `xfce`, `kde`, `mate`, `lxqt`, `budgie`, `cosmic`, and `sway`.
 
 Official Fedora options:
 
 | Method | Command / link |
 |--------|----------------|
-| **This repo** | `sudo ./dev/desktop_setup.sh` — `@cinnamon-desktop` + GNOME/XFCE fallbacks + optional default session |
+| **This repo** | `sudo ./dev/desktop_setup.sh` — Cinnamon primary + GNOME/XFCE recovery sessions + optional default session |
 | **dnf only** | `sudo dnf install @cinnamon-desktop` then pick Cinnamon on the login screen |
 | **Live spin** | [Fedora Cinnamon Spin](https://spins.fedoraproject.org/) (try or install Cinnamon-only media) |
 | **Netinstall** | Select the Cinnamon desktop group during a netinstall |
@@ -54,13 +72,17 @@ Official Fedora options:
 This toolkit wraps the dnf group install and adds fallbacks for recovery:
 
 ```bash
-sudo ./dev/desktop_setup.sh              # Cinnamon + GNOME + XFCE; sets Cinnamon default
+sudo ./dev/desktop_setup.sh              # Cinnamon primary + GNOME/XFCE recovery; sets Cinnamon default
 sudo ./dev/desktop_setup.sh --cinnamon-only
+sudo ./dev/desktop_setup.sh --only-profiles kde --default-session plasma
+sudo ./dev/desktop_setup.sh --only-profiles mate,lxqt,budgie
+sudo ./dev/desktop_setup.sh --profiles cosmic,sway --skip-default
 sudo ./dev/desktop_setup.sh --set-default   # Cinnamon default only (no install)
+sudo ./dev/desktop_setup.sh --default-session plasma   # switch default only
 ./dev/desktop_setup.sh --status           # list sessions (no sudo)
 ```
 
-After install: log out → login screen → session menu (gear icon) → **Cinnamon**. More: [Fedora Wiki — Cinnamon](https://fedoraproject.org/wiki/Cinnamon) · [Cinnamon Spices](https://cinnamon-spices.linuxmint.com/) (themes, applets, extensions).
+After install: log out → login screen → session menu (gear icon) → pick the session you want. Common session names are `cinnamon`, `gnome`, `xfce`, `plasma`, `mate`, `lxqt`, `budgie-desktop`, `cosmic`, and `sway`.
 
 ---
 

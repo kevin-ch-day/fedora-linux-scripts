@@ -93,6 +93,13 @@ services_status_virtualization() {
   service_status_line libvirtd "libvirtd"
 }
 
+services_status_virtualization_stack() {
+  echo "Virtualization & containers:"
+  services_status_containers
+  echo
+  services_status_virtualization
+}
+
 services_status_research_stack() {
   echo "Research workstation services:"
   services_status_web_stack
@@ -118,14 +125,29 @@ services_mobsf_brief() {
   mobsf_doctor_brief || true
 }
 
+web_stack_http_code() {
+  local url="$1"
+  curl -sS -o /dev/null -w '%{http_code}' --max-time 3 "${url}" 2>/dev/null || printf '000'
+}
+
 web_stack_doctor() {
   local rc=0
+  local web_stack_installed=0
 
   common_init_colors
   theme_set_lane dev
   theme_report_header "Web stack doctor" "LAMP · MariaDB · PHP · phpMyAdmin"
+  health_print_runtime_awareness
+  echo
   services_status_web_stack
   echo
+
+  if rpm -q httpd >/dev/null 2>&1 \
+     || rpm -q mariadb-server >/dev/null 2>&1 \
+     || rpm -q php >/dev/null 2>&1 \
+     || rpm -q phpMyAdmin >/dev/null 2>&1; then
+    web_stack_installed=1
+  fi
 
   if have systemctl; then
     if [[ "$(service_unit_active httpd)" != "active" ]]; then
@@ -139,39 +161,61 @@ web_stack_doctor() {
   fi
 
   if cmd_available curl; then
-    if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1/ 2>/dev/null; then
-      ok "http://127.0.0.1/ reachable"
-    else
-      warn "http://127.0.0.1/ not reachable"
-      rc=1
-    fi
-    if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1/info.php 2>/dev/null; then
-      warn "http://127.0.0.1/info.php reachable — remove after testing (phpinfo disclosure)"
-      warn "  sudo ./dev/lamp_python_setup.sh --remove-info-php"
-    else
-      ok "info.php not exposed (good — or run lamp setup with --with-info-php to test PHP)"
-    fi
-    if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1/phpmyadmin/ 2>/dev/null; then
-      ok "http://127.0.0.1/phpmyadmin/ reachable"
-    else
-      warn "http://127.0.0.1/phpmyadmin/ not reachable (optional — run phpmyadmin_setup.sh)"
-    fi
+    local root_code info_code pma_code
+    root_code="$(web_stack_http_code http://127.0.0.1/)"
+    case "${root_code}" in
+      2*|3*|401|403) ok "http://127.0.0.1/ reachable (HTTP ${root_code})" ;;
+      *)
+        warn "http://127.0.0.1/ not reachable (HTTP ${root_code})"
+        rc=1
+        ;;
+    esac
+
+    info_code="$(web_stack_http_code http://127.0.0.1/info.php)"
+    case "${info_code}" in
+      2*|3*|401|403)
+        warn "http://127.0.0.1/info.php reachable (HTTP ${info_code}) — remove after testing (phpinfo disclosure)"
+        warn "  sudo ./dev/lamp_python_setup.sh --remove-info-php"
+        ;;
+      *)
+        ok "info.php not exposed (HTTP ${info_code}; good — or run lamp setup with --with-info-php to test PHP)"
+        ;;
+    esac
+
+    pma_code="$(web_stack_http_code http://127.0.0.1/phpmyadmin/)"
+    case "${pma_code}" in
+      2*|3*|401|403) ok "http://127.0.0.1/phpmyadmin/ reachable (HTTP ${pma_code})" ;;
+      404) warn "http://127.0.0.1/phpmyadmin/ returns 404 (optional — run phpmyadmin_setup.sh)" ;;
+      *)
+        warn "http://127.0.0.1/phpmyadmin/ not reachable (HTTP ${pma_code}; optional — run phpmyadmin_setup.sh)"
+        ;;
+    esac
   else
     warn "curl not installed; skipping HTTP checks"
   fi
 
   echo
-  local mysql_bin php_bin
-  if mysql_bin="$(cmd_binary_path mysql 2>/dev/null)"; then
-    ok "mysql client: $("${mysql_bin}" --version 2>&1 | head -n 1)"
+  local db_client_bin php_bin
+  if db_client_bin="$(cmd_binary_path mariadb 2>/dev/null)"; then
+    ok "mariadb client: $("${db_client_bin}" --version 2>&1 | head -n 1)"
+  elif db_client_bin="$(cmd_binary_path mysql 2>/dev/null)"; then
+    ok "mysql client: $("${db_client_bin}" --version 2>&1 | head -n 1)"
   else
-    warn "mysql client not on PATH"
+    if (( web_stack_installed == 0 )); then
+      warn "MariaDB client not installed yet (run lamp_python_setup.sh)"
+    else
+      warn "MariaDB client not on PATH"
+    fi
     rc=1
   fi
   if php_bin="$(cmd_binary_path php 2>/dev/null)"; then
     ok "php: $("${php_bin}" -v 2>&1 | head -n 1)"
   else
-    warn "php not on PATH"
+    if (( web_stack_installed == 0 )); then
+      warn "php CLI not installed yet (run lamp_python_setup.sh)"
+    else
+      warn "php not on PATH"
+    fi
     rc=1
   fi
   echo

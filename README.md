@@ -4,7 +4,7 @@
 
 | Entry | Use |
 |-------|-----|
-| **`./fedora.sh`** | Main menu — lanes; rebuild `[4]`; doctor `[5]`; toolkit check `[6]` |
+| **`./fedora.sh`** | Main menu — workstation areas, rebuild, health checks |
 | **`./mobsf.sh`** | MobSF stack — install/start/**doctor** (separate lifecycle) |
 | **`./fedora_rebuild.sh`** | Compatibility → `./fedora.sh --rebuild` |
 
@@ -45,11 +45,11 @@ Shared libs: `common`, `theme`, `menu`, `packages`, `health`, `android`, `androi
 
 ## Lanes
 
-| Lane | Folder | Guide |
+| Area | Folder | Guide |
 |------|--------|-------|
-| System | `system/` | [system/README.md](system/README.md) |
-| Dev | `dev/` | [dev/README.md](dev/README.md) |
-| Android RE | `android/` | [android/README.md](android/README.md) |
+| System maintenance | `system/` | [system/README.md](system/README.md) |
+| Developer workstation areas | `dev/` | [dev/README.md](dev/README.md) |
+| Android RE & MobSF entry | `android/` | [android/README.md](android/README.md) |
 | MobSF *(separate)* | `mobsf/` | [mobsf/GUIDE.md](mobsf/GUIDE.md) |
 | Legacy | `legacy/` | [legacy/README.md](legacy/README.md) |
 

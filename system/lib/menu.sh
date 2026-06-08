@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# system/lib/menu.sh — System lane menus (host, maintenance, logs)
+# system/lib/menu.sh — System maintenance menus (host, maintenance, logs)
 # Version: 0.3.1
 #
 # Standalone:  ./system/system.sh
@@ -21,6 +21,8 @@ source "${_FEDORA_ROOT}/lib/health.sh"
 source "${_FEDORA_ROOT}/lib/services.sh"
 # shellcheck source=../../lib/logging.sh
 source "${_FEDORA_ROOT}/lib/logging.sh"
+# shellcheck source=../../lib/health_snapshot.sh
+source "${_FEDORA_ROOT}/lib/health_snapshot.sh"
 # shellcheck source=../../lib/menu.sh
 source "${_FEDORA_ROOT}/lib/menu.sh"
 
@@ -28,12 +30,32 @@ system_menu_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_lane_banner "System lane" system
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Root: ${MENU_ROOT}"
-  theme_meta_line "Logs: $(log_dir)"
+  theme_lane_banner "System maintenance" system
+  if menu_is_submenu; then
+    theme_meta_line "Path: $(menu_path_text)"
+  else
+    theme_meta_line "Host: $(hostname) · User: $(real_user) · logs: $(log_dir)"
+  fi
   menu_hr
-  menu_print_breadcrumb
+  theme_page_title "${title}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
+}
+
+system_menu_maintenance_header() {
+  local title="$1"
+  local subtitle="${2:-}"
+  menu_clear_screen
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s⚙ System maintenance%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '⚙ System maintenance\n'
+  fi
+  theme_meta_line "inspect and maintain the Fedora host"
+  theme_meta_line "Path: $(menu_path_text)"
+  menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
@@ -42,7 +64,7 @@ system_menu_header() {
 
 system_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "System lane" "${fedora_root}" 0
+  menu_init "System maintenance" "${fedora_root}" 0
   theme_set_lane system
   menu_set_header_fn system_menu_header
 }
@@ -78,6 +100,30 @@ _system_cleanup_dispatch() {
 system_menu_cleanup() {
   menu_loop "Cleanup" "logs · dnf · repo permissions" \
     _system_cleanup_items _system_cleanup_dispatch
+}
+
+# ---------- Disk and memory submenu ----------
+_system_disk_memory_items() {
+  theme_section "Disk and memory"
+  menu_item 1 "Show quick disk/memory summary" "RAM · swap · filesystems · cleanup targets"
+  menu_item 2 "Refresh health snapshot" "update stored health state"
+  menu_item 3 "Export full diagnostic report" "verbose report saved to file"
+  menu_item_back
+}
+
+_system_disk_memory_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll system/health_snapshot.sh --show; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/health_snapshot.sh --refresh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/health_snapshot.sh --export; menu_pause; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_disk_memory() {
+  menu_loop "Disk and memory" "snapshot · dashboard · export" \
+    _system_disk_memory_items _system_disk_memory_dispatch
 }
 
 # ---------- OS hardening submenu ----------
@@ -196,14 +242,18 @@ system_menu_help() {
 }
 
 _system_main_items() {
+  theme_section "Readiness"
   menu_item_lane 1 system "Host information" "system snapshot"
-  menu_item_lane 2 system "Fresh install baseline" "report → logs/"
-  menu_item_lane 3 system "Rebuild readiness" "pre-rebuild validation"
-  menu_item_lane 4 system "Update Fedora" "sudo · scroll · log"
-  menu_item_lane 5 system "View logs" "log_engine · tail · follow"
-  menu_item 6 "Backup current state" "export for reinstall"
-  menu_item_lane 7 system "Cleanup" "logs · dnf · repo fix"
-  menu_item_lane 8 system "OS hardening" "Round 1 · services audit"
+  menu_item_lane 2 system "Disk and memory" "quick health dashboard"
+  menu_item_lane 3 system "Fresh install baseline" "report → logs/"
+  menu_item_lane 4 system "Rebuild readiness" "pre-rebuild validation"
+  theme_section "Operations"
+  menu_item_lane 5 system "Update Fedora" "sudo · scroll · log"
+  menu_item_lane 6 system "View logs" "log_engine · tail · follow"
+  menu_item 7 "Backup current state" "export for reinstall"
+  menu_item_lane 8 system "Cleanup" "logs · dnf · repo fix"
+  theme_section "Security"
+  menu_item_lane 9 system "OS hardening" "Round 1 · services audit"
   menu_item_lane_exit
 }
 
@@ -211,25 +261,29 @@ _system_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
     1) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
-    2) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
-    3) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
-    4)
+    2) system_menu_disk_memory; return 0 ;;
+    3) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
+    4) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    5)
       info "Update logs to: $(log_dir)/system_update.log"
       menu_run_sudo_env_script_scroll system/system_update.sh --quick
       menu_pause
       return 0
       ;;
-    5) system_menu_logs; return 0 ;;
-    6) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
-    7) system_menu_cleanup; return 0 ;;
-    8) system_menu_hardening; return 0 ;;
+    6) system_menu_logs; return 0 ;;
+    7) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
+    8) system_menu_cleanup; return 0 ;;
+    9) system_menu_hardening; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 system_main_menu() {
-  menu_loop "System menu" "MobSF stack: ./mobsf.sh" \
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn system_menu_maintenance_header
+  menu_loop "System maintenance" "host · updates · logs · cleanup" \
     _system_main_items _system_main_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dev/lib/menu.sh — Dev workstation lane menus (uses lib/menu.sh theme)
+# dev/lib/menu.sh — Developer workstation area menus (uses lib/menu.sh theme)
 # Version: 0.3.0
 #
 # Standalone:  ./dev/dev.sh
@@ -20,15 +20,76 @@ source "${_FEDORA_ROOT}/lib/services.sh"
 # shellcheck source=../../lib/menu.sh
 source "${_FEDORA_ROOT}/lib/menu.sh"
 
-dev_menu_header() {
+dev_menu_desktop_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_lane_banner "Development lane" dev
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Root: ${MENU_ROOT}"
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s🖥 Desktop environments%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '🖥 Desktop environments\n'
+  fi
+  theme_meta_line "install and manage Fedora graphical login sessions"
+  theme_meta_line "Path: $(menu_path_text)"
   menu_hr
-  menu_print_breadcrumb
+  theme_page_title "${title}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
+}
+
+dev_menu_developer_header() {
+  local title="$1"
+  local subtitle="${2:-}"
+  menu_clear_screen
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s⚡ Developer tools%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '⚡ Developer tools\n'
+  fi
+  theme_meta_line "configure and verify local developer tooling"
+  theme_meta_line "Path: $(menu_path_text)"
+  menu_hr
+  theme_page_title "${title}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
+}
+
+dev_menu_virtualization_header() {
+  local title="$1"
+  local subtitle="${2:-}"
+  menu_clear_screen
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s▣ Virtualization & containers%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '▣ Virtualization & containers\n'
+  fi
+  theme_meta_line "containers and VM host support"
+  theme_meta_line "Path: $(menu_path_text)"
+  menu_hr
+  theme_page_title "${title}"
+  if [[ -n "${subtitle}" ]]; then
+    theme_meta_line "${subtitle}"
+  fi
+}
+
+dev_menu_web_header() {
+  local title="$1"
+  local subtitle="${2:-}"
+  menu_clear_screen
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s◇ Web/database stack%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '◇ Web/database stack\n'
+  fi
+  theme_meta_line "install and verify local web and database services"
+  theme_meta_line "Path: $(menu_path_text)"
+  menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
@@ -37,118 +98,155 @@ dev_menu_header() {
 
 dev_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "Development lane" "${fedora_root}" 0
+  menu_init "Developer tools" "${fedora_root}" 0
   theme_set_lane dev
-  menu_set_header_fn dev_menu_header
+  menu_set_header_fn dev_menu_developer_header
 }
 
-# ---------- Workstation ----------
-_dev_workstation_items() {
+# ---------- Developer tools ----------
+_dev_developer_tools_items() {
   theme_section "Git"
   menu_item 1 "Git setup" "prompts for name/email"
   menu_item 2 "Git config status" "read-only"
-  theme_section "Desktop"
+  theme_section "Developer tools"
   menu_item 3 "Install VS Code" "sudo"
-  menu_item 4 "Desktop: Cinnamon + fallbacks" "sudo · @cinnamon-desktop"
-  menu_item 5 "Desktop: Cinnamon only" "sudo"
-  menu_item 6 "Desktop status" "installed sessions"
-  menu_item 7 "Set Cinnamon default" "sudo"
+  menu_item 4 "Verify developer tools" "git · code"
   menu_item_back
 }
 
-_dev_workstation_dispatch() {
+_dev_developer_tools_dispatch() {
   case "$1" in
     0) return 1 ;;
     1) menu_run_script dev/git_setup.sh; menu_pause; return 0 ;;
     2) menu_run_script_scroll dev/git_setup.sh --status; menu_pause; return 0 ;;
     3) menu_run_sudo_script_scroll dev/install_vscode.sh; menu_pause; return 0 ;;
-    4) menu_run_sudo_script_scroll dev/desktop_setup.sh; menu_pause; return 0 ;;
-    5) menu_run_sudo_script_scroll dev/desktop_setup.sh --cinnamon-only; menu_pause; return 0 ;;
+    4)
+      cmd_available git && ok "git on PATH: $(cmd_binary_path git)" || warn "git not on PATH"
+      cmd_available code && ok "code on PATH: $(cmd_binary_path code)" || warn "code not on PATH"
+      menu_pause
+      return 0
+      ;;
+    *) return 2 ;;
+  esac
+}
+
+dev_menu_developer_tools() {
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn dev_menu_developer_header
+  menu_loop "Developer tools" "git · vscode · shell helpers" \
+    _dev_developer_tools_items _dev_developer_tools_dispatch
+  menu_set_header_fn "${prev_header}"
+}
+
+# ---------- Desktop environments ----------
+_dev_desktop_items() {
+  theme_section "Install"
+  menu_item 1 "Install Cinnamon baseline" "Cinnamon primary · GNOME/XFCE recovery sessions"
+  menu_item 2 "Install KDE Plasma" "optional desktop session"
+  menu_item 3 "Install MATE" "optional desktop session"
+  menu_item 4 "Install LXQt" "optional desktop session"
+  menu_item 5 "Install all desktop environments" "Cinnamon baseline · KDE · MATE · LXQt"
+  theme_section "Status and defaults"
+  menu_item 6 "Show installed login sessions" "read-only"
+  menu_item 7 "Set Cinnamon as login default" "AccountsService · ~/.dmrc"
+  menu_item_back
+}
+
+_dev_desktop_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_sudo_script_scroll dev/desktop_setup.sh; menu_pause; return 0 ;;
+    2) menu_run_sudo_script_scroll dev/desktop_setup.sh --only-profiles kde --default-session plasma; menu_pause; return 0 ;;
+    3) menu_run_sudo_script_scroll dev/desktop_setup.sh --only-profiles mate --default-session mate; menu_pause; return 0 ;;
+    4) menu_run_sudo_script_scroll dev/desktop_setup.sh --only-profiles lxqt --default-session lxqt; menu_pause; return 0 ;;
+    5) menu_run_sudo_script_scroll dev/desktop_setup.sh --profiles kde,mate,lxqt; menu_pause; return 0 ;;
     6) menu_run_script dev/desktop_setup.sh --status; menu_pause; return 0 ;;
     7) menu_run_sudo_script_scroll dev/desktop_setup.sh --set-default; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
-dev_menu_workstation() {
-  menu_loop "Workstation" "git · editor · desktop · set GIT_NAME/GIT_EMAIL to skip prompts" \
-    _dev_workstation_items _dev_workstation_dispatch
+dev_menu_desktop_environments() {
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn dev_menu_desktop_header
+  menu_loop "Desktop environments" "Cinnamon primary · GNOME/XFCE recovery · KDE · MATE · LXQt" \
+    _dev_desktop_items _dev_desktop_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
-# ---------- Infrastructure ----------
+# ---------- Virtualization ----------
 _dev_infra_items() {
-  menu_item 1 "Containers + KVM (sudo)"
-  menu_item 2 "Research service status"
+  theme_section "Containers"
+  menu_item 1 "Install Podman engine" "podman package · basic verify"
+  menu_item 2 "Install Docker engine" "docker repo · engine package"
+  theme_section "Virtual machines"
+  menu_item 3 "Install KVM/libvirt" "qemu · libvirt · virt-manager"
+  menu_item 4 "Install VirtualBox host" "RPM Fusion · kernel modules · vboxusers"
+  theme_section "Checks"
+  menu_item 5 "Check virtualization status" "podman · docker · libvirtd · vboxdrv"
   menu_item_back
 }
 
 _dev_infra_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script_scroll dev/fedora_container_kvm_setup.sh; menu_pause; return 0 ;;
-    2) services_status_research_stack; menu_pause; return 0 ;;
+    1) menu_run_sudo_script_scroll dev/fedora_container_kvm_setup.sh --podman-only; menu_pause; return 0 ;;
+    2) menu_run_sudo_script_scroll dev/fedora_container_kvm_setup.sh --docker-only; menu_pause; return 0 ;;
+    3) menu_run_sudo_script_scroll dev/fedora_container_kvm_setup.sh --kvm-only; menu_pause; return 0 ;;
+    4) menu_run_sudo_script_scroll dev/virtualbox_setup.sh; menu_pause; return 0 ;;
+    5) services_status_virtualization_stack; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 dev_menu_infrastructure() {
-  menu_loop "Infrastructure" "podman · docker · libvirt" \
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn dev_menu_virtualization_header
+  menu_loop "Virtualization & containers" "podman · docker · kvm/libvirt · virtualbox" \
     _dev_infra_items _dev_infra_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
-# ---------- Web stack ----------
+# ---------- Web/database stack ----------
 _dev_web_items() {
-  menu_item 1 "LAMP + Python (sudo, localhost)"
-  menu_item 2 "phpMyAdmin (sudo, localhost default)"
-  menu_item 3 "Web stack doctor"
-  menu_item 4 "Remove public info.php (if created)"
+  theme_section "Components"
+  menu_item 1 "Apache" "install/enable httpd only"
+  menu_item 2 "MariaDB" "install/enable database only"
+  menu_item 3 "PHP" "install php + extensions only"
+  menu_item 4 "phpMyAdmin" "localhost default"
+  theme_section "Checks"
+  menu_item 5 "Check web/database status" "Apache · MariaDB · PHP · phpMyAdmin"
+  menu_item 6 "Remove public info.php" "if created during PHP testing"
   menu_item_back
 }
 
 _dev_web_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_sudo_script_scroll dev/lamp_python_setup.sh; menu_pause; return 0 ;;
-    2) menu_run_sudo_script_scroll dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
-    3) menu_run_script_scroll dev/web_stack_doctor.sh; menu_pause; return 0 ;;
-    4) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
+    1) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --apache-only; menu_pause; return 0 ;;
+    2) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --mariadb-only; menu_pause; return 0 ;;
+    3) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --php-only; menu_pause; return 0 ;;
+    4) menu_run_sudo_script_scroll dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
+    5) menu_run_script_scroll dev/web_stack_doctor.sh; menu_pause; return 0 ;;
+    6) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 dev_menu_web_stack() {
-  menu_loop "Web stack" "Apache · MariaDB · PHP · phpMyAdmin" \
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn dev_menu_web_header
+  menu_loop "Web/database stack" "Apache · MariaDB · PHP · phpMyAdmin" \
     _dev_web_items _dev_web_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
 dev_menu_help() {
   menu_help_docs_loop "dev/README.md" "guides · dev lane"
 }
 
-# ---------- Main dev menu ----------
-_dev_main_items() {
-  theme_section "Areas"
-  menu_item_lane 1 dev "Workstation" "git · vscode · desktop"
-  menu_item_lane 2 dev "Infrastructure" "podman · docker · kvm"
-  menu_item_lane 3 dev "Web stack" "apache · mariadb · phpmyadmin"
-  menu_item 4 "Help & docs" "guides · getting started"
-  menu_item_lane_exit
-}
-
-_dev_main_dispatch() {
-  case "$1" in
-    0) menu_lane_handle_main_exit ;;
-    1) dev_menu_workstation; return 0 ;;
-    2) dev_menu_infrastructure; return 0 ;;
-    3) dev_menu_web_stack; return 0 ;;
-    4) dev_menu_help; return 0 ;;
-    *) return 2 ;;
-  esac
-}
-
 dev_main_menu() {
-  menu_loop "Development menu" "daily dev tools · not part of guided rebuild core" \
-    _dev_main_items _dev_main_dispatch
+  dev_menu_help
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

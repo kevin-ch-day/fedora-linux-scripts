@@ -20,6 +20,14 @@ done
 
 # shellcheck source=lib/menu.sh
 source "${FEDORA_ROOT}/lib/menu.sh"
+# shellcheck source=lib/health_snapshot.sh
+source "${FEDORA_ROOT}/lib/health_snapshot.sh"
+# shellcheck source=system/lib/menu.sh
+source "${FEDORA_ROOT}/system/lib/menu.sh"
+# shellcheck source=dev/lib/menu.sh
+source "${FEDORA_ROOT}/dev/lib/menu.sh"
+# shellcheck source=android/lib/menu.sh
+source "${FEDORA_ROOT}/android/lib/menu.sh"
 
 menu_init "Fedora Workstation Toolkit" "${FEDORA_ROOT}" 1
 
@@ -41,22 +49,45 @@ _fedora_run_check() {
   fedora_toolkit_check "${FEDORA_ROOT}" "${full}" "${fix_repos}"
 }
 
+_fedora_inline_menu() {
+  local header_fn="$1"
+  local lane="$2"
+  local menu_fn="$3"
+  local prev_header="${MENU_HEADER_FN}"
+  local prev_lane="${THEME_LANE:-main}"
+  local prev_parent="${MENU_PARENT_CONTEXT:-}"
+
+  menu_set_header_fn "${header_fn}"
+  theme_set_lane "${lane}"
+  MENU_PARENT_CONTEXT="main-menu"
+  "${menu_fn}"
+  menu_set_header_fn "${prev_header}"
+  theme_set_lane "${prev_lane}"
+  MENU_PARENT_CONTEXT="${prev_parent}"
+}
+
 _fedora_open_lane() {
   local lane="$1"
   local ec=0
   case "${lane}" in
     1) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh" || ec=$? ;;
-    2) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" || ec=$? ;;
-    3) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/android/android.sh" || ec=$? ;;
-    *) die "Invalid lane: ${lane} (use 1–3)" ;;
+    2) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" --developer-tools || ec=$? ;;
+    3) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" --desktop-environments || ec=$? ;;
+    4) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" --virtualization || ec=$? ;;
+    5) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/dev/dev.sh" --web-stack || ec=$? ;;
+    6) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/android/android.sh" || ec=$? ;;
+    7) FEDORA_REBUILD_VIA_FEDORA=1 bash "${FEDORA_ROOT}/fedora_rebuild.sh" || ec=$? ;;
+    8) bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only || ec=$? ;;
+    9) _fedora_run_check || ec=$? ;;
+    *) die "Invalid menu item: ${lane} (use 1–9)" ;;
   esac
   if (( ec != 0 )); then
-    warn "Lane exited with status ${ec} — returning to main menu"
+    warn "Menu item exited with status ${ec} — returning to main menu"
   fi
 }
 
 # Non-interactive lane shortcut (must run before option parsing consumes args)
-if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-3]$ ]]; then
+if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-9]$ ]]; then
   _fedora_open_lane "$1"
   exit 0
 fi
@@ -80,10 +111,10 @@ MobSF stack (separate lifecycle):
   ./mobsf.sh
   ./mobsf.sh --doctor
 
-Usage: $(basename "$0") [options|lane]
+Usage: $(basename "$0") [options|menu-item]
 
-Lane (non-interactive):
-  1|2|3              Open System / Development / Android RE once, then exit
+Menu item (non-interactive):
+  1..9               Run one main-menu item once, then exit
 
 Options:
   --help, -h         Show this help
@@ -104,14 +135,17 @@ Options:
   --rebuild [opts]   Guided rebuild (passes options to rebuild engine)
   --rebuild-yes      Rebuild with --yes
   --dry-run          Rebuild dry-run
-  --system           Open System lane menu
-  --dev              Open Development lane menu
-  --android          Open Android RE lane menu
+  --system           Open System maintenance menu
+  --dev              Open Developer tools
+  --android          Open Android RE & MobSF
 
-Lane launchers:
+Area launchers:
   ./system/system.sh       Host · updates · logs · cleanup
-  ./dev/dev.sh             Git · VS Code · KVM · LAMP
-  ./android/android.sh     Android RE workstation
+  ./dev/dev.sh --developer-tools
+  ./dev/dev.sh --desktop-environments
+  ./dev/dev.sh --virtualization
+  ./dev/dev.sh --web-stack
+  ./android/android.sh     Android RE tools · verify · ADB · MobSF
 
 Fresh install flow:
   ./fedora.sh --check
@@ -156,30 +190,38 @@ while [[ $# -gt 0 ]]; do
     --host-context) shift; exec bash "${FEDORA_ROOT}/system/host_context.sh" "$@" ;;
     --rebuild-check) shift; exec bash "${FEDORA_ROOT}/system/rebuild_readiness_check.sh" "$@" ;;
     --system) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/system/system.sh" "$@" ;;
-    --dev) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" "$@" ;;
+    --dev) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" --developer-tools "$@" ;;
     --android) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/android/android.sh" "$@" ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
 done
 
 fedora_main_header() {
+  local health_line=""
   menu_clear_screen
   theme_lane_banner "${MENU_APP_NAME}" main
   theme_meta_line "Host: $(hostname) · User: $(real_user)"
   theme_meta_line "Root: ${MENU_ROOT}"
+  if health_line="$(health_snapshot_status_line_from_file 2>/dev/null || true)" && [[ -n "${health_line}" ]]; then
+    theme_meta_line "${health_line}"
+  fi
+  menu_hr
+  theme_page_title "Main menu"
+  theme_meta_line "choose a lane, a rebuild path, or a health check"
 }
 
 _fedora_main_items() {
-  theme_section "Main lanes"
-  menu_item_lane 1 system "System" "host · updates · logs · cleanup"
-  menu_item_lane 2 dev "Development" "git · vscode · kvm · lamp"
-  menu_item_lane 3 android "Android RE" "sdk · apktool · jadx · frida · verify"
+  theme_section "Workstation areas"
+  menu_item_lane 1 system "System maintenance" "host · updates · logs · cleanup"
+  menu_item_lane 2 dev "Developer tools" "git · vscode · shell helpers"
+  menu_item_lane 3 desktop "Desktop environments" "cinnamon · kde · mate · lxqt"
+  menu_item_lane 4 virt "Virtualization & containers" "podman · docker · kvm · virtualbox"
+  menu_item_lane 5 web "Web/database stack" "apache · mariadb · php · phpmyadmin"
+  menu_item_lane 6 android "Android RE & MobSF" "sdk · adb · jadx · apktool · mobsf"
   theme_section "Setup and health"
-  menu_item_lane 4 rebuild "Guided rebuild" "full workstation setup"
-  menu_item_lane 5 audit "Fedora doctor" "repo · lanes · workstation health"
-  menu_item_lane 6 audit "Toolkit check" "validate · smoke · rebuild readiness"
-  theme_section "Separate tools"
-  theme_note_kv "MobSF stack" "./mobsf.sh"
+  menu_item_lane 7 rebuild "Guided rebuild" "install and configure this workstation"
+  menu_item_lane 8 audit "System health check" "Fedora services · repos · workstation health"
+  menu_item_lane 9 audit "Toolkit self-test" "menu links · smoke checks · rebuild readiness"
   theme_section "Shortcuts"
   theme_shortcut "r" "repeat menu"
   echo
@@ -189,19 +231,27 @@ _fedora_main_items() {
 _fedora_main_dispatch() {
   case "$1" in
     0) info "Main menu closed. Run ./fedora.sh to return."; exit 0 ;;
-    1|2|3) _fedora_open_lane "$1"; return 0 ;;
-    4)
+    1)
+      _fedora_inline_menu system_menu_header system system_main_menu
+      return 0
+      ;;
+    2) _fedora_inline_menu dev_menu_developer_header dev dev_menu_developer_tools; return 0 ;;
+    3) _fedora_inline_menu dev_menu_desktop_header dev dev_menu_desktop_environments; return 0 ;;
+    4) _fedora_inline_menu dev_menu_virtualization_header dev dev_menu_infrastructure; return 0 ;;
+    5) _fedora_inline_menu dev_menu_web_header dev dev_menu_web_stack; return 0 ;;
+    6) _fedora_inline_menu android_menu_main_header android android_main_menu; return 0 ;;
+    7)
       info "Guided rebuild (confirm each step)"
       FEDORA_FROM_MENU=1 FEDORA_REBUILD_VIA_FEDORA=1 bash "${FEDORA_ROOT}/fedora_rebuild.sh" || true
       menu_pause
       return 0
       ;;
-    5)
+    8)
       menu_run_script_scroll system/research_doctor.sh --android-only
       menu_pause
       return 0
       ;;
-    6)
+    9)
       local prev="${MENU_SCROLL_MODE}"
       MENU_SCROLL_MODE=1
       _fedora_run_check || true
@@ -214,6 +264,7 @@ _fedora_main_dispatch() {
 }
 
 main_menu() {
+  health_snapshot_startup_refresh
   menu_set_header_fn fedora_main_header
   theme_set_lane main
   menu_loop "Main menu" "" _fedora_main_items _fedora_main_dispatch

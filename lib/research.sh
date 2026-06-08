@@ -15,6 +15,8 @@ _RESEARCH_LIB_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "${_RESEARCH_LIB_DIR}/common.sh"
 # shellcheck source=theme.sh
 source "${_RESEARCH_LIB_DIR}/theme.sh"
+# shellcheck source=host_context.sh
+source "${_RESEARCH_LIB_DIR}/host_context.sh"
 
 research_doctor_usage() {
   cat <<EOF
@@ -56,12 +58,16 @@ research_doctor_run() {
   theme_report_header "Fedora doctor" \
     "Host: $(hostname) · User: $(real_user)" \
     "Android: $(( do_android )) · MobSF: $(( do_mobsf ))"
+  health_print_runtime_awareness
+  echo
+  host_context_remediation_notes
+  echo
 
   try_run research_check_entry_points "${fedora_root}" || rc=1
   echo
 
   if (( do_android )); then
-    try_run bash "${fedora_root}/android/doctor_android_research.sh" || rc=1
+    FEDORA_SKIP_RUNTIME_AWARENESS=1 try_run bash "${fedora_root}/android/doctor_android_research.sh" || rc=1
     echo
   fi
 

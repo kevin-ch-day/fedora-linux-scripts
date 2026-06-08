@@ -106,6 +106,12 @@ pkg_binary_path() {
   cmd_binary_path "$1"
 }
 
+pkg_rpm_satisfied() {
+  local pkg="$1"
+  dnf_installed "${pkg}" && return 0
+  rpm -q --whatprovides "${pkg}" >/dev/null 2>&1
+}
+
 # Install a package via dnf if not already installed.
 pkg_install_if_missing() {
   local pkg="$1"
@@ -117,6 +123,21 @@ pkg_install_if_missing() {
   _dnf_run "Failed to install ${pkg}" install "${pkg}"
   if ! pkg_present "${pkg}"; then
     die "Installed ${pkg} but it is still not present (check package name or binary path)"
+  fi
+  ok "${pkg} installed"
+}
+
+# Install an RPM by package name only; do not require a same-named binary on PATH.
+pkg_install_rpm_if_missing() {
+  local pkg="$1"
+  if pkg_rpm_satisfied "${pkg}"; then
+    ok "${pkg} already installed"
+    return 0
+  fi
+  info "Installing ${pkg}..."
+  _dnf_run "Failed to install ${pkg}" install "${pkg}"
+  if ! pkg_rpm_satisfied "${pkg}"; then
+    die "Installed ${pkg} but no installed RPM now satisfies it"
   fi
   ok "${pkg} installed"
 }

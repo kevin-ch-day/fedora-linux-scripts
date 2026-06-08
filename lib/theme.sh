@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/theme.sh — Fedora workstation console theme (dark-first, black-terminal friendly)
-# Version: 0.4.2
+# Version: 0.5.0
 #
 # Respects NO_COLOR and FEDORA_NO_COLOR=1.
 # FEDORA_THEME=dark|light (default: dark)
@@ -76,6 +76,41 @@ theme_use_color() {
   [[ "${THEME_USE_COLOR}" -eq 1 ]]
 }
 
+theme_resolved_width() {
+  local configured="${THEME_WIDTH:-54}"
+  local cols=""
+
+  if [[ ! "${configured}" =~ ^[0-9]+$ ]] || (( configured <= 0 )); then
+    configured=54
+  fi
+
+  if [[ -t 1 ]] && _theme_have tput; then
+    cols="$(tput cols 2>/dev/null || true)"
+    if [[ "${cols}" =~ ^[0-9]+$ ]] && (( cols > 0 )); then
+      if (( cols < 52 )); then
+        printf '%s\n' "${cols}"
+        return 0
+      fi
+      if (( configured > cols - 4 )); then
+        configured=$(( cols - 4 ))
+      fi
+    fi
+  fi
+
+  (( configured < 48 )) && configured=48
+  printf '%s\n' "${configured}"
+}
+
+theme_repeat_char() {
+  local count="$1"
+  local char="${2:--}"
+  local i
+  (( count > 0 )) || return 0
+  for ((i = 0; i < count; i++)); do
+    printf '%s' "${char}"
+  done
+}
+
 # 256-color foreground when supported; empty otherwise.
 _theme_fg256() {
   local code="$1"
@@ -89,6 +124,9 @@ theme_lane_accent_code() {
   case "${lane}" in
     system) printf '%s' 75 ;;       # steel blue
     dev|development) printf '%s' 78 ;; # sea green
+    desktop) printf '%s' 117 ;;     # cool sky
+    virt|virtualization) printf '%s' 111 ;; # pale cyan
+    web) printf '%s' 180 ;;         # sand
     android) printf '%s' 208 ;;     # orange
     mobsf) printf '%s' 141 ;;       # violet
     rebuild) printf '%s' 220 ;;     # gold
@@ -102,6 +140,9 @@ theme_lane_icon() {
   case "${1:-}" in
     system) printf '⚙ ' ;;
     dev|development) printf '⚡ ' ;;
+    desktop) printf '🖥 ' ;;
+    virt|virtualization) printf '▣ ' ;;
+    web) printf '◇ ' ;;
     android) printf '◈ ' ;;
     mobsf) printf '⬡ ' ;;
     rebuild) printf '↻ ' ;;
@@ -114,12 +155,12 @@ theme_lane_icon() {
 theme_lane_subtitle() {
   case "${1:-}" in
     system) printf '%s' "host · updates · logs · hardening" ;;
-    dev|development) printf '%s' "git · vscode · kvm · lamp" ;;
+    dev|development) printf '%s' "developer tools · desktops · virtualization · web stack" ;;
     android) printf '%s' "sdk · re tools · verify" ;;
     mobsf) printf '%s' "podman stack · static analysis" ;;
     rebuild) printf '%s' "guided workstation setup" ;;
     audit|security) printf '%s' "readiness · compliance · findings" ;;
-    main|fedora) printf '%s' "fedora workstation toolkit" ;;
+    main|fedora) printf '%s' "rebuild · verify · maintain a Fedora research workstation" ;;
     *) printf '%s' "" ;;
   esac
 }
@@ -136,6 +177,9 @@ theme_set_lane() {
     case "${lane}" in
       system) THEME_ACCENT="$(tput setaf 4 2>/dev/null || true)${THEME_BOLD}" ;;
       dev|development) THEME_ACCENT="$(tput setaf 2 2>/dev/null || true)${THEME_BOLD}" ;;
+      desktop) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
+      virt|virtualization) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
+      web) THEME_ACCENT="$(tput setaf 7 2>/dev/null || true)${THEME_BOLD}" ;;
       android) THEME_ACCENT="$(tput setaf 3 2>/dev/null || true)${THEME_BOLD}" ;;
       mobsf) THEME_ACCENT="$(tput setaf 5 2>/dev/null || true)${THEME_BOLD}" ;;
       *) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
@@ -224,7 +268,7 @@ theme_init() {
 
 theme_rule() {
   local char="${1:-─}"
-  local width="${2:-${THEME_WIDTH}}"
+  local width="${2:-$(theme_resolved_width)}"
   local i
   if theme_use_color; then
     printf '%s' "${THEME_BORDER}"
@@ -240,9 +284,12 @@ theme_rule() {
 
 theme_plain_banner() {
   local title="$1"
+  local width
+  width="$(theme_resolved_width)"
   if theme_use_color; then
+    theme_rule '─' "${width}"
     echo "${THEME_TITLE}${title}${THEME_RESET}"
-    theme_rule '─'
+    theme_rule '─' "${width}"
   else
     echo "${title}"
     theme_rule '─'
@@ -258,15 +305,18 @@ theme_banner() {
 theme_lane_banner() {
   local title="$1"
   local lane="${2:-${THEME_LANE:-main}}"
-  local icon sub=""
+  local icon sub="" width
+  width="$(theme_resolved_width)"
   icon="$(theme_lane_icon "${lane}")"
   sub="$(theme_lane_subtitle "${lane}")"
   if theme_use_color; then
+    theme_rule '═' "${width}"
     echo "${THEME_ACCENT}${icon}${THEME_RESET}${THEME_TITLE}${title}${THEME_RESET}"
-    theme_rule '─'
+    theme_rule '─' "${width}"
     [[ -n "${sub}" ]] && theme_meta_line "${sub}"
   else
-    theme_plain_banner "${title}"
+    echo "${icon}${title}"
+    theme_rule '─' "${width}"
     [[ -n "${sub}" ]] && theme_meta_line "${sub}"
   fi
 }
@@ -319,10 +369,11 @@ theme_report_step() {
 }
 
 theme_page_title() {
+  local title="$1"
   if theme_use_color; then
-    echo "${THEME_BOLD}${THEME_FG}${1}${THEME_RESET}"
+    printf '%s[%s]%s\n' "${THEME_BOLD}${THEME_FG}" "${title}" "${THEME_RESET}"
   else
-    echo "${1}"
+    printf '[%s]\n' "${title}"
   fi
 }
 
@@ -371,21 +422,35 @@ theme_scroll_marker() {
 
 theme_section() {
   local title="$1"
+  local width tail
+  width="$(theme_resolved_width)"
   if [[ "${THEME_DENSITY}" == compact ]]; then
     if theme_use_color; then
-      printf '  %s▸%s %s\n' "${THEME_ACCENT}" "${THEME_RESET}" "${title}"
+      printf '  %s[%s]%s\n' "${THEME_ACCENT}" "${title}" "${THEME_RESET}"
     else
-      printf '  ▸ %s\n' "${title}"
+      printf '  [%s]\n' "${title}"
     fi
     return 0
   fi
   echo
   if theme_use_color; then
-    printf '  %s▸%s %s%s%s\n' \
-      "${THEME_ACCENT}" "${THEME_RESET}" \
-      "${THEME_BOLD}" "${title}" "${THEME_RESET}"
+    printf '  %s[%s]%s' \
+      "${THEME_ACCENT}" "${title}" "${THEME_RESET}"
+    tail=$(( width - ${#title} - 6 ))
+    if (( tail > 6 )); then
+      printf ' %s' "${THEME_BORDER}"
+      theme_repeat_char "${tail}" '-'
+      printf '%s\n' "${THEME_RESET}"
+    else
+      printf '\n'
+    fi
   else
-    printf '  ▸ %s\n' "${title}"
+    printf '  [%s] ' "${title}"
+    tail=$(( width - ${#title} - 6 ))
+    if (( tail > 4 )); then
+      theme_repeat_char "${tail}" '-'
+    fi
+    printf '\n'
   fi
 }
 
@@ -432,18 +497,19 @@ theme_option_lane() {
   fi
 
   if theme_use_color; then
-    printf '  %s[%s]%s %s%s%s%s\n' \
+    printf '  %s[%s]%s %s%s%s %s%s%s\n' \
       "${key_color}" "${num}" "${THEME_RESET}" \
-      "${THEME_ACCENT}" "${icon}" "${THEME_FG}" "${label}${THEME_RESET}${last_mark}"
+      "${THEME_ACCENT}" "${icon}" "${THEME_RESET}" \
+      "${THEME_FG}" "${label}" "${THEME_RESET}${last_mark}"
   else
     printf '  [%s] %s%s%s\n' "${num}" "${icon}" "${label}" "${last_mark}"
   fi
 
   if [[ -n "${hint}" ]]; then
     if theme_use_color; then
-      printf '      %s%s%s\n' "${THEME_DIM}" "${hint}" "${THEME_RESET}"
+      printf '      %s↳ %s%s\n' "${THEME_DIM}" "${hint}" "${THEME_RESET}"
     else
-      printf '      %s\n' "${hint}"
+      printf '      ↳ %s\n' "${hint}"
     fi
   fi
 
@@ -484,9 +550,9 @@ theme_option() {
 
   if [[ -n "${hint}" ]]; then
     if theme_use_color; then
-      printf '      %s%s%s\n' "${THEME_DIM}" "${hint}" "${THEME_RESET}"
+      printf '      %s↳ %s%s\n' "${THEME_DIM}" "${hint}" "${THEME_RESET}"
     else
-      printf '      %s\n' "${hint}"
+      printf '      ↳ %s\n' "${hint}"
     fi
   fi
 }
@@ -503,11 +569,12 @@ theme_note_kv() {
   local key="$1"
   local value="$2"
   if theme_use_color; then
-    printf '  %s%-16s%s %s%s%s\n' \
-      "${THEME_DIM}" "${key}" "${THEME_RESET}" \
+    printf '  %s[%s]%s %s›%s %s%s%s\n' \
+      "${THEME_ACCENT}" "${key}" "${THEME_RESET}" \
+      "${THEME_BORDER}" "${THEME_RESET}" \
       "${THEME_MUTED}" "${value}" "${THEME_RESET}"
   else
-    printf '  %-16s %s\n' "${key}" "${value}"
+    printf '  [%s] > %s\n' "${key}" "${value}"
   fi
 }
 
@@ -515,11 +582,12 @@ theme_shortcut() {
   local key="$1"
   local value="$2"
   if theme_use_color; then
-    printf '  %s%s%s = %s%s%s\n' \
+    printf '  %s[%s]%s %s›%s %s%s%s\n' \
       "${THEME_ACCENT}" "${key}" "${THEME_RESET}" \
+      "${THEME_DIM}" "${THEME_RESET}" \
       "${THEME_DIM}" "${value}" "${THEME_RESET}"
   else
-    printf '  %s = %s\n' "${key}" "${value}"
+    printf '  [%s] > %s\n' "${key}" "${value}"
   fi
 }
 
@@ -669,9 +737,9 @@ theme_tool_row() {
         printf '  %s[ERR]%s  %s%-12s%s %s%s%s\n' \
           "${THEME_ERROR}" "${THEME_RESET}" \
           "${THEME_FG}" "${tag}" "${THEME_RESET}" \
-          "${THEME_DIM}" "${detail}" "${THEME_RESET}" >&2
+          "${THEME_DIM}" "${detail}" "${THEME_RESET}"
       else
-        printf '  [ERROR] %-12s %s\n' "${tag}" "${detail}" >&2
+        printf '  [ERROR] %-12s %s\n' "${tag}" "${detail}"
       fi
       ;;
     miss|skip)
@@ -780,6 +848,7 @@ theme_fail_list() {
 
 theme_choice_prompt() {
   local prompt="${1:-Choice: }"
+  prompt="${prompt/Choice:/Choice ›}"
   if theme_use_color; then
     printf '%s%s%s' "${THEME_ACCENT}" "${prompt}" "${THEME_RESET}"
   else

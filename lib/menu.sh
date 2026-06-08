@@ -31,6 +31,24 @@ MENU_STACK=()
 MENU_LAST_CHOICE=""
 MENU_SCROLL_MODE=0
 MENU_IS_ROOT=0
+MENU_PARENT_CONTEXT="${MENU_PARENT_CONTEXT:-}"
+
+menu_is_submenu() {
+  ((${#MENU_STACK[@]} > 1))
+}
+
+menu_path_text() {
+  local crumb
+  crumb="$(menu_breadcrumb_text)"
+  crumb="${crumb//Main menu/Main}"
+  if [[ -n "${crumb}" ]]; then
+    printf '%s\n' "${crumb}"
+  elif ((${#MENU_STACK[@]} > 0)); then
+    printf '%s\n' "${MENU_STACK[-1]}"
+  else
+    printf '%s\n' "${MENU_APP_NAME}"
+  fi
+}
 
 menu_set_header_fn() {
   MENU_HEADER_FN="${1:?header function name required}"
@@ -45,6 +63,7 @@ menu_init() {
   MENU_IS_ROOT="${is_root}"
   MENU_STACK=()
   MENU_LAST_CHOICE=""
+  MENU_PARENT_CONTEXT="${MENU_PARENT_CONTEXT:-}"
   theme_init
 }
 
@@ -85,10 +104,13 @@ menu_header() {
   local subtitle="${2:-}"
   menu_clear_screen
   theme_lane_banner "${MENU_APP_NAME}"
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Root: ${MENU_ROOT}"
+  if menu_is_submenu; then
+    theme_meta_line "Path: $(menu_path_text)"
+  else
+    theme_meta_line "Host: $(hostname) · User: $(real_user)"
+    theme_meta_line "Path: ${MENU_ROOT}"
+  fi
   menu_hr
-  menu_print_breadcrumb
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
     theme_meta_line "${subtitle}"
@@ -136,6 +158,8 @@ menu_item_exit() {
 menu_item_lane_exit() {
   if [[ "${FEDORA_FROM_PICKER:-}" == 1 ]]; then
     menu_item 0 "Back to lane picker"
+  elif [[ "${MENU_PARENT_CONTEXT:-}" == "main-menu" ]]; then
+    menu_item 0 "Back"
   else
     menu_item 0 "Exit"
   fi
@@ -144,6 +168,8 @@ menu_item_lane_exit() {
 menu_lane_handle_main_exit() {
   if [[ "${FEDORA_FROM_PICKER:-}" == 1 ]]; then
     exit 0
+  elif [[ "${MENU_PARENT_CONTEXT:-}" == "main-menu" ]]; then
+    return 1
   fi
   menu_lane_exit_msg
   exit 0
@@ -166,9 +192,9 @@ menu_read_choice() {
   theme_choice_prompt "${prompt}"
   if ! read -r value; then
     echo
-    warn "Input closed — use [0] to leave this menu"
-    printf -v "${__var}" '%s' ""
-    return 1
+    info "Input closed — leaving this menu"
+    printf -v "${__var}" '%s' "0"
+    return 0
   fi
   printf -v "${__var}" '%s' "${value}"
 }
