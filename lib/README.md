@@ -19,6 +19,7 @@ hardening.sh       Round 1/2 actions (uses all context libs)
 security_audit.sh  Smart audit findings (uses host_context)
 baseline.sh        Fresh-install / rebuild readiness
 check.sh           fedora.sh --check orchestration
+readiness.sh       Daily driver · btrfs · LUKS · VirtualBox · package noise
 ```
 
 ## Host awareness API

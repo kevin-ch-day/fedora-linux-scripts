@@ -89,7 +89,7 @@ secure_boot_note() {
 report_virtualbox() {
   local vboxmanage_path vbox_ver
   if vboxmanage_path="$(cmd_binary_path VBoxManage 2>/dev/null)"; then
-    vbox_ver="$("${vboxmanage_path}" --version 2>/dev/null | head -n 1 || echo unknown)"
+    vbox_ver="$("${vboxmanage_path}" --version 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1 || echo unknown)"
     ok "VBoxManage: ${vboxmanage_path} (${vbox_ver})"
   else
     warn "VBoxManage not found on PATH after install"

@@ -254,11 +254,13 @@ health_ipv4_interfaces() {
 
 # ---------- systemd ----------
 health_failed_systemd_units_count() {
+  local n=0
   if ! have systemctl; then
     printf '0\n'
     return 0
   fi
-  systemctl --failed --no-legend 2>/dev/null | wc -l | tr -d ' '
+  n="$(systemctl --failed --no-legend 2>/dev/null | wc -l | tr -d ' ')" || n=0
+  printf '%s\n' "${n}"
 }
 
 health_failed_systemd_units_list() {

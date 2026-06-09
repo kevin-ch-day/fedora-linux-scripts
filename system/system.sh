@@ -51,6 +51,14 @@ Commands:
   research-doctor Full research doctor (Android + MobSF — rebuild finale)
   logs           Open logs submenu
 
+Workstation readiness (read-only by default):
+  daily-driver       Daily driver check (boot · btrfs · LUKS · vbox · noise)
+  btrfs-health       Btrfs device stats and scrub status (--scrub to start scrub)
+  luks-readiness     LUKS keyslots and header backup presence
+  virtualbox-readiness  VirtualBox modules and packages
+  package-noise      PackageKit/dnf/flatpak background processes (--stop-session)
+  post-update-check  Validate system after dnf upgrade
+
 Toolkit root: ${FEDORA_ROOT}
 EOF
 }
@@ -154,6 +162,30 @@ while [[ $# -gt 0 ]]; do
       system_menu_init "${FEDORA_ROOT}"
       system_menu_logs
       exit 0
+      ;;
+    daily-driver)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/daily_driver_check.sh" "$@"
+      ;;
+    btrfs-health)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/btrfs_health.sh" "$@"
+      ;;
+    luks-readiness)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/luks_readiness.sh" "$@"
+      ;;
+    virtualbox-readiness)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/virtualbox_readiness.sh" "$@"
+      ;;
+    package-noise)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/package_noise.sh" "$@"
+      ;;
+    post-update-check)
+      shift
+      exec bash "${SYSTEM_LAUNCHER_DIR}/post_update_check.sh" "$@"
       ;;
     *)
       die "Unknown option: $1 (try --help)"

@@ -101,6 +101,7 @@ Quick start:
   ./fedora.sh --check          All-in-one readiness (validate · smoke · rebuild)
   ./fedora.sh --check --full   Include full smoke + Fedora doctor
   ./fedora.sh --check --fix-repos   Fix DNF repos (sudo) then re-check
+  ./fedora.sh --daily-driver-check
   ./fedora.sh --doctor
   ./fedora.sh --baseline
   ./fedora.sh --rebuild-check
@@ -125,6 +126,7 @@ Options:
   --check            Validate + smoke + rebuild readiness (add --full or --fix-repos)
   --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
   --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
+  --daily-driver-check  Read-only daily driver / workstation readiness
   --doctor           Fedora doctor (repo · lanes · workstation health)
   --baseline         Fresh-install host baseline report (read-only → logs/)
   --security-audit   Read-only security audit → logs/security_audit/
@@ -182,6 +184,7 @@ while [[ $# -gt 0 ]]; do
     --rebuild) shift; _fedora_run_rebuild "$@" ;;
     --rebuild-yes) shift; _fedora_run_rebuild --yes "$@" ;;
     --dry-run) shift; _fedora_run_rebuild --dry-run "$@" ;;
+    --daily-driver-check) shift; exec bash "${FEDORA_ROOT}/system/daily_driver_check.sh" "$@" ;;
     --doctor) shift; exec bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only "$@" ;;
     --baseline) shift; exec bash "${FEDORA_ROOT}/system/fresh_install_check.sh" "$@" ;;
     --security-audit) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" "$@" ;;

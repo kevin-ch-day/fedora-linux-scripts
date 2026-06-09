@@ -147,8 +147,10 @@ theme_report_section "Help and CLI dispatch"
 _smoke_run "fedora.sh --help" 0 bash "${ROOT}/fedora.sh" --help
 _smoke_run "fedora.sh --check bad option" 1 bash "${ROOT}/fedora.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
-if (( CI == 0 )); then
+if (( CI == 0 && QUICK == 0 )); then
   _smoke_run "system.sh doctor" 0 bash "${ROOT}/system/system.sh" doctor
+elif (( CI == 0 )); then
+  theme_note "Skipping system.sh doctor in quick mode (no sudo)"
 fi
 _smoke_run "fedora.sh unknown option" 1 bash "${ROOT}/fedora.sh" --not-a-flag
 if (( CI == 0 && QUICK == 0 )); then
@@ -205,7 +207,8 @@ if [[ "${update_quiet_ec}" -eq 0 ]] \
   && ! grep -qE '^\[[0-9]{4}-[0-9]{2}-[0-9]{2}T' <<< "${update_quiet_out}" \
   && ! grep -q 'SESSION START\|SESSION END\|Session-ID' <<< "${update_quiet_out}" \
   && grep -q '\[Status\]' <<< "${update_quiet_out}" \
-  && grep -q '^Log  ' <<< "${update_quiet_out}"; then
+  && grep -q '^Log  ' <<< "${update_quiet_out}" \
+  && grep -q 'post-update-check' <<< "${update_quiet_out}"; then
   ok "system_update quiet output stays compact"
 else
   FAILS=$((FAILS + 1))
@@ -234,6 +237,16 @@ else
   FAIL_NAMES+=("system_update log keeps full detail")
   warn "system_update log missing session metadata or detailed output"
 fi
+
+theme_report_section "Workstation readiness"
+_smoke_run_summary "daily driver check" "Daily driver check complete" \
+  bash "${ROOT}/system/daily_driver_check.sh"
+_smoke_run "system.sh daily-driver" 0 bash "${ROOT}/system/system.sh" daily-driver
+_smoke_run "fedora.sh --daily-driver-check" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
+_smoke_run_summary "luks-readiness" "LUKS summary" bash "${ROOT}/system/system.sh" luks-readiness
+_smoke_run "post-update-check" 0 bash "${ROOT}/system/system.sh" post-update-check
+_smoke_run "luks-readiness --add-passphrase non-interactive" 1 \
+  bash "${ROOT}/system/luks_readiness.sh" --add-passphrase </dev/null
 
 theme_report_section "Health snapshot"
 _smoke_run "health snapshot refresh" 0 bash "${ROOT}/system/health_snapshot.sh" --refresh --quiet

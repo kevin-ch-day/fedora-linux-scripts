@@ -17,6 +17,7 @@ set -euo pipefail
 # ============================================================
 
 _SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+FEDORA_ROOT="$(cd -- "${_SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=../lib/packages.sh
 source "${_SCRIPT_DIR}/../lib/packages.sh"
 # shellcheck source=../lib/health.sh
@@ -242,6 +243,28 @@ summarize_health() {
   ui_ok "failed systemd units: ${failed_units}"
 }
 
+offer_post_update_check() {
+  local user ans
+  ui_section "Next"
+  ui_line "Run  ./system/system.sh post-update-check"
+  if (( TEST_MODE )); then
+    return 0
+  fi
+  [[ -r /dev/tty && -w /dev/tty ]] || return 0
+  printf 'Run post-update readiness check now? [y/N] ' >/dev/tty
+  IFS= read -r ans </dev/tty || return 0
+  case "${ans,,}" in
+    y|yes)
+      user="$(real_user)"
+      if [[ "${EUID}" -eq 0 && "${user}" != root ]]; then
+        sudo -u "${user}" -H bash "${FEDORA_ROOT}/system/post_update_check.sh" >&3 2>&4 || true
+      else
+        bash "${FEDORA_ROOT}/system/post_update_check.sh" >&3 2>&4 || true
+      fi
+      ;;
+  esac
+}
+
 if (( TEST_MODE )); then
   require_root() { return 0; }
   packages_preflight() {
@@ -427,5 +450,6 @@ else
   ui_warn "Fedora update completed with ${UPDATE_ISSUES} issue(s)"
 fi
 ui_line "Log  ${LOG_FILE}"
+offer_post_update_check
 
 exit $(( UPDATE_ISSUES > 0 ? 1 : 0 ))

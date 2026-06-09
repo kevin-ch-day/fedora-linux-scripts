@@ -1,10 +1,12 @@
-# Fedora Rebuild Kit
+# Fedora Workstation Control Plane
 
-**fedora-linux-scripts** — Fedora workstation automation for Android security research (**neptune** and similar hosts).
+**fedora-linux-scripts** — Fedora workstation **setup, readiness, stabilization, and repair** for Android security research (**neptune** and similar hosts). Not Mercury (no database backup, DR manifests, or prod-to-dev sync).
+
+Also known as the **Fedora Rebuild Kit** for guided install flows.
 
 | Entry | Use |
 |-------|-----|
-| **`./fedora.sh`** | Main menu — workstation areas, rebuild, health checks |
+| **`./fedora.sh`** | Main menu — setup lanes, workstation readiness, rebuild |
 | **`./mobsf.sh`** | MobSF stack — install/start/**doctor** (separate lifecycle) |
 | **`./fedora_rebuild.sh`** | Compatibility → `./fedora.sh --rebuild` |
 
@@ -13,6 +15,7 @@
 ./fedora.sh --check      # validate + smoke + rebuild readiness (start here)
 ./fedora.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
 ./fedora.sh --check --full        # + full smoke + Fedora doctor
+./fedora.sh --daily-driver-check  # read-only daily driver / stabilization report
 ./fedora.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
 ./fedora.sh --baseline   # fresh-install host baseline → logs/
 ./fedora.sh --rebuild-check   # pre-rebuild readiness only
@@ -40,6 +43,17 @@ fedora-linux-scripts/
 ```
 
 Shared libs: `common`, `theme`, `menu`, `packages`, `health`, `android`, `android_re`, `research`, `services`, `logging`.
+
+---
+
+## Two identities
+
+| Identity | Purpose |
+|----------|---------|
+| **Setup / rebuild lanes** | Install and configure: system, dev, desktop, virt, web, Android RE; MobSF separate |
+| **Readiness / stabilization** | Daily driver, btrfs/LUKS/vbox checks, package noise, post-update validation, recovery export |
+
+Workstation readiness: `./fedora.sh --daily-driver-check` or System menu → **Workstation readiness**.
 
 ---
 
@@ -80,6 +94,12 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
+| `daily_driver_check.sh` | Read-only daily driver report (`./fedora.sh --daily-driver-check`) |
+| `btrfs_health.sh` | Btrfs stats/scrub; `--scrub` starts scrub (confirm) |
+| `luks_readiness.sh` | LUKS keyslots, header backups; `--add-passphrase` (sudo · interactive) |
+| `virtualbox_readiness.sh` | vbox modules, vboxdrv, packages |
+| `package_noise.sh` | PackageKit/dnf/flatpak noise; `--stop-session` |
+| `post_update_check.sh` | After `dnf upgrade`: reboot, btrfs, services, vbox |
 | `system_update.sh` | Full Fedora update + health snapshot; `--quick` skips rpm -Va |
 | `fresh_install_check.sh` | Host baseline after fresh install (`./fedora.sh --baseline`) |
 | `rebuild_readiness_check.sh` | Pre-rebuild checks (`./fedora.sh --rebuild-check`) |
@@ -141,5 +161,6 @@ Fedora 43+ · `sudo` · network · Java 21 for RE tools
 | Doc | Purpose |
 |-----|---------|
 | [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) | Onboarding, doctors, rebuild |
+| [docs/RECOVERY.md](docs/RECOVERY.md) | Btrfs · LUKS · boot · VirtualBox recovery |
 | [docs/AUDIT.md](docs/AUDIT.md) | Maintainer audit (security, menus, QA) |
 | [logs/README.md](logs/README.md) | Logging engine |

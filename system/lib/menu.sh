@@ -126,6 +126,42 @@ system_menu_disk_memory() {
     _system_disk_memory_items _system_disk_memory_dispatch
 }
 
+# ---------- Workstation readiness submenu ----------
+_system_readiness_items() {
+  theme_section "Daily driver"
+  menu_item 1 "Daily driver check" "read-only · boot · btrfs · LUKS · vbox"
+  theme_section "Stabilization"
+  menu_item 2 "Btrfs health" "device stats · scrub status"
+  menu_item 3 "LUKS readiness" "keyslots (sudo) · header backups"
+  menu_item 4 "VirtualBox readiness" "modules · vboxdrv · packages"
+  menu_item 5 "Package / update noise" "PackageKit · dnf · flatpak"
+  menu_item 6 "Post-update check" "after dnf upgrade"
+  theme_section "Recovery"
+  menu_item 7 "Backup current state" "export for reinstall"
+  menu_item 8 "Host context snapshot" "users · network · posture"
+  menu_item_back
+}
+
+_system_readiness_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll system/daily_driver_check.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/btrfs_health.sh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/luks_readiness.sh; menu_pause; return 0 ;;
+    4) menu_run_script_scroll system/virtualbox_readiness.sh; menu_pause; return 0 ;;
+    5) menu_run_script_scroll system/package_noise.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
+    7) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
+    8) menu_run_script_scroll system/host_context.sh --summary; menu_pause; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_readiness() {
+  menu_loop "Workstation readiness" "daily driver · stabilization · recovery" \
+    _system_readiness_items _system_readiness_dispatch
+}
+
 # ---------- OS hardening submenu ----------
 _system_hardening_items() {
   theme_section "Round 1 — safe baseline"
@@ -242,15 +278,16 @@ system_menu_help() {
 }
 
 _system_main_items() {
-  theme_section "Readiness"
-  menu_item_lane 1 system "Host information" "system snapshot"
-  menu_item_lane 2 system "Disk and memory" "quick health dashboard"
-  menu_item_lane 3 system "Fresh install baseline" "report → logs/"
-  menu_item_lane 4 system "Rebuild readiness" "pre-rebuild validation"
+  theme_section "Workstation readiness"
+  menu_item_lane 1 system "Workstation readiness" "daily driver · btrfs · LUKS · vbox"
+  theme_section "Host baseline"
+  menu_item_lane 2 system "Host information" "system snapshot"
+  menu_item_lane 3 system "Disk and memory" "quick health dashboard"
+  menu_item_lane 4 system "Fresh install baseline" "report → logs/"
+  menu_item_lane 5 system "Rebuild readiness" "pre-rebuild validation"
   theme_section "Operations"
-  menu_item_lane 5 system "Update Fedora" "quiet summary · full log saved"
-  menu_item_lane 6 system "View logs" "log_engine · tail · follow"
-  menu_item 7 "Backup current state" "export for reinstall"
+  menu_item_lane 6 system "Update Fedora" "quiet summary · full log saved"
+  menu_item_lane 7 system "View logs" "log_engine · tail · follow"
   menu_item_lane 8 system "Cleanup" "logs · dnf · repo fix"
   theme_section "Security"
   menu_item_lane 9 system "OS hardening" "Round 1 · services audit"
@@ -260,18 +297,18 @@ _system_main_items() {
 _system_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
-    1) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
-    2) system_menu_disk_memory; return 0 ;;
-    3) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
-    4) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
-    5)
+    1) system_menu_readiness; return 0 ;;
+    2) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
+    3) system_menu_disk_memory; return 0 ;;
+    4) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
+    5) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    6)
       info "Update logs to: $(log_dir)/system_update.log"
       menu_run_sudo_env_script_scroll system/system_update.sh --quick
       menu_pause
       return 0
       ;;
-    6) system_menu_logs; return 0 ;;
-    7) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
+    7) system_menu_logs; return 0 ;;
     8) system_menu_cleanup; return 0 ;;
     9) system_menu_hardening; return 0 ;;
     *) return 2 ;;

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/health_snapshot.sh — lightweight runtime health snapshot + dashboard
-# Version: 0.1.0
+# Version: 0.1.1
 #
 # Quiet startup snapshot for fedora.sh and explicit System menu actions.
 # Writes:
@@ -146,10 +146,18 @@ health_snapshot_disk_size() {
 
 health_snapshot_compact_dir_lines() {
   local base="$1" limit="$2"
-  du -xhd1 "${base}" 2>/dev/null \
-    | sort -h \
-    | awk -v base="${base}" '$1 != "0" && $2 != base {print $1 "\t" $2}' \
-    | tail -n "${limit}"
+  local timeout_sec="${3:-${FEDORA_HEALTH_DU_TIMEOUT:-12}}"
+  if have timeout; then
+    timeout "${timeout_sec}" du -xhd1 "${base}" 2>/dev/null \
+      | sort -h \
+      | awk -v base="${base}" '$1 != "0" && $2 != base {print $1 "\t" $2}' \
+      | tail -n "${limit}" || true
+  else
+    du -xhd1 "${base}" 2>/dev/null \
+      | sort -h \
+      | awk -v base="${base}" '$1 != "0" && $2 != base {print $1 "\t" $2}' \
+      | tail -n "${limit}" || true
+  fi
 }
 
 health_snapshot_top_memory_lines() {
@@ -278,15 +286,17 @@ health_snapshot_generate() {
     '
   )
 
-  while IFS= read -r line; do
-    [[ -n "${line}" ]] || continue
-    system_areas+=("${line}")
-  done < <(health_snapshot_compact_dir_lines / 6)
+  if [[ "${mode}" == full || "${mode}" == export ]]; then
+    while IFS= read -r line; do
+      [[ -n "${line}" ]] || continue
+      system_areas+=("${line}")
+    done < <(health_snapshot_compact_dir_lines / 6)
 
-  while IFS= read -r line; do
-    [[ -n "${line}" ]] || continue
-    home_areas+=("${line}")
-  done < <(health_snapshot_compact_dir_lines "${HOME}" 8)
+    while IFS= read -r line; do
+      [[ -n "${line}" ]] || continue
+      home_areas+=("${line}")
+    done < <(health_snapshot_compact_dir_lines "${HOME}" 8)
+  fi
 
   while IFS= read -r line; do
     [[ -n "${line}" ]] || continue
@@ -388,18 +398,23 @@ health_snapshot_generate() {
     txt+="${line}"$'\n'
   done
   txt+=$'\n'
-  txt+="[Large system areas]"$'\n'
-  if ((${#system_areas[@]} == 0)); then
-    txt+="(no large directories detected)"$'\n'
+  if [[ "${mode}" == full || "${mode}" == export ]]; then
+    txt+="[Large system areas]"$'\n'
+    if ((${#system_areas[@]} == 0)); then
+      txt+="(no large directories detected)"$'\n'
+    else
+      for line in "${system_areas[@]}"; do txt+="${line}"$'\n'; done
+    fi
+    txt+=$'\n'
+    txt+="[Large home areas]"$'\n'
+    if ((${#home_areas[@]} == 0)); then
+      txt+="(no large directories detected)"$'\n'
+    else
+      for line in "${home_areas[@]}"; do txt+="${line}"$'\n'; done
+    fi
   else
-    for line in "${system_areas[@]}"; do txt+="${line}"$'\n'; done
-  fi
-  txt+=$'\n'
-  txt+="[Large home areas]"$'\n'
-  if ((${#home_areas[@]} == 0)); then
-    txt+="(no large directories detected)"$'\n'
-  else
-    for line in "${home_areas[@]}"; do txt+="${line}"$'\n'; done
+    txt+="[Large areas]"$'\n'
+    txt+="(skipped in quick mode — use --export or refresh with mode=full)"$'\n'
   fi
   txt+=$'\n'
   txt+="[Cleanup targets]"$'\n'
@@ -476,7 +491,7 @@ health_snapshot_refresh() {
 
 health_snapshot_startup_refresh() {
   [[ "${FEDORA_HEALTH_STARTUP:-1}" == 0 ]] && return 0
-  health_snapshot_refresh startup 0 "${FEDORA_VERBOSE:-0}" >/dev/null 2>&1 || true
+  health_snapshot_refresh quick 0 "${FEDORA_VERBOSE:-0}" >/dev/null 2>&1 || true
 }
 
 health_snapshot_export_full_report() {

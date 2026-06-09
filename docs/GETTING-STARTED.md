@@ -1,6 +1,6 @@
-# Getting Started — Fedora Rebuild Kit
+# Getting Started — Fedora Workstation Control Plane
 
-Quick map for **neptune** and other Fedora research workstations. Clone: `git clone https://github.com/kevin-ch-day/fedora-linux-scripts.git`
+Quick map for **neptune** and other Fedora research workstations. This repo is **not Mercury** (no database backup/DR). Clone: `git clone https://github.com/kevin-ch-day/fedora-linux-scripts.git`
 
 ---
 
@@ -14,7 +14,11 @@ Quick map for **neptune** and other Fedora research workstations. Clone: `git cl
 
 | Goal | Command |
 |------|---------|
-| **All-in-one readiness** | `./fedora.sh --check` |
+| **Daily driver check** | `./fedora.sh --daily-driver-check` or `./system/system.sh daily-driver` |
+| Btrfs / LUKS / VirtualBox readiness | `./system/system.sh btrfs-health` · `luks-readiness` · `virtualbox-readiness` |
+| Package update noise | `./system/system.sh package-noise` |
+| After `dnf upgrade` | `./system/system.sh post-update-check` |
+| **All-in-one toolkit check** | `./fedora.sh --check` |
 | Fix DNF repos then re-check | `./fedora.sh --check --fix-repos` (sudo) |
 | Full check (+ doctor smoke) | `./fedora.sh --check --full` |
 | System maintenance | `./system/system.sh` or `./fedora.sh --system` |
@@ -27,7 +31,8 @@ Quick map for **neptune** and other Fedora research workstations. Clone: `git cl
 | Host baseline (fresh install) | `./fedora.sh --baseline` |
 | Rebuild readiness | `./fedora.sh --rebuild-check` |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
-| Logs CLI | `./system/log_engine.sh` or System menu `[5]` |
+| Workstation readiness menu | `./fedora.sh --system` → `[1] Workstation readiness` |
+| Logs CLI | `./system/log_engine.sh` or System menu `[7]` |
 | Repo validation | `./validate.sh` |
 | Dynamic smoke tests | `./smoke_test.sh` or `./validate.sh --smoke --quick` |
 
@@ -48,6 +53,7 @@ Shortcuts:
 ./fedora.sh --check            # validate + smoke + rebuild readiness (start here)
 ./fedora.sh --check --fix-repos   # same, but fixes DNF .repo permissions first (sudo)
 ./fedora.sh --check --full     # includes full smoke + Fedora doctor
+./fedora.sh --daily-driver-check  # read-only stabilization report (Neptune-style)
 ./fedora.sh --doctor           # Fedora doctor (repo · lanes · workstation health)
 ./fedora.sh --baseline         # host baseline report → logs/
 ./fedora.sh --rebuild-check    # pre-rebuild readiness
@@ -112,10 +118,17 @@ Set `NO_COLOR=1` or pass `--no-color` on `./fedora.sh` for plain terminal output
 ## Daily workflow
 
 ```bash
+./fedora.sh --daily-driver-check   # quick read-only health (boot · btrfs · LUKS · vbox)
 ./fedora.sh          # main menu — exit a lane to return here
 ./fedora.sh 6        # jump straight into Android RE & MobSF (then exit to shell)
 ./mobsf.sh           # MobSF stack menu (separate from fedora.sh)
 ```
+
+After `sudo ./system/system_update.sh`: run `./system/system.sh post-update-check` (the update script prints this and may offer to run it).
+
+Recovery playbook (btrfs · LUKS · boot · VirtualBox): [RECOVERY.md](RECOVERY.md).
+
+Readiness checks are **read-only by default**. Destructive actions (`--scrub`, `--stop-session`, hardening) require explicit flags or menu confirmation.
 
 **Menu tips:** At any prompt, `[r]` repeats your last choice. `[0]` exits the lane picker or goes back one level in submenus. Menu reference: [AUDIT.md](AUDIT.md#menu-ux-reference).
 

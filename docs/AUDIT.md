@@ -1,6 +1,7 @@
 # Fedora Toolkit — Maintainer Audit
 
-**Repo:** `fedora-linux-scripts` · **Updated:** 2026-06-07  
+**Repo:** `fedora-linux-scripts` · **Updated:** 2026-06-09  
+**Identity:** Fedora Workstation Control Plane (setup + readiness/stabilization). **Not Mercury.**  
 **Operator guide:** [GETTING-STARTED.md](GETTING-STARTED.md) · **Script index:** [README.md](../README.md)
 
 ---
@@ -21,7 +22,33 @@ mobsf.sh  → mobsf/mobsf.sh (separate Podman stack)
 lib/      → shared helpers · mobsf/lib/ → stack-specific
 ```
 
-Scale: ~45 active task scripts · 15 lib modules · 4 lane menus.
+Scale: ~51 active task scripts · 16 lib modules · 4 lane menus.
+
+---
+
+## Workstation readiness (2026-06-09)
+
+| Check | Entry | Default |
+|-------|-------|---------|
+| Daily driver | `./fedora.sh --daily-driver-check` | read-only |
+| Btrfs health | `./system/system.sh btrfs-health` | read-only; `--scrub` confirms |
+| LUKS readiness | `./system/system.sh luks-readiness` | read-only; no passphrase output |
+| VirtualBox | `./system/system.sh virtualbox-readiness` | read-only |
+| Package noise | `./system/system.sh package-noise` | read-only; `--stop-session` explicit |
+| Post-update | `./system/system.sh post-update-check` | read-only |
+
+**Health snapshot fix:** `lib/health_snapshot.sh` quick/startup modes skip `du -xhd1 /` scans (bounded `--export` only).
+
+**Neptune lessons encoded:** btrfs corruption_errs, LUKS header backup paths, `rhgb quiet` visibility, initrd vs userspace boot delay, vboxdrv on wrong kernel, PackageKit noise.
+
+### Phase roadmap
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Daily driver + readiness CLI/menu + health snapshot quick fix | **Done** |
+| 2 | LUKS `--add-passphrase`; post-update hook; `docs/RECOVERY.md`; `docs/PHASE2-VALIDATION.md` | **Done** |
+| 3 | Readiness history under `runtime/readiness/`; compare snapshots; main-menu shortcut | Planned |
+| 4 | Fresh install stabilization wizard; auto post-update in CI/menu paths | Planned |
 
 ---
 
