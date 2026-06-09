@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run.sh — Fedora workstation control plane (lane picker + rebuild + doctor CLI)
-# Version: 1.0.0
+# Version: 1.0.1
 #
 # Run: ./run.sh [--help|--check|--smoke|--doctor|--baseline|--rebuild-check|--rebuild*|--system|--dev|--android]
 #
@@ -103,6 +103,8 @@ Quick start:
   ./run.sh --check --full   Include full smoke + Fedora doctor
   ./run.sh --check --fix-repos   Fix DNF repos (sudo) then re-check
   ./run.sh --daily-driver-check
+  ./run.sh --post-update-check
+  ./run.sh --disk-summary
   ./run.sh --doctor
   ./run.sh --baseline
   ./run.sh --rebuild-check
@@ -131,6 +133,8 @@ Options:
   --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
   --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
   --daily-driver-check  Read-only daily driver / workstation readiness
+  --post-update-check   Validate system after dnf upgrade
+  --disk-summary        Disk/memory snapshot (auto-refresh if older than 15m)
   --doctor           Fedora doctor (repo · lanes · workstation health)
   --baseline         Fresh-install host baseline report (read-only → logs/)
   --security-audit   Read-only security audit → logs/security_audit/
@@ -190,6 +194,8 @@ while [[ $# -gt 0 ]]; do
     --rebuild-yes) shift; _fedora_run_rebuild --yes "$@" ;;
     --dry-run) shift; _fedora_run_rebuild --dry-run "$@" ;;
     --daily-driver-check) shift; exec bash "${FEDORA_ROOT}/system/daily_driver_check.sh" "$@" ;;
+    --post-update-check) shift; exec bash "${FEDORA_ROOT}/system/post_update_check.sh" "$@" ;;
+    --disk-summary) shift; exec bash "${FEDORA_ROOT}/system/health_snapshot.sh" --show "$@" ;;
     --doctor) shift; exec bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only "$@" ;;
     --baseline) shift; exec bash "${FEDORA_ROOT}/system/fresh_install_check.sh" "$@" ;;
     --security-audit) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" "$@" ;;
@@ -220,7 +226,7 @@ fedora_main_header() {
 
 _fedora_main_items() {
   theme_section "Workstation areas"
-  menu_item_lane 1 system "System maintenance" "host · updates · logs · cleanup"
+  menu_item_lane 1 system "System maintenance" "daily readiness · updates · logs · cleanup"
   menu_item_lane 2 dev "Developer tools" "git · vscode · shell helpers"
   menu_item_lane 3 desktop "Desktop environments" "cinnamon · kde · mate · lxqt"
   menu_item_lane 4 virt "Virtualization & containers" "podman · docker · kvm · virtualbox"
@@ -228,8 +234,8 @@ _fedora_main_items() {
   menu_item_lane 6 android "Android RE tools" "sdk · adb · jadx · apktool"
   theme_section "Setup and health"
   menu_item_lane 7 rebuild "Guided rebuild" "install and configure this workstation"
-  menu_item_lane 8 audit "System health check" "Fedora services · repos · workstation health"
-  menu_item_lane 9 audit "Toolkit self-test" "menu links · smoke checks · rebuild readiness"
+  menu_item_lane 8 audit "System health check" "Fedora doctor · repos · Android RE entry points"
+  menu_item_lane 9 check "Toolkit self-test" "validate · smoke · rebuild readiness"
   theme_section "Shortcuts"
   theme_shortcut "r" "repeat menu"
   echo

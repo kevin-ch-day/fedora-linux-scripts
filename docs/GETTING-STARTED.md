@@ -19,9 +19,10 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Goal | Command |
 |------|---------|
 | **Daily driver check** | `./run.sh --daily-driver-check` or `./system/system.sh daily-driver` |
+| Disk/memory summary | `./run.sh --disk-summary` or `./system/health_snapshot.sh --show` |
 | Btrfs / LUKS / VirtualBox readiness | `./system/system.sh btrfs-health` · `luks-readiness` · `virtualbox-readiness` |
 | Package update noise | `./system/system.sh package-noise` |
-| After `dnf upgrade` | `./system/system.sh post-update-check` |
+| After `dnf upgrade` | `./run.sh --post-update-check` or `./system/system.sh post-update-check` |
 | **All-in-one toolkit check** | `./run.sh --check` |
 | Fix DNF repos then re-check | `./run.sh --check --fix-repos` (sudo) |
 | Full check (+ doctor smoke) | `./run.sh --check --full` |
@@ -32,10 +33,10 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Web/database stack | `./dev/dev.sh --web-stack` |
 | Android RE tools | `./android/android.sh` or `./run.sh --android` |
 | Fedora doctor | `./run.sh --doctor` |
-| Host baseline (fresh install) | `./run.sh --baseline` |
+| Fresh install report | `./run.sh --baseline` |
 | Rebuild readiness | `./run.sh --rebuild-check` |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
-| Workstation readiness menu | `./run.sh --system` → `[1] Workstation readiness` |
+| System readiness menu | `./run.sh --system` → `[1] Daily driver check` · `[2] Post-update check` |
 | Logs CLI | `./system/log_engine.sh` or System menu `[7]` |
 | Repo validation | `./validate.sh` |
 | Dynamic smoke tests | `./smoke_test.sh` or `./validate.sh --smoke --quick` |
@@ -57,7 +58,9 @@ Shortcuts:
 ./run.sh --check            # validate + smoke + rebuild readiness (start here)
 ./run.sh --check --fix-repos   # same, but fixes DNF .repo permissions first (sudo)
 ./run.sh --check --full     # includes full smoke + Fedora doctor
-./run.sh --daily-driver-check  # read-only stabilization report (Neptune-style)
+./run.sh --daily-driver-check
+./run.sh --disk-summary        # disk/memory snapshot (auto-refresh if stale)
+./run.sh --post-update-check   # after dnf upgrade
 ./run.sh --doctor           # Fedora doctor (repo · lanes · workstation health)
 ./run.sh --baseline         # host baseline report → logs/
 ./run.sh --rebuild-check    # pre-rebuild readiness
@@ -122,13 +125,15 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 ## Daily workflow
 
 ```bash
-./run.sh --daily-driver-check   # quick read-only health (boot · btrfs · LUKS · vbox)
+./run.sh --daily-driver-check
+./run.sh --disk-summary        # disk/memory snapshot (auto-refresh if stale)
+./run.sh --post-update-check   # after dnf upgrade
 ./run.sh          # main menu — exit a lane to return here
 ./run.sh 6        # jump straight into Android RE tools (then exit to shell)
 ./mobsf.sh           # MobSF stack menu (separate from run.sh)
 ```
 
-After `sudo ./system/system_update.sh`: run `./system/system.sh post-update-check` (the update script prints this and may offer to run it).
+After `sudo ./system/system_update.sh`: run `./run.sh --post-update-check` (the update script prints this and may offer to run it).
 
 Recovery playbook (btrfs · LUKS · boot · VirtualBox): [RECOVERY.md](RECOVERY.md).
 

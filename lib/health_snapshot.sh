@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/health_snapshot.sh — lightweight runtime health snapshot + dashboard
-# Version: 0.1.1
+# Version: 0.1.7
 #
 # Quiet startup snapshot for run.sh and explicit System menu actions.
 # Writes:
@@ -108,30 +108,95 @@ health_snapshot_swap_status() {
 health_snapshot_mount_source() {
   local src
   src="$(findmnt -no SOURCE "$1" 2>/dev/null | head -n 1 || true)"
-  src="${src%%\[*}"
+  if [[ "${src}" =~ ^(.+)\[[^]]+\]$ ]]; then
+    src="${BASH_REMATCH[1]}"
+  fi
   printf '%s\n' "${src}"
 }
 
 health_snapshot_base_disk_from_source() {
-  local src="$1" resolved parent chain_disk
+  local src="$1" resolved disk node type pk
   [[ -n "${src}" ]] || return 0
   resolved="$(readlink -f "${src}" 2>/dev/null || printf '%s' "${src}")"
-  chain_disk="$(lsblk -s -nrdo NAME,TYPE "${resolved}" 2>/dev/null | awk '$2=="disk"{print $1}' | tail -n 1 || true)"
-  if [[ -n "${chain_disk}" ]]; then
-    printf '%s\n' "${chain_disk}"
+  disk="$(lsblk -s -nrdo NAME,TYPE "${resolved}" 2>/dev/null | awk '$2=="disk"{d=$1} END{print d}')"
+  if [[ -n "${disk}" ]]; then
+    printf '%s\n' "${disk}"
     return 0
   fi
-  while true; do
-    parent="$(lsblk -no PKNAME "${resolved}" 2>/dev/null | head -n 1 || true)"
-    [[ -n "${parent}" ]] || break
-    resolved="/dev/${parent}"
+  node="${resolved}"
+  while [[ -n "${node}" && -e "${node}" ]]; do
+    type="$(lsblk -no TYPE "${node}" 2>/dev/null | awk 'NR==1{print $1}')"
+    if [[ "${type}" == "disk" ]]; then
+      basename "${node}"
+      return 0
+    fi
+    pk="$(lsblk -no PKNAME "${node}" 2>/dev/null | awk 'NR==1{print $1}')"
+    [[ -n "${pk}" ]] || break
+    node="/dev/${pk}"
   done
   basename "${resolved}"
 }
 
+health_snapshot_resolve_disk_node() {
+  local disk="${1-}" dev type pk
+  [[ -n "${disk}" ]] || return 1
+  dev="/dev/${disk}"
+  if [[ ! -b "${dev}" && -b "/dev/mapper/${disk}" ]]; then
+    dev="/dev/mapper/${disk}"
+  fi
+  if [[ ! -b "${dev}" ]]; then
+    printf '%s\n' "${disk}"
+    return 0
+  fi
+  type="$(lsblk -dn -o TYPE "${dev}" 2>/dev/null | awk 'NR==1{print $1}')"
+  if [[ "${type}" == "disk" ]]; then
+    printf '%s\n' "${disk}"
+    return 0
+  fi
+  pk="$(lsblk -dn -o PKNAME "${dev}" 2>/dev/null | awk 'NR==1{print $1}')"
+  [[ -n "${pk}" ]] && printf '%s\n' "${pk}" || printf '%s\n' "${disk}"
+}
+
+health_snapshot_disk_block_path() {
+  local disk="$1" candidate
+  [[ -n "${disk}" ]] || return 1
+  for candidate in "/dev/mapper/${disk}" "/dev/${disk}"; do
+    [[ -b "${candidate}" ]] || continue
+    printf '%s\n' "${candidate}"
+    return 0
+  done
+  return 1
+}
+
+health_snapshot_physical_disk_from_block() {
+  local block="$1"
+  [[ -n "${block}" ]] || return 1
+  lsblk -s -nrdo NAME,TYPE "${block}" 2>/dev/null | awk '$2=="disk"{d=$1} END{print d}'
+}
+
+health_snapshot_physical_disk_name() {
+  local disk="$1" base="" block resolved
+  [[ -n "${disk}" ]] || return 1
+  if block="$(health_snapshot_disk_block_path "${disk}")"; then
+    resolved="$(health_snapshot_physical_disk_from_block "${block}")"
+    [[ -n "${resolved}" ]] && printf '%s\n' "${resolved}" && return 0
+  fi
+  base="$(health_snapshot_resolve_disk_node "${disk}")"
+  [[ -n "${base}" ]] || return 1
+  if block="$(health_snapshot_disk_block_path "${base}")"; then
+    resolved="$(health_snapshot_physical_disk_from_block "${block}")"
+    [[ -n "${resolved}" ]] && printf '%s\n' "${resolved}" && return 0
+  fi
+  printf '%s\n' "${base}"
+}
+
 health_snapshot_disk_kind() {
-  local disk="$1" rota
-  rota="$(lsblk -dn -o ROTA "/dev/${disk}" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+  local disk="$1" base="" block rota
+  base="$(health_snapshot_physical_disk_name "${disk}" || true)"
+  if [[ -z "${base}" ]]; then
+    base="$(health_snapshot_resolve_disk_node "${disk}")"
+  fi
+  rota="$(lsblk -dn -o ROTA "/dev/${base}" 2>/dev/null | awk 'NR==1{print $1}' || true)"
   case "${rota}" in
     0) printf 'SSD\n' ;;
     1) printf 'HDD\n' ;;
@@ -140,8 +205,52 @@ health_snapshot_disk_kind() {
 }
 
 health_snapshot_disk_size() {
-  local disk="$1"
-  lsblk -dn -o SIZE "/dev/${disk}" 2>/dev/null | awk 'NR==1{print $1}' || printf 'unknown\n'
+  local disk="$1" base="" size block
+  if block="$(health_snapshot_disk_block_path "${disk}")"; then
+    size="$(lsblk -dn -o SIZE "${block}" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+    [[ -n "${size}" ]] && {
+      printf '%s\n' "${size}"
+      return 0
+    }
+    base="$(health_snapshot_physical_disk_from_block "${block}")"
+    if [[ -n "${base}" ]]; then
+      size="$(lsblk -dn -o SIZE "/dev/${base}" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+      [[ -n "${size}" ]] && {
+        printf '%s\n' "${size}"
+        return 0
+      }
+    fi
+  fi
+  printf '%s\n' "unknown"
+}
+
+health_snapshot_drive_role_label() {
+  case "$1" in
+    system) printf '%s\n' 'Fedora system drive' ;;
+    data) printf '%s\n' 'DATA drive' ;;
+    *) printf '%s\n' "$1 drive" ;;
+  esac
+}
+
+health_snapshot_format_drive_line() {
+  local role="$1" kind="$2" size="$3" disk="$4"
+  local label device
+  label="$(health_snapshot_drive_role_label "${role}")"
+  device="$(health_snapshot_physical_disk_name "${disk}" 2>/dev/null || health_snapshot_resolve_disk_node "${disk}" 2>/dev/null || true)"
+  if [[ -n "${device}" && "${device}" != "${disk}" ]]; then
+    printf '%s  %-8s  %s (%s)\n' "${kind}" "${size}" "${label}" "${device}"
+  else
+    printf '%s  %-8s  %s\n' "${kind}" "${size}" "${label}"
+  fi
+}
+
+health_snapshot_drive_display_name() {
+  local disk="$1" name=""
+  [[ -n "${disk}" ]] || return 1
+  name="$(health_snapshot_physical_disk_name "${disk}" 2>/dev/null || true)"
+  [[ -n "${name}" ]] || name="$(health_snapshot_resolve_disk_node "${disk}" 2>/dev/null || true)"
+  [[ -n "${name}" ]] || name="${disk}"
+  printf '%s\n' "${name}"
 }
 
 health_snapshot_compact_dir_lines() {
@@ -162,9 +271,130 @@ health_snapshot_compact_dir_lines() {
 
 health_snapshot_top_memory_lines() {
   ps -eo comm=,rss= \
-    | awk '{rss[$1]+=$2} END {for (cmd in rss) printf "%s\t%.1fM RSS\n", cmd, rss[cmd]/1024}' \
+    | awk '{rss[$1]+=$2} END {
+        for (cmd in rss) {
+          mib = rss[cmd] / 1024
+          if (mib >= 1024) printf "%s\t%.1fGi\n", cmd, mib / 1024
+          else printf "%s\t%.0fMi\n", cmd, mib
+        }
+      }' \
     | sort -t$'\t' -k2,2nr \
     | head -8
+}
+
+health_snapshot_os_short() {
+  local os="$1"
+  if [[ "${os}" =~ Fedora\ Linux\ ([0-9]+) ]]; then
+    printf 'Fedora %s\n' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  printf '%s\n' "${os}"
+}
+
+health_snapshot_kernel_short() {
+  local kernel="$1"
+  if [[ "${kernel}" =~ ^([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  printf '%s\n' "${kernel}"
+}
+
+health_snapshot_uptime_short() {
+  local uptime="$1"
+  uptime="${uptime// hours/h}"
+  uptime="${uptime// hour/h}"
+  uptime="${uptime// minutes/m}"
+  uptime="${uptime// minute/m}"
+  uptime="${uptime//, / }"
+  uptime="${uptime//  / }"
+  printf '%s\n' "${uptime}"
+}
+
+health_snapshot_identity_line() {
+  local host="$1" os="$2" kernel="$3" uptime="$4"
+  printf '%s · %s · kernel %s · up %s\n' \
+    "${host}" \
+    "$(health_snapshot_os_short "${os}")" \
+    "$(health_snapshot_kernel_short "${kernel}")" \
+    "$(health_snapshot_uptime_short "${uptime}")"
+}
+
+health_snapshot_needs_refresh() {
+  local txt max_age="${FEDORA_HEALTH_MAX_AGE_SEC:-900}" age now mtime
+  txt="$(health_snapshot_latest_txt)"
+  [[ -f "${txt}" ]] || return 0
+  now="$(date +%s)"
+  mtime="$(stat -c %Y "${txt}" 2>/dev/null || echo 0)"
+  age=$(( now - mtime ))
+  (( age > max_age ))
+}
+
+health_snapshot_generated_human() {
+  # e.g. 6/9/2026 1:43 PM (local time, no ISO noise)
+  date '+%-m/%-d/%Y %-I:%M %p' 2>/dev/null \
+    || date '+%m/%d/%Y %I:%M %p' 2>/dev/null \
+    || date '+%Y-%m-%d %H:%M'
+}
+
+health_snapshot_age_seconds() {
+  local txt now mtime
+  txt="$(health_snapshot_latest_txt)"
+  [[ -f "${txt}" ]] || return 1
+  now="$(date +%s)"
+  mtime="$(stat -c %Y "${txt}" 2>/dev/null || echo 0)"
+  printf '%s\n' "$(( now - mtime ))"
+}
+
+health_snapshot_age_human() {
+  local age
+  age="$(health_snapshot_age_seconds 2>/dev/null || true)"
+  [[ -n "${age}" ]] || {
+    printf 'missing\n'
+    return 0
+  }
+  if (( age < 45 )); then
+    printf 'just now\n'
+  elif (( age < 90 )); then
+    printf '1m ago\n'
+  elif (( age < 3600 )); then
+    printf '%sm ago\n' "$(( age / 60 ))"
+  else
+    printf '%sh ago\n' "$(( age / 3600 ))"
+  fi
+}
+
+health_snapshot_menu_age_hint() {
+  local age
+  if ! age="$(health_snapshot_age_seconds 2>/dev/null)"; then
+    printf 'no snapshot yet — refreshes on first view\n'
+    return 0
+  fi
+  if health_snapshot_needs_refresh; then
+    printf 'stale (%s) — auto-refreshes on view\n' "$(health_snapshot_age_human)"
+    return 0
+  fi
+  printf 'snapshot %s\n' "$(health_snapshot_age_human)"
+}
+
+health_snapshot_print_refresh_summary() {
+  local status
+  theme_init
+  status="$(health_snapshot_status_line_from_file 2>/dev/null || true)"
+  theme_rule '═'
+  if theme_use_color; then
+    printf '%s◉ Health snapshot refreshed%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+  else
+    printf '◉ Health snapshot refreshed\n'
+  fi
+  theme_rule '─'
+  if [[ -n "${status}" ]]; then
+    theme_meta_line "${status}"
+  fi
+  theme_meta_line "Updated: just now · saved: runtime/health/latest.txt"
+  theme_rule '─'
+  theme_status_info "View summary: ./system/health_snapshot.sh --show"
+  theme_status_info "Full export:  ./system/health_snapshot.sh --export"
 }
 
 health_snapshot_dnf_cache_size() {
@@ -181,26 +411,26 @@ health_snapshot_journal_size() {
   printf '%s\n' "${size}"
 }
 
-health_snapshot_mysql_note() {
+health_snapshot_mysql_note_text() {
   local data_src mysql_src data_disk mysql_disk
   data_src="$(health_snapshot_mount_source /data)"
   mysql_src="$(health_snapshot_mount_source /var/lib/mysql)"
   if [[ -n "${mysql_src}" ]]; then
     if [[ "${mysql_src}" == "${data_src}" && -n "${data_src}" ]]; then
-      printf 'NOTE /var/lib/mysql is mounted from the same source as /data.\n'
+      printf '%s\n' '/var/lib/mysql shares the same mount source as /data'
       return 0
     fi
     data_disk="$(health_snapshot_base_disk_from_source "${data_src}")"
     mysql_disk="$(health_snapshot_base_disk_from_source "${mysql_src}")"
     if [[ -n "${data_disk}" && "${data_disk}" == "${mysql_disk}" ]]; then
-      printf 'NOTE /var/lib/mysql is mounted from the same backing drive as /data.\n'
+      printf '%s\n' '/var/lib/mysql shares the same backing drive as /data'
       return 0
     fi
-    printf 'NOTE /var/lib/mysql is mounted separately from /data.\n'
+    printf '%s\n' '/var/lib/mysql is mounted separately from /data'
     return 0
   fi
   if findmnt -n /data >/dev/null 2>&1; then
-    printf 'NOTE /var/lib/mysql is not a separate mount; /data is mounted.\n'
+    printf '%s\n' '/var/lib/mysql is not a separate mount (/data is mounted)'
   fi
 }
 
@@ -238,12 +468,13 @@ health_snapshot_generate() {
   local mem_total_h mem_used_h mem_avail_h mem_total_b mem_used_b mem_avail_b
   local swap_total_h swap_used_h swap_free_h swap_total_b swap_used_b swap_free_b
   local mem_status swap_status overall_status compact_status data_state
-  local dnf_cache journal_size mysql_note
+  local dnf_cache journal_size
   local root_pct root_avail_h
   local line
 
   local -a fs_mounts=() fs_status=() fs_size=() fs_used=() fs_free=() fs_pct=() fs_fstype=()
-  local -a drive_lines=() system_areas=() home_areas=() top_mem=() summary_lines=()
+  local -a drive_lines=() system_areas=() home_areas=() top_mem=() note_lines=() summary_lines=()
+  local mysql_note_text=""
   local mount fstype size used avail pct status
 
   health_snapshot_ensure_dirs
@@ -305,7 +536,7 @@ health_snapshot_generate() {
 
   dnf_cache="$(health_snapshot_dnf_cache_size)"
   journal_size="$(health_snapshot_journal_size)"
-  mysql_note="$(health_snapshot_mysql_note || true)"
+  mysql_note_text="$(health_snapshot_mysql_note_text || true)"
 
   local root_src home_src data_src mysql_src root_disk data_disk root_kind data_kind root_size data_size
   root_src="$(health_snapshot_mount_source /)"
@@ -315,26 +546,38 @@ health_snapshot_generate() {
   root_disk="$(health_snapshot_base_disk_from_source "${root_src}")"
   data_disk="$(health_snapshot_base_disk_from_source "${data_src}")"
 
+  local root_disk_node="" data_disk_node="" same_root_home=0 mysql_on_data=0
+  [[ -n "${root_disk}" ]] && root_disk_node="$(health_snapshot_resolve_disk_node "${root_disk}")"
+  [[ -n "${data_disk}" ]] && data_disk_node="$(health_snapshot_resolve_disk_node "${data_disk}")"
+
+  if [[ -n "${root_src}" && -n "${home_src}" && "${root_src}" == "${home_src}" ]]; then
+    same_root_home=1
+  fi
+  if [[ -n "${mysql_src}" && -n "${data_disk}" \
+    && "$(health_snapshot_base_disk_from_source "${mysql_src}")" == "${data_disk}" ]]; then
+    mysql_on_data=1
+  fi
+
   if [[ -n "${root_disk}" ]]; then
     root_kind="$(health_snapshot_disk_kind "${root_disk}")"
     root_size="$(health_snapshot_disk_size "${root_disk}")"
-    drive_lines+=("${root_kind}  ${root_disk}   ${root_size}  Fedora system drive")
-    if [[ -n "${home_src}" && "$(health_snapshot_base_disk_from_source "${home_src}")" == "${root_disk}" ]]; then
+    drive_lines+=("$(health_snapshot_format_drive_line system "${root_kind}" "${root_size}" "${root_disk}")")
+    if (( same_root_home )); then
       drive_lines+=("     └─ backs / and /home")
     else
       drive_lines+=("     └─ backs /")
     fi
   fi
 
-  if [[ -n "${data_disk}" && "${data_disk}" != "${root_disk}" ]]; then
+  if [[ -n "${data_disk}" && "${data_disk_node}" != "${root_disk_node}" ]]; then
     data_kind="$(health_snapshot_disk_kind "${data_disk}")"
     data_size="$(health_snapshot_disk_size "${data_disk}")"
     drive_lines+=("")
-    drive_lines+=("${data_kind}  ${data_disk}   ${data_size}  DATA drive")
-    if [[ -n "${mysql_src}" && "$(health_snapshot_base_disk_from_source "${mysql_src}")" == "${data_disk}" ]]; then
-      drive_lines+=("     └─ mounted at /data and also backs /var/lib/mysql")
+    drive_lines+=("$(health_snapshot_format_drive_line data "${data_kind}" "${data_size}" "${data_disk}")")
+    if (( mysql_on_data )); then
+      drive_lines+=("     └─ /data · /var/lib/mysql")
     else
-      drive_lines+=("     └─ mounted at /data")
+      drive_lines+=("     └─ backs /data")
     fi
   fi
 
@@ -353,45 +596,46 @@ health_snapshot_generate() {
   overall_status="$(health_snapshot_worst_status "${mem_status}" "${swap_status}" "${fs_status[@]}")"
   compact_status="Health: ${overall_status} · root ${root_pct}% used · RAM ${root_avail_h} available · ${data_state}"
 
-  summary_lines+=("${overall_status} Disk space summary computed from key mounts.")
   case "${mem_status}" in
-    BAD) summary_lines+=("BAD RAM available is under 4G.") ;;
-    WARN) summary_lines+=("WARN RAM available is under 8G.") ;;
-    *) summary_lines+=("OK RAM available is healthy.") ;;
+    BAD) note_lines+=("RAM available is under 4G") ;;
+    WARN) note_lines+=("RAM available is under 8G") ;;
   esac
   case "${swap_status}" in
-    WARN) summary_lines+=("WARN Swap usage is elevated.") ;;
-    NOTE) summary_lines+=("NOTE Swap is in use.") ;;
-    *) summary_lines+=("OK Swap is unused.") ;;
+    WARN) note_lines+=("Swap usage is elevated") ;;
+    NOTE) note_lines+=("Swap is in use") ;;
   esac
-  if [[ -n "${mysql_note}" ]]; then
-    summary_lines+=("${mysql_note%$'\n'}")
+  if [[ -n "${mysql_note_text}" ]] && (( ! mysql_on_data )); then
+    note_lines+=("${mysql_note_text}")
   fi
+  if [[ "${mode}" != full && "${mode}" != export ]]; then
+    note_lines+=("Full directory scan: Disk and memory → [3] Export, or: ./system/health_snapshot.sh --export")
+  fi
+  summary_lines=("${note_lines[@]}")
 
   local txt=""
   txt+="══════════════════════════════════════════════════════"$'\n'
   txt+="◉ Disk and memory summary"$'\n'
   txt+="──────────────────────────────────────────────────────"$'\n'
-  txt+="Host    : ${host}"$'\n'
-  txt+="OS      : ${os}"$'\n'
-  txt+="Kernel  : ${kernel}"$'\n'
-  txt+="Uptime  : ${uptime}"$'\n'
-  txt+="Generated: $(date -Is)"$'\n'
-  txt+="Compact : ${compact_status}"$'\n'
+  txt+="$(health_snapshot_identity_line "${host}" "${os}" "${kernel}" "${uptime}")"$'\n'
+  txt+="${compact_status}"$'\n'
+  txt+="Generated: $(health_snapshot_generated_human)"$'\n'
   txt+="──────────────────────────────────────────────────────"$'\n\n'
-  txt+="[System]"$'\n'
-  txt+="Host    : ${host}"$'\n'
-  txt+="Fedora  : ${os}"$'\n'
-  txt+="Kernel  : ${kernel}"$'\n'
-  txt+="Uptime  : ${uptime}"$'\n\n'
   txt+="[Memory]"$'\n'
   txt+="${mem_status}   RAM   ${mem_total_h} total · ${mem_used_h} used · ${mem_avail_h} available"$'\n'
   txt+="${swap_status}   Swap  ${swap_total_h} total · ${swap_used_h} used · ${swap_free_h} free"$'\n\n'
   txt+="[Filesystems]"$'\n'
   for mount in "${!fs_mounts[@]}"; do
-    txt+="${fs_status[$mount]}   ${fs_mounts[$mount]} ${fs_size[$mount]} total · ${fs_used[$mount]} used · ${fs_free[$mount]} free · ${fs_pct[$mount]}%"$'\n'
+    if (( same_root_home )) && [[ "${fs_mounts[$mount]}" == "/home" ]]; then
+      continue
+    fi
+    printf -v _fs_row '%-5s %-14s %6s · %6s used · %6s free · %3s%%\n' \
+      "${fs_status[$mount]}" "${fs_mounts[$mount]}" "${fs_size[$mount]}" \
+      "${fs_used[$mount]}" "${fs_free[$mount]}" "${fs_pct[$mount]}"
+    txt+="${_fs_row}"
   done
-  [[ -n "${mysql_note}" ]] && txt+="${mysql_note}"
+  if (( same_root_home )); then
+    txt+="OK    /home          same backing store as /"$'\n'
+  fi
   txt+=$'\n'
   txt+="[Drives]"$'\n'
   for line in "${drive_lines[@]}"; do
@@ -412,21 +656,23 @@ health_snapshot_generate() {
     else
       for line in "${home_areas[@]}"; do txt+="${line}"$'\n'; done
     fi
-  else
-    txt+="[Large areas]"$'\n'
-    txt+="(skipped in quick mode — use --export or refresh with mode=full)"$'\n'
+    txt+=$'\n'
   fi
-  txt+=$'\n'
   txt+="[Cleanup targets]"$'\n'
   txt+="OK   DNF cache    ${dnf_cache}"$'\n'
   txt+="OK   Journal      ${journal_size}"$'\n\n'
-  txt+="[Top memory groups]"$'\n'
+  txt+="[Top memory]"$'\n'
   for line in "${top_mem[@]}"; do
-    txt+="$(cut -f1 <<< "${line}") $(cut -f2 <<< "${line}")"$'\n'
+    printf -v _mem_row '%-14s %s\n' "$(cut -f1 <<< "${line}")" "$(cut -f2 <<< "${line}")"
+    txt+="${_mem_row}"
   done
-  txt+=$'\n'
-  txt+="[Summary]"$'\n'
-  for line in "${summary_lines[@]}"; do txt+="${line}"$'\n'; done
+  if ((${#note_lines[@]} > 0)); then
+    txt+=$'\n'
+    txt+="[Notes]"$'\n'
+    for line in "${note_lines[@]}"; do
+      txt+="· ${line}"$'\n'
+    done
+  fi
 
   local json fs_json="" summary_json="" system_json="" home_json="" top_json="" drives_json=""
   for mount in "${!fs_mounts[@]}"; do
@@ -467,7 +713,7 @@ health_snapshot_generate() {
   json+="\"memory\":{\"status\":\"${mem_status}\",\"total\":\"$(health_snapshot_json_escape "${mem_total_h}")\",\"used\":\"$(health_snapshot_json_escape "${mem_used_h}")\",\"available\":\"$(health_snapshot_json_escape "${mem_avail_h}")\"},"
   json+="\"swap\":{\"status\":\"${swap_status}\",\"total\":\"$(health_snapshot_json_escape "${swap_total_h}")\",\"used\":\"$(health_snapshot_json_escape "${swap_used_h}")\",\"free\":\"$(health_snapshot_json_escape "${swap_free_h}")\"},"
   json+="\"filesystems\":[${fs_json}],"
-  json+="\"data_mysql_note\":\"$(health_snapshot_json_escape "${mysql_note}")\","
+  json+="\"data_mysql_note\":\"$(health_snapshot_json_escape "${mysql_note_text}")\","
   json+="\"drives\":[${drives_json}],"
   json+="\"large_system_areas\":[${system_json}],"
   json+="\"large_home_areas\":[${home_json}],"
@@ -504,7 +750,7 @@ health_snapshot_export_full_report() {
     echo "══════════════════════════════════════════════════════"
     echo "◉ Full health diagnostic report"
     echo "──────────────────────────────────────────────────────"
-    echo "Generated: $(date -Is)"
+    echo "Generated: $(health_snapshot_generated_human)"
     echo "Root: $(fedora_toolkit_root)"
     echo
     cat "$(health_snapshot_latest_txt)" 2>/dev/null || true

@@ -56,7 +56,7 @@ Shared libs: `common`, `theme`, `menu`, `packages`, `health`, `android`, `androi
 | **Setup / rebuild lanes** | Install and configure: system, dev, desktop, virt, web, Android RE; MobSF separate |
 | **Readiness / stabilization** | Daily driver, btrfs/LUKS/vbox checks, package noise, post-update validation, recovery export |
 
-Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Workstation readiness**.
+Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Daily driver check** `[1]`.
 
 ---
 

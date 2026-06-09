@@ -245,6 +245,8 @@ _smoke_run_summary "daily driver check" "Daily driver check complete" \
   bash "${ROOT}/system/daily_driver_check.sh"
 _smoke_run "system.sh daily-driver" 0 bash "${ROOT}/system/system.sh" daily-driver
 _smoke_run "run.sh --daily-driver-check" 0 bash "${ROOT}/run.sh" --daily-driver-check
+_smoke_run "run.sh --post-update-check" 0 bash "${ROOT}/run.sh" --post-update-check
+_smoke_run "run.sh --disk-summary" 0 bash "${ROOT}/run.sh" --disk-summary
 _smoke_run "fedora.sh --daily-driver-check (compat)" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
 _smoke_run_summary "luks-readiness" "LUKS summary" bash "${ROOT}/system/system.sh" luks-readiness
 _smoke_run "post-update-check" 0 bash "${ROOT}/system/system.sh" post-update-check
@@ -259,7 +261,7 @@ health_ec=0
 health_out="$(bash "${ROOT}/system/health_snapshot.sh" --show 2>&1)" || health_ec=$?
 if [[ "${health_ec}" -eq 0 ]] \
   && ! grep -qE 'tmpfs|devtmpfs|efivarfs' <<< "${health_out}" \
-  && grep -q '\[Top memory groups\]' <<< "${health_out}"; then
+  && grep -q '\[Top memory\]' <<< "${health_out}"; then
   ok "health snapshot output filtered (no tmpfs/devtmpfs/efivarfs noise)"
 else
   FAILS=$((FAILS + 1))
@@ -283,7 +285,7 @@ theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
 _smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '1\n0\n0\n'
 _smoke_menu "run.sh android area back path" "${ROOT}/run.sh" '6\n0\n0\n'
-_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '1\n2\n0\n0\n0\n'
+_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '1\n5\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
 _smoke_menu "android.sh from picker" "${ROOT}/android/android.sh" '0\n' 1

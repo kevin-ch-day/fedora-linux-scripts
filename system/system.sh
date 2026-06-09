@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # system.sh — System maintenance launcher (host, maintenance, logs)
-# Version: 0.1.6
+# Version: 0.1.8
 #
 # Run:
 #   ./system/system.sh
@@ -19,10 +19,11 @@ source "${SYSTEM_LAUNCHER_DIR}/lib/menu.sh"
 
 usage() {
   cat <<EOF
-System maintenance — host maintenance, baseline, updates, logs, cleanup.
+System maintenance — daily readiness, host snapshot, updates, logs, cleanup.
 
 From main entry: ./run.sh → [1]  or  ./run.sh --system
-System health check: ./run.sh --doctor  or  ./run.sh → [8]
+Daily driver: ./run.sh --daily-driver-check · Disk summary: ./run.sh --disk-summary
+Post-update: ./run.sh --post-update-check · Fedora doctor: ./run.sh --doctor (main menu [8])
 
 Usage: $(basename "$0") [command|option]
 

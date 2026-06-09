@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # system/lib/menu.sh — System maintenance menus (host, maintenance, logs)
-# Version: 0.3.1
+# Version: 0.3.3
 #
 # Standalone:  ./system/system.sh
 # From main:   ./run.sh → [1] or ./run.sh --system
@@ -104,10 +104,14 @@ system_menu_cleanup() {
 
 # ---------- Disk and memory submenu ----------
 _system_disk_memory_items() {
-  theme_section "Disk and memory"
-  menu_item 1 "Show quick disk/memory summary" "RAM · swap · filesystems · cleanup targets"
-  menu_item 2 "Refresh health snapshot" "update stored health state"
-  menu_item 3 "Export full diagnostic report" "verbose report saved to file"
+  local age_hint
+  age_hint="$(health_snapshot_menu_age_hint)"
+  theme_section "Summary"
+  menu_item 1 "View disk/memory summary" "${age_hint}"
+  menu_item 2 "Refresh snapshot now" "updates runtime/health/latest.*"
+  menu_item 3 "Export full diagnostic report" "large dirs · lsblk · saved to history/"
+  theme_section "Related"
+  menu_item 4 "More readiness checks" "btrfs · LUKS · VirtualBox · fresh install"
   menu_item_back
 }
 
@@ -117,48 +121,47 @@ _system_disk_memory_dispatch() {
     1) menu_run_script_scroll system/health_snapshot.sh --show; menu_pause; return 0 ;;
     2) menu_run_script_scroll system/health_snapshot.sh --refresh; menu_pause; return 0 ;;
     3) menu_run_script_scroll system/health_snapshot.sh --export; menu_pause; return 0 ;;
+    4) system_menu_readiness; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 system_menu_disk_memory() {
-  menu_loop "Disk and memory" "snapshot · dashboard · export" \
+  menu_loop "Disk and memory" "RAM · disks · cleanup · top memory" \
     _system_disk_memory_items _system_disk_memory_dispatch
 }
 
-# ---------- Workstation readiness submenu ----------
+# ---------- Extended readiness submenu (btrfs · LUKS · vbox · recovery) ----------
 _system_readiness_items() {
-  theme_section "Daily driver"
-  menu_item 1 "Daily driver check" "read-only · boot · btrfs · LUKS · vbox"
   theme_section "Stabilization"
-  menu_item 2 "Btrfs health" "device stats · scrub status"
-  menu_item 3 "LUKS readiness" "keyslots (sudo) · header backups"
-  menu_item 4 "VirtualBox readiness" "modules · vboxdrv · packages"
-  menu_item 5 "Package / update noise" "PackageKit · dnf · flatpak"
-  menu_item 6 "Post-update check" "after dnf upgrade"
+  menu_item 1 "Btrfs health" "device stats · scrub status"
+  menu_item 2 "LUKS readiness" "keyslots (sudo) · header backups"
+  menu_item 3 "VirtualBox readiness" "modules · vboxdrv · packages"
+  menu_item 4 "Package / update noise" "PackageKit · dnf · flatpak"
+  theme_section "Host baseline"
+  menu_item 5 "Fresh install report" "baseline report → logs/"
   theme_section "Recovery"
-  menu_item 7 "Backup current state" "export for reinstall"
-  menu_item 8 "Host context snapshot" "users · network · posture"
+  menu_item 6 "Backup current state" "export for reinstall"
+  menu_item 7 "Host context snapshot" "users · network · posture"
   menu_item_back
 }
 
 _system_readiness_dispatch() {
   case "$1" in
     0) return 1 ;;
-    1) menu_run_script_scroll system/daily_driver_check.sh; menu_pause; return 0 ;;
-    2) menu_run_script_scroll system/btrfs_health.sh; menu_pause; return 0 ;;
-    3) menu_run_script_scroll system/luks_readiness.sh; menu_pause; return 0 ;;
-    4) menu_run_script_scroll system/virtualbox_readiness.sh; menu_pause; return 0 ;;
-    5) menu_run_script_scroll system/package_noise.sh; menu_pause; return 0 ;;
-    6) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
-    7) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
-    8) menu_run_script_scroll system/host_context.sh --summary; menu_pause; return 0 ;;
+    1) menu_run_script_scroll system/btrfs_health.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/luks_readiness.sh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/virtualbox_readiness.sh; menu_pause; return 0 ;;
+    4) menu_run_script_scroll system/package_noise.sh; menu_pause; return 0 ;;
+    5) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/backup_state.sh; menu_pause; return 0 ;;
+    7) menu_run_script_scroll system/host_context.sh --summary; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }
 
 system_menu_readiness() {
-  menu_loop "Workstation readiness" "daily driver · stabilization · recovery" \
+  menu_loop "More readiness checks" "btrfs · LUKS · VirtualBox · fresh install" \
     _system_readiness_items _system_readiness_dispatch
 }
 
@@ -233,7 +236,7 @@ EOF
 }
 
 system_menu_hardening() {
-  menu_loop "OS hardening" "Round 1 safe · audit before Round 2" \
+  menu_loop "Hardening and services" "firewall · services · listening ports · audit" \
     _system_hardening_items _system_hardening_dispatch
 }
 
@@ -278,33 +281,34 @@ system_menu_help() {
 }
 
 _system_main_items() {
-  theme_section "Workstation readiness"
-  menu_item_lane 1 system "Workstation readiness" "daily driver · btrfs · LUKS · vbox"
-  theme_section "Host baseline"
-  menu_item_lane 2 system "Host information" "system snapshot"
-  menu_item_lane 3 system "Disk and memory" "quick health dashboard"
-  menu_item_lane 4 system "Fresh install baseline" "report → logs/"
-  menu_item_lane 5 system "Rebuild readiness" "pre-rebuild validation"
+  theme_section "Readiness"
+  menu_item_lane 1 readiness "Daily driver check" "btrfs · LUKS · VirtualBox · services"
+  menu_item_lane 2 postupdate "Post-update check" "reboot · btrfs · failed units · package noise"
+  menu_item_lane 3 rebuild "Rebuild readiness" "pre-rebuild validation"
+  theme_section "Host information"
+  menu_item_lane 4 host "Host snapshot" "OS · kernel · hardware · mounts"
+  menu_item_lane 5 disk "Disk and memory" "storage · RAM · swap"
   theme_section "Operations"
-  menu_item_lane 6 system "Update Fedora" "quiet summary · full log saved"
-  menu_item_lane 7 system "View logs" "log_engine · tail · follow"
-  menu_item_lane 8 system "Cleanup" "logs · dnf · repo fix"
+  menu_item_lane 6 update "Update Fedora" "dnf upgrade · compact summary · log saved"
+  menu_item_lane 7 logs "View logs" "recent logs · follow · search"
+  menu_item_lane 8 cleanup "Cleanup" "logs · dnf cache · repo permissions"
   theme_section "Security"
-  menu_item_lane 9 system "OS hardening" "Round 1 · services audit"
+  menu_item_lane 9 audit "Hardening and services" "firewall · services · listening ports"
   menu_item_lane_exit
 }
 
 _system_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
-    1) system_menu_readiness; return 0 ;;
-    2) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
-    3) system_menu_disk_memory; return 0 ;;
-    4) menu_run_script_scroll system/fresh_install_check.sh; menu_pause; return 0 ;;
-    5) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    1) menu_run_script_scroll system/daily_driver_check.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    4) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
+    5) system_menu_disk_memory; return 0 ;;
     6)
       info "Update logs to: $(log_dir)/system_update.log"
       menu_run_sudo_env_script_scroll system/system_update.sh --quick
+      theme_status_info "After a successful upgrade, run Post-update check ([2])"
       menu_pause
       return 0
       ;;
@@ -318,7 +322,7 @@ _system_main_dispatch() {
 system_main_menu() {
   local prev_header="${MENU_HEADER_FN}"
   menu_set_header_fn system_menu_maintenance_header
-  menu_loop "System maintenance" "host · updates · logs · cleanup" \
+  menu_loop "System maintenance" "daily readiness · updates · logs · cleanup" \
     _system_main_items _system_main_dispatch
   menu_set_header_fn "${prev_header}"
 }

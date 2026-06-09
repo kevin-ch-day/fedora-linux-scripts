@@ -35,13 +35,14 @@ cd ~/GitHub/fedora-linux-scripts   # adjust path if cloned elsewhere
 
 ---
 
-### 2. System menu shows Workstation readiness
+### 2. System menu shows readiness checks
 
 ```bash
 ./run.sh --system
 ```
 
-- [ ] `[1] Workstation readiness` appears under **Workstation readiness**
+- [ ] `[1] Daily driver check` appears under **Readiness**
+- [ ] `[2] Post-update check` appears under **Readiness**
 - [ ] Submenu lists: Daily driver · Btrfs · LUKS · VirtualBox · Package noise · Post-update · Backup · Host context
 - [ ] `[0]` back to system menu, then `[0]` exit to shell
 
@@ -163,7 +164,7 @@ Walk through until the first **write** confirmation, then **cancel**:
 - [ ] Runs reboot hint (`needs-restarting` if available)
 - [ ] Checks btrfs stats, failed services, VirtualBox, package noise
 - [ ] Prints summary box
-- [ ] Exits 0 on stable system (exit 1 if issues found — document which)
+- [ ] Exits 0 on stable system (exit 1 only for reboot, btrfs errors, failed units, or broken VirtualBox — not missing `/dev/vboxdrv` when modules loaded and VBoxManage OK)
 
 **Optional:** after a real update:
 
@@ -194,7 +195,7 @@ sudo ./system/system_update.sh --quick
 ```
 
 - [ ] **Result: PASSED**
-- [ ] Workstation readiness section includes daily driver, luks-readiness, post-update-check
+- [ ] Readiness section includes daily driver, post-update-check, rebuild readiness
 - [ ] Health snapshot section completes without long hang (~20s total acceptable on Neptune)
 
 ---

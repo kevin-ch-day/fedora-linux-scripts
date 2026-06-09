@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # health_snapshot.sh — quick disk/memory snapshot + dashboard
-# Version: 0.1.0
+# Version: 0.1.4
 #
 # Run:
 #   ./system/health_snapshot.sh --show
@@ -26,8 +26,8 @@ Quick health snapshot and dashboard for disk, memory, swap, mounts, and cleanup 
 
 Options:
   --help, -h     Show this help
-  --show         Print latest quick health dashboard (refresh if missing)
-  --refresh      Refresh latest quick snapshot and print saved paths
+  --show         Print dashboard (refresh if missing or older than 15m)
+  --refresh      Refresh snapshot; print compact status unless --quiet
   --export       Export a fuller diagnostic report to runtime/health/history/
   --quiet        Suppress non-essential status lines
 
@@ -52,7 +52,7 @@ done
 
 case "${MODE}" in
   show)
-    if [[ ! -f "$(health_snapshot_latest_txt)" ]]; then
+    if [[ ! -f "$(health_snapshot_latest_txt)" ]] || health_snapshot_needs_refresh; then
       health_snapshot_refresh quick 1 "${FEDORA_VERBOSE:-0}" >/dev/null
     fi
     cat "$(health_snapshot_latest_txt)"
@@ -60,16 +60,19 @@ case "${MODE}" in
   refresh)
     health_snapshot_refresh quick 1 "${FEDORA_VERBOSE:-0}" >/dev/null
     if (( QUIET == 0 )); then
-      echo "Latest text: $(health_snapshot_latest_txt)"
-      echo "Latest json: $(health_snapshot_latest_json)"
+      health_snapshot_print_refresh_summary
     fi
     ;;
   export)
     out="$(health_snapshot_export_full_report)"
     if (( QUIET == 0 )); then
-      echo "Full report: ${out}"
-      echo "Latest text: $(health_snapshot_latest_txt)"
-      echo "Latest json: $(health_snapshot_latest_json)"
+      theme_init
+      theme_rule '═'
+      printf '◉ Full diagnostic report exported\n'
+      theme_rule '─'
+      theme_meta_line "Report: ${out}"
+      theme_meta_line "Latest: runtime/health/latest.txt"
+      theme_status_info "Open report: less ${out}"
     fi
     ;;
 esac

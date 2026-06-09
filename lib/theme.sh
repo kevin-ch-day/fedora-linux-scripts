@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/theme.sh — Fedora workstation console theme (dark-first, black-terminal friendly)
-# Version: 0.5.0
+# Version: 0.5.1
 #
 # Respects NO_COLOR and FEDORA_NO_COLOR=1.
 # FEDORA_THEME=dark|light (default: dark)
@@ -131,6 +131,7 @@ theme_lane_accent_code() {
     mobsf) printf '%s' 141 ;;       # violet
     rebuild) printf '%s' 220 ;;     # gold
     audit|security) printf '%s' 117 ;; # sky
+    check|selftest) printf '%s' 82 ;; # mint
     main|fedora) printf '%s' 86 ;;  # cyan
     *) printf '%s' 86 ;;
   esac
@@ -141,20 +142,23 @@ theme_lane_icon() {
     system) printf '⚙ ' ;;
     dev|development) printf '⚡ ' ;;
     desktop) printf '🖥 ' ;;
-    virt|virtualization) printf '▣ ' ;;
-    web) printf '◇ ' ;;
+    virt|virtualization|disk) printf '▣ ' ;;
+    web|host) printf '◇ ' ;;
     android) printf '◈ ' ;;
     mobsf) printf '⬡ ' ;;
-    rebuild) printf '↻ ' ;;
-    audit|security) printf '◉ ' ;;
-    main|fedora) printf '◆ ' ;;
+    rebuild|update|postupdate) printf '↻ ' ;;
+    audit|security|readiness) printf '◉ ' ;;
+    check|selftest) printf '✓ ' ;;
+    main|fedora|cleanup) printf '◆ ' ;;
+    hardening) printf '◆ ' ;;
+    logs) printf '≡ ' ;;
     *) printf '· ' ;;
   esac
 }
 
 theme_lane_subtitle() {
   case "${1:-}" in
-    system) printf '%s' "host · updates · logs · hardening" ;;
+    system) printf '%s' "daily readiness · updates · logs · cleanup" ;;
     dev|development) printf '%s' "developer tools · desktops · virtualization · web stack" ;;
     android) printf '%s' "sdk · re tools · verify" ;;
     mobsf) printf '%s' "podman stack · static analysis" ;;

@@ -444,6 +444,14 @@ readiness_vbox_char_dev_ready() {
   [[ -c /dev/vboxdrv ]]
 }
 
+# Modules loaded and VBoxManage works, but /dev/vboxdrv is missing (recoverable via vboxdrv.service).
+readiness_vbox_char_dev_recoverable() {
+  readiness_vbox_is_installed || return 1
+  [[ -n "$(readiness_vbox_modules_loaded)" ]] || return 1
+  readiness_vbox_char_dev_ready && return 1
+  readiness_vbox_version >/dev/null 2>&1
+}
+
 readiness_vbox_modules_loaded() {
   lsmod 2>/dev/null | awk '/^vbox/{print}' || true
 }

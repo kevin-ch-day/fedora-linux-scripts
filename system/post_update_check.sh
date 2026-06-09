@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # post_update_check.sh — validation after dnf upgrade (read-only)
-# Version: 0.1.2
+# Version: 0.1.3
 #
 # Exit 0 when stable; exit 1 when reboot, btrfs, services, or VirtualBox need review.
+# Missing /dev/vboxdrv with modules loaded and VBoxManage OK is warn-only (recoverable).
 #
 # Run:
 #   ./system/post_update_check.sh
@@ -95,8 +96,13 @@ if readiness_vbox_is_installed; then
       ISSUES=$((ISSUES + 1))
     fi
     if ! readiness_vbox_char_dev_ready; then
-      warn "/dev/vboxdrv missing — VirtualBox cannot start VMs"
-      ISSUES=$((ISSUES + 1))
+      if readiness_vbox_char_dev_recoverable; then
+        warn "/dev/vboxdrv missing — recoverable: sudo systemctl restart vboxdrv.service"
+        theme_note "Modules loaded and VBoxManage OK — not a post-update failure"
+      else
+        warn "/dev/vboxdrv missing — VirtualBox cannot start VMs"
+        ISSUES=$((ISSUES + 1))
+      fi
     fi
   else
     warn "VirtualBox installed but kernel modules not loaded"
