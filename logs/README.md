@@ -114,4 +114,28 @@ System lane **Logs** and MobSF menu **Logs** both reach `log_engine.sh` for `mob
 
 ## Git
 
-`.gitignore` at the repo root excludes `logs/*.log`, `logs/archive/`, `logs/backups/`. Keep this README tracked.
+This repo tracks the **toolkit** (scripts, docs, placeholders) — not host-generated output.
+
+| Path | Tracked | Notes |
+|------|---------|-------|
+| `logs/README.md` | yes | Policy and layout (this file) |
+| `logs/*.log` | no | Operational append-only logs |
+| `logs/archive/`, `logs/backups/` | no | Rotated logs and `backup_state` exports |
+| `logs/security_audit/`, `logs/host_context/`, `logs/hardening/`, `logs/readiness/` | no | Report snapshots when written |
+
+**Runtime health** (`lib/health_snapshot.sh`, refreshed on `./fedora.sh` startup and via System → Disk/memory):
+
+| Path | Tracked | Notes |
+|------|---------|-------|
+| `runtime/health/.gitkeep`, `runtime/health/history/.gitkeep` | yes | Preserve directory layout |
+| `runtime/health/latest.json`, `latest.txt` | no | Current compact snapshot |
+| `runtime/health/history/*.{json,txt}` | no | Export/history copies |
+
+Phase 2 readiness commands (`daily-driver`, `post-update-check`, etc.) print to the terminal only; they do **not** write under `runtime/health/` or `logs/`.
+
+If generated files were committed earlier, untrack without deleting local copies:
+
+```bash
+git rm -r --cached runtime/health/latest.json runtime/health/latest.txt runtime/health/history/
+git add runtime/health/.gitkeep runtime/health/history/.gitkeep
+```

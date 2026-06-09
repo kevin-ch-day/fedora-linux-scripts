@@ -1,7 +1,8 @@
-# Fedora toolkit runtime output
-runtime/
-!runtime/
-runtime/health/
+# Fedora toolkit — host-generated runtime (see lib/health_snapshot.sh)
+runtime/health/latest.json
+runtime/health/latest.txt
+runtime/health/history/*.json
+runtime/health/history/*.txt
 
 # Operational logs (see logs/README.md)
 logs/*.log
@@ -10,12 +11,16 @@ logs/backups/
 logs/security_audit/
 logs/host_context/
 logs/hardening/
+logs/readiness/
 !logs/README.md
 
-# Local environment overrides
+# Local secrets / environment
 .env
 .env.*
+*.env
 *.local
+*.secret
+*.key
 
 # Python cache / local tooling
 __pycache__/
@@ -42,7 +47,7 @@ coverage/
 htmlcov/
 *.cover
 *.coverage
-.coverage*
+.coverage.*
 
 # Editor / OS clutter
 .DS_Store
