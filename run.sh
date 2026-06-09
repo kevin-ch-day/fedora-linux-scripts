@@ -143,7 +143,7 @@ Options:
   --dry-run          Rebuild dry-run
   --system           Open System maintenance menu
   --dev              Open Developer tools
-  --android          Open Android RE & MobSF
+  --android          Open Android RE tools
 
 Area launchers:
   ./system/system.sh       Host · updates · logs · cleanup
@@ -151,7 +151,7 @@ Area launchers:
   ./dev/dev.sh --desktop-environments
   ./dev/dev.sh --virtualization
   ./dev/dev.sh --web-stack
-  ./android/android.sh     Android RE tools · verify · ADB · MobSF
+  ./android/android.sh     Android RE tools · verify · ADB (MobSF: ./mobsf.sh)
 
 Fresh install flow:
   ./setup.sh
@@ -225,7 +225,7 @@ _fedora_main_items() {
   menu_item_lane 3 desktop "Desktop environments" "cinnamon · kde · mate · lxqt"
   menu_item_lane 4 virt "Virtualization & containers" "podman · docker · kvm · virtualbox"
   menu_item_lane 5 web "Web/database stack" "apache · mariadb · php · phpmyadmin"
-  menu_item_lane 6 android "Android RE & MobSF" "sdk · adb · jadx · apktool · mobsf"
+  menu_item_lane 6 android "Android RE tools" "sdk · adb · jadx · apktool"
   theme_section "Setup and health"
   menu_item_lane 7 rebuild "Guided rebuild" "install and configure this workstation"
   menu_item_lane 8 audit "System health check" "Fedora services · repos · workstation health"

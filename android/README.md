@@ -2,7 +2,20 @@
 
 Quick reference for the Android security / reverse-engineering workstation on Fedora.
 
-**Menu:** `./android/android.sh` · **From main entry:** `./run.sh` → `[3]` or `./run.sh --android`
+**Menu:** `./android/android.sh` · **From main entry:** `./run.sh` → `[6]` or `./run.sh --android`
+
+**MobSF** (separate lifecycle): `./mobsf.sh` — not part of this lane.
+
+---
+
+## Verification tiers
+
+| Tier | Command | Scope |
+|------|---------|--------|
+| **Core tools** | `sudo ./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy, node/npm (read-only) |
+| **APK RE tools** | `./android/verify_all_re_tools.sh` | apktool, jadx, smali, dex2jar |
+| **Full doctor** | `./android/doctor_android_research.sh` | Core + ADB + all RE tools |
+| **MobSF stack** | `./mobsf.sh` · `./mobsf.sh --doctor` | Podman stack only |
 
 ---
 
@@ -27,16 +40,19 @@ Fedora doctor (entry points · Android RE, no MobSF): `./run.sh --doctor`
 
 | Task | Command |
 |------|---------|
+| Core status (read-only) | `sudo ./android/android_dev_core_setup.sh --status` |
 | Install one tool | `./android/android_re_install.sh jadx` |
 | Upgrade / re-fetch | `./android/android_re_install.sh --upgrade jadx` |
 | Upgrade from menu | `./run.sh --android` → RE tool installs → items 11–15 |
 | Install all | `./android/android_re_install.sh all` |
 | Verify one | `./android/verify_re_tool.sh apktool` |
-| Verify all | `./android/verify_re_tool.sh all` |
-| ADB status | `./android/android.sh` → Diagnostics → ADB |
+| Verify all APK RE | `./android/verify_all_re_tools.sh` |
+| ADB status | `./android/android.sh` → ADB and device checks |
 
 Install logic: `lib/android_re.sh`  
 Verify logic: `lib/android.sh` (via `verify_re_tool.sh`)
+
+Node/npm are **optional** for core setup; required only for **apk-mitm** (Repair Node/npm menu item).
 
 ---
 

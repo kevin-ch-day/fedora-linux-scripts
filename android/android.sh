@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# android.sh — Android RE & MobSF launcher (standalone menu + CLI shortcuts)
-# Version: 0.1.2
+# android.sh — Android RE tools launcher (standalone menu + CLI shortcuts)
+# Version: 0.1.3
 #
 # Run:
 #   ./android/android.sh
@@ -20,7 +20,8 @@ source "${ANDROID_LAUNCHER_DIR}/lib/menu.sh"
 
 usage() {
   cat <<EOF
-Android RE & MobSF launcher — core setup, RE tools, verification, and mobile analysis.
+Android RE tools launcher — core setup, RE tools, verification, and ADB checks.
+MobSF stack (separate): ./mobsf.sh
 
 From main entry: ./run.sh → [6]  or  ./run.sh --android
 

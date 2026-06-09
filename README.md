@@ -66,7 +66,7 @@ Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Work
 |------|--------|-------|
 | System maintenance | `system/` | [system/README.md](system/README.md) |
 | Developer workstation areas | `dev/` | [dev/README.md](dev/README.md) |
-| Android RE & MobSF entry | `android/` | [android/README.md](android/README.md) |
+| Android RE tools entry | `android/` | [android/README.md](android/README.md) |
 | MobSF *(separate)* | `mobsf/` | [mobsf/GUIDE.md](mobsf/GUIDE.md) |
 | Legacy | `legacy/` | [legacy/README.md](legacy/README.md) |
 

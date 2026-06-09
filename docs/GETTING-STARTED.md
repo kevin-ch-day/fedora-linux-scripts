@@ -30,7 +30,7 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Desktop environments | `./dev/dev.sh --desktop-environments` |
 | Virtualization & containers | `./dev/dev.sh --virtualization` |
 | Web/database stack | `./dev/dev.sh --web-stack` |
-| Android RE & MobSF | `./android/android.sh` or `./run.sh --android` |
+| Android RE tools | `./android/android.sh` or `./run.sh --android` |
 | Fedora doctor | `./run.sh --doctor` |
 | Host baseline (fresh install) | `./run.sh --baseline` |
 | Rebuild readiness | `./run.sh --rebuild-check` |
@@ -44,7 +44,7 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 ./run.sh                 Main menu (Fedora Workstation Toolkit)
                               [1] System maintenance · [2] Developer tools
                               [3] Desktop environments · [4] Virtualization
-                              [5] Web/database stack · [6] Android RE & MobSF
+                              [5] Web/database stack · [6] Android RE tools
 
 ./run.sh --rebuild       Guided sequence (update → KVM → Android → RE tools → …)
 ./mobsf.sh                  MobSF stack (separate entry — own menu)
@@ -65,7 +65,7 @@ Shortcuts:
 ./run.sh --rebuild --yes    # rebuild without step prompts
 ./run.sh --system           # open System maintenance directly
 ./run.sh --dev              # open Developer tools directly
-./run.sh --android          # open Android RE & MobSF directly
+./run.sh --android          # open Android RE tools directly
 ./mobsf.sh                     # MobSF menu
 ./mobsf.sh --doctor            # MobSF-only check
 ./mobsf.sh --doctor --dynamic  # static + dynamic analysis readiness
@@ -124,7 +124,7 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 ```bash
 ./run.sh --daily-driver-check   # quick read-only health (boot · btrfs · LUKS · vbox)
 ./run.sh          # main menu — exit a lane to return here
-./run.sh 6        # jump straight into Android RE & MobSF (then exit to shell)
+./run.sh 6        # jump straight into Android RE tools (then exit to shell)
 ./mobsf.sh           # MobSF stack menu (separate from run.sh)
 ```
 
@@ -145,7 +145,7 @@ Readiness checks are **read-only by default**. Destructive actions (`--scrub`, `
 | Desktop environments | `3` / `./run.sh 3` | Cinnamon baseline, KDE, MATE, LXQt |
 | Virtualization & containers | `4` / `./run.sh 4` | Podman, Docker, KVM, VirtualBox |
 | Web/database stack | `5` / `./run.sh 5` | Apache, MariaDB, PHP, phpMyAdmin |
-| Android RE & MobSF | `6` / `./run.sh --android` | SDK, RE tools, verify, ADB, MobSF |
+| Android RE tools | `6` / `./run.sh --android` | SDK, RE tools, verify, ADB (MobSF: `./mobsf.sh`) |
 | Guided rebuild | `7` / `./run.sh --rebuild` | full workstation setup |
 | System health check | `8` / `./run.sh --doctor` | entry points · Android RE workstation |
 | Toolkit self-test | `9` / `./run.sh --check` | validate, smoke, rebuild readiness |
@@ -157,13 +157,24 @@ Lane guides: [system/README.md](../system/README.md) · [dev/README.md](../dev/R
 
 ---
 
+## Android verification tiers
+
+| Tier | Command | Scope |
+|------|---------|--------|
+| Core tools | `sudo ./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy (read-only) |
+| APK RE tools | `./android/verify_all_re_tools.sh` | apktool, jadx, smali, dex2jar |
+| Full doctor | `./android/doctor_android_research.sh` | Core + ADB + all RE tools |
+| MobSF stack | `./mobsf.sh` · `./mobsf.sh --doctor` | Separate Podman lifecycle |
+
+---
+
 ## Doctor matrix (no double-runs)
 
 | Script | Scope | When to use |
 |--------|-------|-------------|
 | `./run.sh --doctor` (`research_doctor.sh --android-only`) | Entry points · Android RE | Main menu `[5]`; daily verify |
 | `research_doctor.sh` (full, no flags) | Android **+** MobSF | End of guided rebuild only |
-| `android/doctor_android_research.sh` | Android only | Android RE & MobSF area; `--with-mobsf` for brief MobSF note |
+| `android/doctor_android_research.sh` | Android only | Android RE tools area; `--with-mobsf` for brief MobSF note |
 | `./mobsf.sh --doctor` | MobSF stack only | Install/start/health for Podman stack |
 | `dev/web_stack_doctor.sh` | LAMP / phpMyAdmin | After dev stack install |
 

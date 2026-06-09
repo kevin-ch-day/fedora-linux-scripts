@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # android_dev_core_setup.sh
 # Android dev + security core setup (Fedora)
-# Version: 0.6.2
+# Version: 0.6.4
 #
 # Stable installs only:
 # - dnf: available OpenJDK + Node.js packages, adb/fastboot, python3/pip, wireshark, flatpak, unzip/curl
@@ -59,10 +59,127 @@ if [[ "${FEDORA_ANDROID_MENU_MODE:-0}" == 1 && "${FEDORA_VERBOSE:-0}" != 1 ]]; t
   export FEDORA_LOG_TERMINAL_BANNER=0
 fi
 
+android_core_user_path() {
+  local userbin="${REAL_HOME}/.local/bin"
+  local sdk="${REAL_HOME}/Android/Sdk"
+  printf '%s:%s/cmdline-tools/latest/bin:%s/platform-tools:%s' \
+    "${userbin}" "${sdk}" "${sdk}" "${PATH}"
+}
+
 run_as_real_user_with_path() {
-  local userbin
-  userbin="${REAL_HOME}/.local/bin"
-  run_as_real_user env "HOME=${REAL_HOME}" "PATH=${userbin}:${PATH}" "$@"
+  run_as_real_user env "HOME=${REAL_HOME}" "PATH=$(android_core_user_path)" "$@"
+}
+
+user_has_cmd() {
+  local cmd="$1"
+  run_as_real_user_with_path bash -lc "command -v $(printf '%q' "$cmd")" >/dev/null 2>&1
+}
+
+core_row_cmd() {
+  local label="$1" cmd="$2"
+  shift 2
+  local -a version_args=("$@")
+  local detail="not on PATH"
+
+  if user_has_cmd "${cmd}"; then
+    if ((${#version_args[@]} > 0)); then
+      detail="$(run_as_real_user_with_path bash -lc \
+        "$(printf '%q' "$cmd") $(printf '%q ' "${version_args[@]}")" 2>&1 | head -n 1)"
+    else
+      detail="on PATH"
+    fi
+    theme_tool_row ok "${label}" "${detail}"
+    return 0
+  fi
+  if cmd_available "${cmd}"; then
+    if ((${#version_args[@]} > 0)); then
+      detail="$("${cmd}" "${version_args[@]}" 2>&1 | head -n 1)"
+    else
+      detail="on system PATH only"
+    fi
+    theme_status_info "${label}: ${detail} (reload shell: source ~/.bashrc)"
+    return 0
+  fi
+  theme_tool_row warn "${label}" "${detail}"
+  return 1
+}
+
+core_row_optional_node_tool() {
+  local label="$1" cmd="$2"
+  local detail="optional (required for apk-mitm only); not on PATH"
+  local version_flag="--version"
+
+  if user_has_cmd "${cmd}"; then
+    detail="$(run_as_real_user_with_path bash -lc \
+      "$(printf '%q' "$cmd") ${version_flag}" 2>&1 | head -n 1)"
+    theme_tool_row ok "${label}" "${detail}"
+    return 0
+  fi
+  if cmd_available "${cmd}"; then
+    detail="$("${cmd}" "${version_flag}" 2>&1 | head -n 1) (system PATH only)"
+    theme_status_info "${label}: ${detail}"
+    return 0
+  fi
+  theme_status_info "${label}: ${detail}"
+  return 1
+}
+
+core_version_line_from_output() {
+  local raw="$1"
+  local line=""
+
+  if grep -qiE 'unknown command|traceback \(most recent|modulenotfounderror|importerror|no such option' <<< "${raw}"; then
+    return 1
+  fi
+  line="$(printf '%s\n' "${raw}" | grep -E '^[0-9]+(\.[0-9]+)*$' | tail -n 1)"
+  if [[ -z "${line}" ]]; then
+    line="$(printf '%s\n' "${raw}" | sed -n '/./p' | grep -viE '^Warning:' | tail -n 1)"
+  fi
+  [[ -n "${line}" ]] || return 1
+  printf '%s\n' "${line}"
+}
+
+core_row_drozer() {
+  if user_has_cmd drozer; then
+    theme_tool_row ok "drozer" "installed"
+    return 0
+  fi
+  if cmd_available drozer; then
+    theme_status_info "drozer: installed (reload shell: source ~/.bashrc)"
+    return 0
+  fi
+  theme_tool_row warn "drozer" "not on PATH"
+  return 1
+}
+
+core_sdkmanager_version() {
+  local raw=""
+
+  if user_has_cmd sdkmanager; then
+    raw="$(run_as_real_user_with_path bash -lc 'sdkmanager --version' 2>&1)" || true
+  elif cmd_available sdkmanager; then
+    raw="$(sdkmanager --version 2>&1)" || true
+  else
+    return 1
+  fi
+  core_version_line_from_output "${raw}" || printf '%s\n' "installed"
+}
+
+core_row_sdkmanager() {
+  local detail=""
+
+  if user_has_cmd sdkmanager; then
+    detail="$(core_sdkmanager_version)"
+    theme_tool_row ok "sdkmanager" "${detail}"
+    return 0
+  fi
+  if cmd_available sdkmanager; then
+    detail="$(core_sdkmanager_version)"
+    theme_status_info "sdkmanager: ${detail} (reload shell: source ~/.bashrc)"
+    return 0
+  fi
+  theme_tool_row warn "sdkmanager" "not on PATH"
+  return 1
 }
 
 quiet_run() {
@@ -260,28 +377,86 @@ mv \"\${tmp}/extract/cmdline-tools/\"* '${latest_dir}/'
   ok "Android SDK cmdline-tools installed"
 }
 
-ensure_android_paths_in_bashrc() {
+android_sdk_managed_block_body() {
+  cat <<'EOF'
+# >>> ANDROID SDK PATHS (managed) >>>
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+case ":$PATH:" in
+  *":$ANDROID_HOME/cmdline-tools/latest/bin:"*) ;;
+  *) export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin" ;;
+esac
+case ":$PATH:" in
+  *":$ANDROID_HOME/platform-tools:"*) ;;
+  *) export PATH="$PATH:$ANDROID_HOME/platform-tools" ;;
+esac
+# <<< ANDROID SDK PATHS (managed) <<<
+EOF
+}
+
+bashrc_has_legacy_android_path_block() {
+  local bashrc="$1"
+  [[ -f "${bashrc}" ]] || return 1
+  grep -qF 'export ANDROID_HOME="$HOME/Android/Sdk"' "${bashrc}" 2>/dev/null \
+    && ! grep -qF '# >>> ANDROID SDK PATHS (managed) >>>' "${bashrc}" 2>/dev/null
+}
+
+bashrc_android_path_status() {
+  local bashrc="${REAL_HOME}/.bashrc"
+  if grep -qF '# >>> ANDROID SDK PATHS (managed) >>>' "${bashrc}" 2>/dev/null; then
+    theme_status_ok "Android SDK PATH block present in ~/.bashrc (managed)"
+  elif bashrc_has_legacy_android_path_block "${bashrc}"; then
+    theme_status_warn "Legacy unmarked Android SDK PATH block in ~/.bashrc"
+    theme_status_info "Run setup (install mode) to migrate; --status does not modify ~/.bashrc"
+  else
+    theme_status_warn "Android SDK PATH block missing from ~/.bashrc"
+  fi
+}
+
+_write_bashrc_android_sdk_paths() {
   local bashrc="${REAL_HOME}/.bashrc"
   local marker_begin="# >>> ANDROID SDK PATHS (managed) >>>"
   local marker_end="# <<< ANDROID SDK PATHS (managed) <<<"
+  local tmp block_file
+  tmp="$(mktemp)"
+  block_file="$(mktemp)"
+  android_sdk_managed_block_body > "${block_file}"
 
-  if [[ -f "${bashrc}" ]] && grep -qF "${marker_begin}" "${bashrc}"; then
-    ok "Android SDK PATH block already present in ${bashrc}"
-    return 0
+  run_as_real_user touch "${bashrc}"
+  if grep -qF "${marker_begin}" "${bashrc}" 2>/dev/null; then
+    info "Rewriting Android SDK PATH managed block in ${bashrc}"
+    awk -v begin="${marker_begin}" -v end="${marker_end}" -v blockfile="${block_file}" '
+      BEGIN { while ((getline line < blockfile) > 0) block = block line "\n" }
+      $0 == begin { printf "%s", block; skip = 1; next }
+      skip && $0 == end { skip = 0; next }
+      skip { next }
+      { print }
+    ' "${bashrc}" > "${tmp}"
+  elif bashrc_has_legacy_android_path_block "${bashrc}"; then
+    info "Migrating legacy Android SDK PATH block to managed block in ${bashrc}"
+    awk '
+      /^export ANDROID_HOME="\$HOME\/Android\/Sdk"$/ { leg = 1; next }
+      leg == 1 && /^export ANDROID_SDK_ROOT=/ { leg = 2; next }
+      leg == 2 && /cmdline-tools\/latest\/bin/ && /platform-tools/ { leg = 0; next }
+      { print }
+    ' "${bashrc}" > "${tmp}"
+    printf '\n' >> "${tmp}"
+    cat "${block_file}" >> "${tmp}"
+  else
+    info "Adding Android SDK PATH block to ${bashrc}"
+    cat "${bashrc}" > "${tmp}"
+    printf '\n' >> "${tmp}"
+    cat "${block_file}" >> "${tmp}"
   fi
 
-  info "Adding Android SDK PATH block to ${bashrc}"
-  cat >> "${bashrc}" <<EOF
-
-${marker_begin}
-export ANDROID_HOME="\$HOME/Android/Sdk"
-export ANDROID_SDK_ROOT="\$HOME/Android/Sdk"
-export PATH="\$PATH:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools"
-${marker_end}
-EOF
-
+  run_as_real_user cp "${tmp}" "${bashrc}"
   chown "$(real_user):$(real_user)" "${bashrc}" 2>/dev/null || true
-  ok "Android SDK PATH block added"
+  rm -f "${tmp}" "${block_file}"
+}
+
+ensure_android_paths_in_bashrc() {
+  _write_bashrc_android_sdk_paths
+  ok "Android SDK PATH block ensured in ${REAL_HOME}/.bashrc"
 }
 
 # ---------- Main ----------
@@ -308,23 +483,13 @@ done < <(resolve_node_packages)
 
 android_core_status_render() {
   theme_report_header "Android core setup" "Android SDK, platform tools, Python tooling, and baseline packages"
+  theme_status_info "Read-only status for $(real_user) (checks user PATH, not root shell)"
+  echo
   theme_section "Packages"
-  android_check_version Java java -version
-  if cmd_available adb; then
-    theme_tool_row ok "adb" "$(adb version 2>&1 | head -n 1)"
-  else
-    theme_tool_row warn "adb" "not on PATH"
-  fi
-  if cmd_available node; then
-    theme_tool_row ok "node" "$(node --version 2>&1 | head -n 1)"
-  else
-    theme_tool_row warn "node" "not on PATH"
-  fi
-  if cmd_available npm; then
-    theme_tool_row ok "npm" "$(npm --version 2>&1 | head -n 1)"
-  else
-    theme_tool_row warn "npm" "not on PATH"
-  fi
+  core_row_cmd Java java -version
+  core_row_cmd adb adb version
+  core_row_optional_node_tool node node
+  core_row_optional_node_tool npm npm
   echo
   theme_section "Android Studio"
   if cmd_available flatpak && flatpak info com.google.AndroidStudio >/dev/null 2>&1; then
@@ -334,26 +499,14 @@ android_core_status_render() {
   fi
   echo
   theme_section "Python tools"
-  android_check_version Frida frida --version
-  android_check_version Objection objection version
-  android_check_version Mitmproxy mitmproxy --version
-  if cmd_available drozer; then
-    theme_tool_row ok "drozer" "$(drozer --version 2>&1 | head -n 1)"
-  else
-    theme_tool_row warn "drozer" "not on PATH"
-  fi
+  core_row_cmd Frida frida --version
+  core_row_cmd Objection objection version
+  core_row_cmd Mitmproxy mitmproxy --version
+  core_row_drozer
   echo
   theme_section "SDK/PATH"
-  if cmd_available sdkmanager; then
-    theme_tool_row ok "sdkmanager" "$(sdkmanager --version 2>&1 | tail -n 1)"
-  else
-    theme_tool_row warn "sdkmanager" "not on PATH"
-  fi
-  if grep -qF '# >>> ANDROID SDK PATHS (managed) >>>' "${REAL_HOME}/.bashrc" 2>/dev/null; then
-    theme_status_ok "Android SDK PATH block present in ~/.bashrc"
-  else
-    theme_status_warn "Android SDK PATH block missing from ~/.bashrc"
-  fi
+  core_row_sdkmanager
+  bashrc_android_path_status
   theme_note "HOME sdk path: ${REAL_HOME}/Android/Sdk"
 }
 
@@ -367,6 +520,8 @@ if (( QUIET_TERMINAL )); then
 fi
 
 ensure_user_bin_on_path
+theme_status_info "Post-install checks use $(real_user) PATH (~/.local/bin + Android SDK). Reload shell when done: source ~/.bashrc"
+echo
 
 theme_section "Packages"
 quiet_run pkg_install_batch_if_available MISSING_PKGS "${CORE_PKGS[@]}"
@@ -375,22 +530,10 @@ if ((${#MISSING_PKGS[@]} > 0)); then
 else
   theme_status_ok "Baseline packages resolved"
 fi
-android_check_version Java java -version
-if cmd_available adb; then
-  theme_tool_row ok "adb" "$(adb version 2>&1 | head -n 1)"
-else
-  theme_tool_row warn "adb" "not on PATH"
-fi
-if cmd_available node; then
-  theme_tool_row ok "node" "$(node --version 2>&1 | head -n 1)"
-else
-  theme_tool_row warn "node" "not on PATH"
-fi
-if cmd_available npm; then
-  theme_tool_row ok "npm" "$(npm --version 2>&1 | head -n 1)"
-else
-  theme_tool_row warn "npm" "not on PATH"
-fi
+core_row_cmd Java java -version
+core_row_cmd adb adb version
+core_row_optional_node_tool node node
+core_row_optional_node_tool npm npm
 echo
 
 theme_section "Android Studio"
@@ -409,14 +552,10 @@ pip_user_install frida-tools
 pip_user_install objection
 pip_user_install drozer || true
 pip_user_install mitmproxy || true
-android_check_version Frida frida --version
-android_check_version Objection objection version
-android_check_version Mitmproxy mitmproxy --version
-if cmd_available drozer; then
-  theme_tool_row ok "drozer" "$(drozer --version 2>&1 | head -n 1)"
-else
-  theme_tool_row warn "drozer" "not on PATH"
-fi
+core_row_cmd Frida frida --version
+core_row_cmd Objection objection version
+core_row_cmd Mitmproxy mitmproxy --version
+core_row_drozer
 echo
 
 repair_node_tooling() {
@@ -442,8 +581,8 @@ repair_node_tooling() {
         || core_warn "apk-mitm install failed"
     fi
   else
-    core_warn "npm command not found; skipped apk-mitm"
-    info "NEXT run Repair Node/npm tooling or check npm package/PATH."
+    info "Node/npm optional (required for apk-mitm only); skipped apk-mitm"
+    info "NEXT: Repair Node/npm tooling menu item or: sudo ./android/android_dev_core_setup.sh --repair-node"
   fi
 }
 
@@ -462,16 +601,8 @@ echo
 theme_section "SDK/PATH"
 install_android_cmdline_tools
 ensure_android_paths_in_bashrc
-if cmd_available sdkmanager; then
-  theme_tool_row ok "sdkmanager" "$(sdkmanager --version 2>&1 | tail -n 1)"
-else
-  theme_tool_row warn "sdkmanager" "not on PATH"
-fi
-if grep -qF '# >>> ANDROID SDK PATHS (managed) >>>' "${REAL_HOME}/.bashrc" 2>/dev/null; then
-  theme_status_ok "Android SDK PATH block present in ~/.bashrc"
-else
-  theme_status_warn "Android SDK PATH block missing from ~/.bashrc"
-fi
+core_row_sdkmanager
+bashrc_android_path_status
 echo
 
 theme_section "Warnings"
@@ -510,5 +641,5 @@ echo "  adb version"
 echo "  java -version"
 echo "  sdkmanager --version"
 echo "  frida --version"
-echo "  objection --version"
+echo "  objection version"
 echo "  mitmproxy --version"

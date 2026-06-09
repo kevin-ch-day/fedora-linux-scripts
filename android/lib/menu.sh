@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# android/lib/menu.sh — Android RE & MobSF interactive menus (uses lib/menu.sh theme)
-# Version: 0.3.1
+# android/lib/menu.sh — Android RE tools interactive menus (uses lib/menu.sh theme)
+# Version: 0.3.2
 #
 # Standalone:  ./android/android.sh
 # From main:   ./run.sh → [3] or ./run.sh --android
@@ -25,7 +25,7 @@ android_menu_header() {
   local subtitle="${2:-}"
   local page_title="${title}"
   menu_clear_screen
-  theme_lane_banner "Android RE & MobSF" android
+  theme_lane_banner "Android RE tools" android
   if menu_is_submenu; then
     theme_meta_line "Path: $(menu_path_text)"
   else
@@ -47,11 +47,11 @@ android_menu_main_header() {
   menu_clear_screen
   theme_rule '═'
   if theme_use_color; then
-    printf '%s◈ Android RE & MobSF%s\n' "${THEME_TITLE}" "${THEME_RESET}"
+    printf '%s◈ Android RE tools%s\n' "${THEME_TITLE}" "${THEME_RESET}"
   else
-    printf '◈ Android RE & MobSF\n'
+    printf '◈ Android RE tools\n'
   fi
-  theme_meta_line "Android reverse engineering and mobile analysis"
+  theme_meta_line "Android reverse engineering · MobSF: ./mobsf.sh (separate)"
   theme_meta_line "Path: $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
@@ -62,7 +62,7 @@ android_menu_main_header() {
 
 android_menu_init() {
   local fedora_root="${1:-${_FEDORA_ROOT}}"
-  menu_init "Android RE & MobSF" "${fedora_root}" 0
+  menu_init "Android RE tools" "${fedora_root}" 0
   theme_set_lane android
   menu_set_header_fn android_menu_header
 }
@@ -211,12 +211,12 @@ _android_main_items() {
   menu_item 1 "Install Android core tools" "adb · sdkmanager · Python tools · Android Studio"
   menu_item 2 "Install APK RE tools" "apktool · jadx · smali · dex2jar"
   theme_section "Checks"
-  menu_item 3 "Verify Android RE environment" "adb · java · sdkmanager · frida · objection"
+  menu_item 3 "Android workstation doctor" "sdk · adb · core tools · RE tools"
   menu_item 4 "ADB and device checks" "devices · udev · permissions"
   theme_section "Mobile analysis"
-  menu_item 5 "MobSF stack" "setup · start · stop · status"
+  menu_item 5 "Open MobSF stack" "separate lifecycle · ./mobsf.sh"
   theme_section "Maintenance"
-  menu_item 6 "Repair Node/npm tooling" "npm · node · apk-mitm"
+  menu_item 6 "Repair Node/npm tooling" "optional · apk-mitm only"
   theme_section "Docs"
   menu_item 7 "Lane guide" "android/README.md"
   menu_item_lane_exit
@@ -239,7 +239,7 @@ _android_main_dispatch() {
 android_main_menu() {
   local prev_header="${MENU_HEADER_FN}"
   menu_set_header_fn android_menu_main_header
-  menu_loop "Android RE & MobSF" "sdk · adb · apk tools · dynamic tools · mobsf" \
+  menu_loop "Android RE tools" "sdk · adb · jadx · apktool" \
     _android_main_items _android_main_dispatch
   menu_set_header_fn "${prev_header}"
 }
