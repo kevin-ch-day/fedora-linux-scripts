@@ -4,7 +4,7 @@
 #
 # Screen clear is off by default (output accumulates for dev/tuning).
 # Set FEDORA_MENU_CLEAR=1 to restore full-screen redraws.
-# Source from launchers (fedora.sh):
+# Source from launchers (run.sh):
 #   source "${FEDORA_ROOT}/lib/menu.sh"
 #   menu_init "Fedora Toolkit" "${FEDORA_ROOT}"
 #
@@ -176,7 +176,7 @@ menu_lane_handle_main_exit() {
 }
 
 menu_lane_exit_msg() {
-  info "Returned to shell. Run ./fedora.sh to open the main menu."
+  info "Returned to shell. Run ./run.sh to open the main menu."
 }
 
 menu_print_nav_hint() {

@@ -247,7 +247,7 @@ _mobsf_main_items() {
   menu_item 5 "Logs" "container · mobsf.log"
   menu_item 6 "Documentation" "guide · troubleshooting"
   theme_section "Fedora toolkit"
-  theme_note_kv "Main menu" "./fedora.sh"
+  theme_note_kv "Main menu" "./run.sh"
   menu_item_exit
 }
 
@@ -265,7 +265,7 @@ _mobsf_main_dispatch() {
 }
 
 mobsf_main_menu() {
-  menu_loop "MobSF menu" "separate from ./fedora.sh · UI http://127.0.0.1:8080/" \
+  menu_loop "MobSF menu" "separate from ./run.sh · UI http://127.0.0.1:8080/" \
     _mobsf_main_items _mobsf_main_dispatch
 }
 

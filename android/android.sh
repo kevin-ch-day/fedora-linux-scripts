@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./android/android.sh
-#   ./fedora.sh --android
+#   ./run.sh --android
 #   ./android/android.sh --doctor     Android workstation doctor
 #   ./android/android.sh verify all
 #   ./android/android.sh verify apktool
@@ -22,7 +22,7 @@ usage() {
   cat <<EOF
 Android RE & MobSF launcher — core setup, RE tools, verification, and mobile analysis.
 
-From main entry: ./fedora.sh → [6]  or  ./fedora.sh --android
+From main entry: ./run.sh → [6]  or  ./run.sh --android
 
 Usage: $(basename "$0") [command|option]
 
@@ -38,7 +38,7 @@ Commands:
   repair-node    Repair node/npm + apk-mitm tooling (sudo)
   research-doctor Full Android + MobSF doctor (rebuild finale)
 
-Fedora doctor (entry points + Android): ./fedora.sh --doctor
+Fedora doctor (entry points + Android): ./run.sh --doctor
 
 Toolkit root: ${FEDORA_ROOT}
 See: docs/GETTING-STARTED.md

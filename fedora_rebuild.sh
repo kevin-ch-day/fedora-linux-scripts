@@ -2,25 +2,25 @@
 # fedora_rebuild.sh — Guided workstation rebuild sequence (implementation)
 # Version: 0.4.6
 #
-# Prefer: ./fedora.sh --rebuild
+# Prefer: ./run.sh --rebuild
 #
 # This script is retained for compatibility. When invoked directly it delegates
-# to ./fedora.sh --rebuild (see FEDORA_REBUILD_VIA_FEDORA guard below).
+# to ./run.sh --rebuild (see FEDORA_REBUILD_VIA_FEDORA guard below).
 #
 # Run:
-#   ./fedora.sh --rebuild              # preferred
-#   ./fedora_rebuild.sh                # compatibility → fedora.sh --rebuild
-#   ./fedora.sh --rebuild --yes        # no prompts between steps
-#   ./fedora.sh --rebuild --dry-run    # show steps only
-#   ./fedora.sh --rebuild --log        # tee output to logs/fedora_rebuild.log
+#   ./run.sh --rebuild                 # preferred
+#   ./fedora_rebuild.sh              # compatibility → run.sh --rebuild
+#   ./run.sh --rebuild --yes         # no prompts between steps
+#   ./run.sh --rebuild --dry-run     # show steps only
+#   ./run.sh --rebuild --log         # tee output to logs/fedora_rebuild.log
 
 set -euo pipefail
 
 FEDORA_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# Compatibility wrapper: direct callers go through fedora.sh (avoid loop below).
+# Compatibility wrapper: direct callers go through run.sh (avoid loop below).
 if [[ "${FEDORA_REBUILD_VIA_FEDORA:-}" != 1 ]]; then
-  exec bash "${FEDORA_ROOT}/fedora.sh" --rebuild "$@"
+  exec bash "${FEDORA_ROOT}/run.sh" --rebuild "$@"
 fi
 # shellcheck source=lib/common.sh
 source "${FEDORA_ROOT}/lib/common.sh"
@@ -58,8 +58,8 @@ Options:
 
 With --yes: auto-installs MobSF when compose is missing; runs research doctor at end.
 
-Daily lane menus: ./fedora.sh
-Preferred rebuild: ./fedora.sh --rebuild  (this script: compatibility wrapper + implementation)
+Daily lane menus: ./run.sh
+Preferred rebuild: ./run.sh --rebuild  (this script: compatibility wrapper + implementation)
 See: docs/GETTING-STARTED.md
 EOF
 }
@@ -112,7 +112,7 @@ if (( AUTO_YES == 0 && DRY_RUN == 0 && USE_LOG == 0 )) && [[ -t 0 ]] && [[ "${FE
 fi
 
 if [[ "${FEDORA_FROM_MENU:-}" == 1 ]]; then
-  info "Rebuild from fedora.sh — confirm each step (no mode picker)"
+  info "Rebuild from run.sh — confirm each step (no mode picker)"
 fi
 
 if (( USE_LOG )); then
@@ -248,7 +248,7 @@ else
   ok "Rebuild sequence finished"
 fi
 echo "[NEXT] source ~/.bashrc  OR  log out/in for PATH/group changes"
-echo "[NEXT] ./fedora.sh  OR  ./android/android.sh  OR  ./mobsf.sh"
+echo "[NEXT] ./run.sh  OR  ./android/android.sh  OR  ./mobsf.sh"
 if (( USE_LOG )); then
   echo "[NEXT] ./system/log_engine.sh tail --file fedora_rebuild.log --lines 50"
 fi

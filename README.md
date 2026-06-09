@@ -6,22 +6,25 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 
 | Entry | Use |
 |-------|-----|
-| **`./fedora.sh`** | Main menu — setup lanes, workstation readiness, rebuild |
+| **`./run.sh`** | Main menu — setup lanes, workstation readiness, rebuild |
+| **`./setup.sh`** | Repo/toolkit readiness (validate · optional smoke) |
 | **`./mobsf.sh`** | MobSF stack — install/start/**doctor** (separate lifecycle) |
-| **`./fedora_rebuild.sh`** | Compatibility → `./fedora.sh --rebuild` |
+| **`./fedora.sh`** | Compatibility wrapper → `./run.sh` (older docs/scripts) |
+| **`./fedora_rebuild.sh`** | Rebuild engine · compat → `./run.sh --rebuild` |
 
 ```bash
-./fedora.sh              # interactive menu
-./fedora.sh --check      # validate + smoke + rebuild readiness (start here)
-./fedora.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
-./fedora.sh --check --full        # + full smoke + Fedora doctor
-./fedora.sh --daily-driver-check  # read-only daily driver / stabilization report
-./fedora.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
-./fedora.sh --baseline   # fresh-install host baseline → logs/
-./fedora.sh --rebuild-check   # pre-rebuild readiness only
-./fedora.sh --rebuild    # guided full setup
-./fedora.sh --smoke      # dynamic CLI/menu tests
-./fedora.sh --fix-repos  # fix DNF .repo permissions (sudo)
+./setup.sh            # first-run repo check (no sudo · no installs)
+./run.sh              # interactive menu
+./run.sh --check      # validate + smoke + rebuild readiness (start here)
+./run.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
+./run.sh --check --full        # + full smoke + Fedora doctor
+./run.sh --daily-driver-check  # read-only daily driver / stabilization report
+./run.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
+./run.sh --baseline   # fresh-install host baseline → logs/
+./run.sh --rebuild-check   # pre-rebuild readiness only
+./run.sh --rebuild    # guided full setup
+./run.sh --smoke      # dynamic CLI/menu tests
+./run.sh --fix-repos  # fix DNF .repo permissions (sudo)
 ./mobsf.sh --doctor      # MobSF stack health (separate)
 ```
 
@@ -34,7 +37,7 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ```text
 fedora-linux-scripts/
 ├── README.md · docs/ · validate.sh
-├── fedora.sh · mobsf.sh · fedora_rebuild.sh
+├── run.sh · setup.sh · fedora.sh (compat) · mobsf.sh · fedora_rebuild.sh
 ├── lib/                 ← shared libraries
 ├── system/ · dev/ · android/
 ├── mobsf/               ← Podman stack (see mobsf/GUIDE.md)
@@ -53,7 +56,7 @@ Shared libs: `common`, `theme`, `menu`, `packages`, `health`, `android`, `androi
 | **Setup / rebuild lanes** | Install and configure: system, dev, desktop, virt, web, Android RE; MobSF separate |
 | **Readiness / stabilization** | Daily driver, btrfs/LUKS/vbox checks, package noise, post-update validation, recovery export |
 
-Workstation readiness: `./fedora.sh --daily-driver-check` or System menu → **Workstation readiness**.
+Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Workstation readiness**.
 
 ---
 
@@ -71,7 +74,7 @@ Workstation readiness: `./fedora.sh --daily-driver-check` or System menu → **W
 
 ## Install (summary)
 
-Full path: **`./fedora.sh --rebuild`**. Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Full path: **`./run.sh --rebuild`**. Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
@@ -83,9 +86,11 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
-| `fedora.sh` | Main entry |
+| `run.sh` | Main workstation entry |
+| `setup.sh` | Lightweight repo readiness helper |
+| `fedora.sh` | Compatibility wrapper → `run.sh` |
 | `mobsf.sh` | MobSF wrapper → `mobsf/mobsf.sh` |
-| `fedora_rebuild.sh` | Rebuild compat wrapper |
+| `fedora_rebuild.sh` | Rebuild engine + compat redirect |
 | `system/system.sh` · `dev/dev.sh` · `android/android.sh` | Lane menus + CLI |
 | `validate.sh` | Syntax, entry points, ShellCheck; `--smoke` runs smoke_test |
 | `smoke_test.sh` | Dynamic CLI/menu smoke tests (read-only) |
@@ -94,15 +99,15 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
-| `daily_driver_check.sh` | Read-only daily driver report (`./fedora.sh --daily-driver-check`) |
+| `daily_driver_check.sh` | Read-only daily driver report (`./run.sh --daily-driver-check`) |
 | `btrfs_health.sh` | Btrfs stats/scrub; `--scrub` starts scrub (confirm) |
 | `luks_readiness.sh` | LUKS keyslots, header backups; `--add-passphrase` (sudo · interactive) |
 | `virtualbox_readiness.sh` | vbox modules, vboxdrv, packages |
 | `package_noise.sh` | PackageKit/dnf/flatpak noise; `--stop-session` |
 | `post_update_check.sh` | After `dnf upgrade`: reboot, btrfs, services, vbox |
 | `system_update.sh` | Full Fedora update + health snapshot; `--quick` skips rpm -Va |
-| `fresh_install_check.sh` | Host baseline after fresh install (`./fedora.sh --baseline`) |
-| `rebuild_readiness_check.sh` | Pre-rebuild checks (`./fedora.sh --rebuild-check`) |
+| `fresh_install_check.sh` | Host baseline after fresh install (`./run.sh --baseline`) |
+| `rebuild_readiness_check.sh` | Pre-rebuild checks (`./run.sh --rebuild-check`) |
 | `system_info.sh` · `system_monitor.sh` | Snapshot · live dashboard |
 | `research_doctor.sh` | Full research doctor (Android + MobSF); Fedora doctor uses `--android-only` |
 | `log_engine.sh` | Logs CLI |

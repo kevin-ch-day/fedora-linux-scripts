@@ -2,7 +2,7 @@
 
 **Web UI:** http://127.0.0.1:8080/ · **Login:** `mobsf` / `mobsf` · **Entry:** `./mobsf.sh`
 
-MobSF is **not** a `./fedora.sh` lane — separate Podman stack lifecycle. Upstream Docker docs assume Ubuntu; this repo ships a Fedora-patched compose bundle ([STACK.md](STACK.md)).
+MobSF is **not** a `./run.sh` lane — separate Podman stack lifecycle. Upstream Docker docs assume Ubuntu; this repo ships a Fedora-patched compose bundle ([STACK.md](STACK.md)).
 
 **Also read:** [STACK.md](STACK.md) (architecture) · [TROUBLESHOOTING.md](TROUBLESHOOTING.md) (SELinux / failures)
 
@@ -49,7 +49,7 @@ Deploys compose + `.env`, SELinux labels, ordered startup, session log. **Use `s
 | Broken, keep scans | `sudo -E ./mobsf/mobsf_reset.sh --keep` |
 | Clean slate | `sudo -E ./mobsf/mobsf_reset.sh` |
 
-During `./fedora.sh --rebuild`, optional MobSF step runs install or reset `--keep`.
+During `./run.sh --rebuild`, optional MobSF step runs install or reset `--keep`.
 
 ---
 
@@ -93,7 +93,7 @@ Back up before nuke: `tar -czvf ~/MobSF-backup-$(date +%Y%m%d).tar.gz ~/MobSF/mo
 
 ### Research workflow
 
-1. Local RE via `./fedora.sh --android`
+1. Local RE via `./run.sh --android`
 2. Upload APK to MobSF for static report
 3. *(Optional)* Dynamic — `./mobsf.sh --doctor --dynamic`; see [STACK.md](STACK.md#dynamic-analysis-not-enabled-by-default)
 

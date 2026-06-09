@@ -5,7 +5,7 @@
 # Run:
 #   ./system/daily_driver_check.sh
 #   ./system/system.sh daily-driver
-#   ./fedora.sh --daily-driver-check
+#   ./run.sh --daily-driver-check
 
 set -uo pipefail
 
@@ -23,7 +23,7 @@ Usage: $(basename "$0") [--help]
 Read-only daily driver check for a Fedora research workstation.
 Reports boot, btrfs, LUKS, VirtualBox, package noise, and key mounts.
 
-Also: ./fedora.sh --daily-driver-check
+Also: ./run.sh --daily-driver-check
       ./system/system.sh daily-driver
 
 Toolkit root: ${FEDORA_ROOT}

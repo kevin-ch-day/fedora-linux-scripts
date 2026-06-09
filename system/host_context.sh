@@ -35,7 +35,7 @@ Modes:
   --save       Write snapshot under logs/host_context/<host>/
   --compare    Diff live snapshot vs latest saved on this host
 
-Also: ./fedora.sh --host-context
+Also: ./run.sh --host-context
       ./system/system.sh host-context
 
 Toolkit root: ${FEDORA_ROOT}

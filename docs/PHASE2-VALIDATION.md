@@ -15,7 +15,7 @@ cd ~/GitHub/fedora-linux-scripts   # adjust path if cloned elsewhere
 ## Before you start
 
 - [ ] Fedora 44+ host (Neptune or similar research workstation)
-- [ ] Repo on disk with executable scripts (`chmod +x fedora.sh` if needed)
+- [ ] Repo on disk with executable scripts (`chmod +x run.sh` if needed)
 - [ ] Normal user session (not required to be root except where noted)
 - [ ] Optional: `NO_COLOR=1` for plain output in logs
 
@@ -26,7 +26,7 @@ cd ~/GitHub/fedora-linux-scripts   # adjust path if cloned elsewhere
 ### 1. Main menu opens cleanly
 
 ```bash
-./fedora.sh
+./run.sh
 ```
 
 - [ ] Banner and main menu render without errors
@@ -38,7 +38,7 @@ cd ~/GitHub/fedora-linux-scripts   # adjust path if cloned elsewhere
 ### 2. System menu shows Workstation readiness
 
 ```bash
-./fedora.sh --system
+./run.sh --system
 ```
 
 - [ ] `[1] Workstation readiness` appears under **Workstation readiness**
@@ -47,10 +47,10 @@ cd ~/GitHub/fedora-linux-scripts   # adjust path if cloned elsewhere
 
 ---
 
-### 3. Daily driver via fedora.sh
+### 3. Daily driver via run.sh
 
 ```bash
-./fedora.sh --daily-driver-check
+./run.sh --daily-driver-check
 ```
 
 - [ ] Exits 0

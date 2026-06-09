@@ -3,7 +3,7 @@
 # Version: 0.1.0
 #
 # MobSF has its own lifecycle (Podman stack, compose, reset, doctor) and is
-# intentionally separate from ./fedora.sh.
+# intentionally separate from ./run.sh.
 
 set -euo pipefail
 

@@ -376,7 +376,7 @@ security_audit_analyze() {
   if have dnf && ! baseline_dnf_check_ok 2>/dev/null; then
     security_audit_add_finding WARN dnf-check-failed \
       "dnf check failed (repo permissions or config)" \
-      "sudo ./fedora.sh --fix-repos"
+      "sudo ./run.sh --fix-repos"
   fi
 
   if ! findmnt -n /data >/dev/null 2>&1; then
@@ -434,7 +434,7 @@ security_audit_build_action_plan() {
     security_audit_plan_add "./system/hardening_round1.sh --yes"
   fi
   security_audit_finding_has dnf-check-failed \
-    && security_audit_plan_add "sudo ./fedora.sh --fix-repos"
+    && security_audit_plan_add "sudo ./run.sh --fix-repos"
   if [[ ${#SECURITY_AUDIT_ACTION_PLAN[@]} -gt 0 ]]; then
     security_audit_plan_add "./system/security_audit.sh --findings --compare"
   fi

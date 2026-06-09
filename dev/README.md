@@ -2,7 +2,7 @@
 
 Git, VS Code, containers/KVM, VirtualBox, and optional LAMP/phpMyAdmin stack.
 
-**Menu:** `./dev/dev.sh` · **From main entry:** `./fedora.sh` → `[2]` or `./fedora.sh --dev`
+**Menu:** `./dev/dev.sh` · **From main entry:** `./run.sh` → `[2]` or `./run.sh --dev`
 
 ---
 
@@ -25,7 +25,7 @@ sudo ./dev/phpmyadmin_setup.sh
 ./dev/web_stack_doctor.sh
 ```
 
-Rebuild sequence runs KVM setup early: `./fedora.sh --rebuild`
+Rebuild sequence runs KVM setup early: `./run.sh --rebuild`
 
 ---
 
@@ -104,7 +104,7 @@ Or: dev menu → Web stack → [4] Remove public info.php
 
 ---
 
-Web stack doctor: `./dev/web_stack_doctor.sh` · Fedora doctor: `./fedora.sh --doctor` · Full research: `./system/research_doctor.sh`
+Web stack doctor: `./dev/web_stack_doctor.sh` · Fedora doctor: `./run.sh --doctor` · Full research: `./system/research_doctor.sh`
 
 ---
 

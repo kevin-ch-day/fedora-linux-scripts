@@ -158,7 +158,7 @@ if (( FAILURES == 0 )); then
   theme_summary_box "Validation summary" \
     "Result: passed" \
     "Issues: 0" \
-    "Next: ./fedora.sh --check"
+    "Next: ./run.sh --check"
   exit 0
 fi
 theme_summary_box "Validation summary" \

@@ -28,7 +28,7 @@ for lane in main system dev android mobsf rebuild audit; do
   info "Info message"
   theme_msg_miss "missing-tool"
   theme_breadcrumb "Main menu › ${lane} lane › Sample"
-  theme_summary_box "Summary" "Result:  READY" "Next: ./fedora.sh"
+  theme_summary_box "Summary" "Result:  READY" "Next: ./run.sh"
   echo
 done
 

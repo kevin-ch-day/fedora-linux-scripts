@@ -8,8 +8,8 @@ Operational logs for the Fedora rebuild kit. Implementation: **`lib/logging.sh`*
 logs/
 ├── README.md              # this file
 ├── system_update.log      # system/system_update.sh (always)
-├── fedora_rebuild.log     # fedora.sh --rebuild --log
-├── fresh_install_check_YYYYMMDD_HHMMSS.log  # ./fedora.sh --baseline (timestamped)
+├── fedora_rebuild.log     # run.sh --rebuild --log
+├── fresh_install_check_YYYYMMDD_HHMMSS.log  # ./run.sh --baseline (timestamped)
 ├── mobsf.log              # mobsf install/reset/update (was mobsf_reset.log)
 ├── android_dev_core.log   # android/android_dev_core_setup.sh (always)
 ├── archive/               # rotated/archived copies (*.log)
@@ -97,7 +97,7 @@ Each run writes a session banner, Session-ID, structured lines, and footer (see 
 | Script | Log file | When |
 |--------|----------|------|
 | `system/system_update.sh` | `system_update.log` | Always |
-| `fedora.sh --rebuild --log` | `fedora_rebuild.log` | when `--log` passed |
+| `run.sh --rebuild --log` | `fedora_rebuild.log` | when `--log` passed |
 | `mobsf/mobsf_install.sh` | `mobsf.log` | Always (install/reset/update) |
 | `android/android_dev_core_setup.sh` | `android_dev_core.log` | Always |
 
@@ -123,7 +123,7 @@ This repo tracks the **toolkit** (scripts, docs, placeholders) — not host-gene
 | `logs/archive/`, `logs/backups/` | no | Rotated logs and `backup_state` exports |
 | `logs/security_audit/`, `logs/host_context/`, `logs/hardening/`, `logs/readiness/` | no | Report snapshots when written |
 
-**Runtime health** (`lib/health_snapshot.sh`, refreshed on `./fedora.sh` startup and via System → Disk/memory):
+**Runtime health** (`lib/health_snapshot.sh`, refreshed on `./run.sh` startup and via System → Disk/memory):
 
 | Path | Tracked | Notes |
 |------|---------|-------|

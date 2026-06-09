@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/entry_points.sh — shared launcher layout checks (validate.sh + Fedora doctor)
-# Version: 0.1.1
+# Version: 0.2.0
 #
 # Source after lib/common.sh:
 #   fedora_entry_points_check ROOT [fail_count_var]
@@ -27,7 +27,7 @@ fedora_entry_points_check() {
     theme_section "Entry points"
   fi
 
-  for path in fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do
+  for path in run.sh setup.sh fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do
     if [[ -x "${fedora_root}/${path}" ]]; then
       ok "./${path}"
     else
@@ -45,12 +45,12 @@ fedora_entry_points_check() {
     n=$((n + 1))
   fi
 
-  if grep -qE '_fedora_open_lane.*mobsf|menu_item [0-9]+ "MobSF lane' "${fedora_root}/fedora.sh" 2>/dev/null; then
-    warn "fedora.sh still references MobSF as an active lane (expected separate ./mobsf.sh only)"
+  if grep -qE '_fedora_open_lane.*mobsf|menu_item [0-9]+ "MobSF lane' "${fedora_root}/run.sh" 2>/dev/null; then
+    warn "run.sh still references MobSF as an active lane (expected separate ./mobsf.sh only)"
     rc=1
     n=$((n + 1))
   else
-    ok "fedora.sh — MobSF not listed as an active lane"
+    ok "run.sh — MobSF not listed as an active lane"
   fi
 
   if [[ -n "${fail_var}" ]]; then

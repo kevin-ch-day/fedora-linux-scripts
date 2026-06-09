@@ -12,12 +12,12 @@
 |-------|--------|
 | `bash -n` (active scripts) | Pass |
 | ShellCheck `-S warning` | Pass (`./validate.sh`) |
-| Entry points | `./fedora.sh`, `./mobsf.sh`, `./validate.sh` · checks in `lib/entry_points.sh` |
+| Entry points | `./run.sh`, `./mobsf.sh`, `./validate.sh` · checks in `lib/entry_points.sh` |
 | CI | `.github/workflows/validate.yml` |
 | Docs | `docs/GETTING-STARTED.md`, `mobsf/GUIDE.md` |
 
 ```text
-fedora.sh → system/ · dev/ · android/ + rebuild + doctor
+run.sh → system/ · dev/ · android/ + rebuild + doctor
 mobsf.sh  → mobsf/mobsf.sh (separate Podman stack)
 lib/      → shared helpers · mobsf/lib/ → stack-specific
 ```
@@ -30,7 +30,7 @@ Scale: ~51 active task scripts · 16 lib modules · 4 lane menus.
 
 | Check | Entry | Default |
 |-------|-------|---------|
-| Daily driver | `./fedora.sh --daily-driver-check` | read-only |
+| Daily driver | `./run.sh --daily-driver-check` | read-only |
 | Btrfs health | `./system/system.sh btrfs-health` | read-only; `--scrub` confirms |
 | LUKS readiness | `./system/system.sh luks-readiness` | read-only; no passphrase output |
 | VirtualBox | `./system/system.sh virtualbox-readiness` | read-only |
@@ -108,7 +108,7 @@ Consolidation (RE engine, lane launchers, MobSF split, secrets, autostart, dynam
 | **soft-fail** | Warn and stay in menu |
 | `[0]` | Back · `[r]` | Repeat last choice |
 
-### Lane picker (`fedora.sh`)
+### Lane picker (`run.sh`)
 
 ```
 [1] System  [2] Dev  [3] Android  [4] Rebuild  [5] Doctor  [0] Exit
@@ -116,7 +116,7 @@ Consolidation (RE engine, lane launchers, MobSF split, secrets, autostart, dynam
 
 MobSF is a separate entry: `./mobsf.sh`
 
-CLI shortcuts exit to shell (by design): `./fedora.sh 1`–`3`, `--system`, `--dev`, `--android`, `--doctor`, `--rebuild*`
+CLI shortcuts exit to shell (by design): `./run.sh 1`–`3`, `--system`, `--dev`, `--android`, `--doctor`, `--rebuild*`
 
 ### MobSF menu (`./mobsf.sh`)
 
@@ -124,16 +124,16 @@ CLI shortcuts exit to shell (by design): `./fedora.sh 1`–`3`, `--system`, `--d
 [1] Stack  [2] Setup  [3] Doctor  [4] Maintenance  [5] Logs  [6] Docs  [0] Exit
 ```
 
-### Dev lane (`./fedora.sh --dev`)
+### Dev lane (`./run.sh --dev`)
 
 Workstation: git · VS Code · Cinnamon (`@cinnamon-desktop`) · `--cinnamon-only` · `--set-default` · status. Infrastructure: KVM. Web: LAMP/phpMyAdmin.
 
 Full trees were trimmed here; source of truth is `*/lib/menu.sh`. QA loop:
 
 ```bash
-./fedora.sh
-./fedora.sh --rebuild --dry-run
-./fedora.sh 1    # exits to shell when non-interactive — expected
+./run.sh
+./run.sh --rebuild --dry-run
+./run.sh 1    # exits to shell when non-interactive — expected
 ```
 
 ---
@@ -142,7 +142,7 @@ Full trees were trimmed here; source of truth is `*/lib/menu.sh`. QA loop:
 
 ```bash
 ./validate.sh
-./fedora.sh --doctor
+./run.sh --doctor
 ./mobsf.sh --doctor
 ./system/research_doctor.sh --android-only
 ./legacy/update_fedora.sh          # must exit 1

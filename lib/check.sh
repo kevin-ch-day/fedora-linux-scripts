@@ -3,7 +3,7 @@
 # Version: 0.2.2
 #
 # Source after lib/common.sh.
-# Used by: ./fedora.sh --check
+# Used by: ./run.sh --check
 
 if [[ -n "${FEDORA_CHECK_SH_LOADED:-}" ]]; then
   return 0 2>/dev/null || exit 0
@@ -29,7 +29,7 @@ fedora_toolkit_check() {
   local fix_repos="${3:-0}"
   local val_ec=0 smoke_ec=0 ready_ec=0 doctor_ec=0
   local smoke_args=(--quick)
-  local next_hint="Fix issues above, then: ./fedora.sh --check"
+  local next_hint="Fix issues above, then: ./run.sh --check"
   local steps=3 step=0
 
   (( full_smoke )) && smoke_args=()
@@ -62,7 +62,7 @@ fedora_toolkit_check() {
     else
       warn "DNF repo files not readable as $(real_user) — rebuild check may fail"
       printf '%s\n' "${unreadable_repos}" | sed 's/^/  /'
-      info "Fix: ./fedora.sh --check --fix-repos   or   sudo ./fedora.sh --fix-repos"
+      info "Fix: ./run.sh --check --fix-repos   or   sudo ./run.sh --fix-repos"
       echo
     fi
   fi
@@ -100,11 +100,11 @@ fedora_toolkit_check() {
   echo
 
   if (( ready_ec != 0 )) && baseline_unreadable_repo_files 2>/dev/null | grep -q .; then
-    next_hint="sudo ./fedora.sh --fix-repos  →  ./fedora.sh --check"
+    next_hint="sudo ./run.sh --fix-repos  →  ./run.sh --check"
   elif (( ready_ec != 0 )); then
-    next_hint="Resolve rebuild readiness issues  →  ./fedora.sh --check"
+    next_hint="Resolve rebuild readiness issues  →  ./run.sh --check"
   elif (( val_ec != 0 || smoke_ec != 0 || doctor_ec != 0 )); then
-    next_hint="Fix repo/smoke/doctor failures  →  ./fedora.sh --check"
+    next_hint="Fix repo/smoke/doctor failures  →  ./run.sh --check"
   fi
 
   if (( val_ec == 0 && smoke_ec == 0 && ready_ec == 0 && doctor_ec == 0 )); then
@@ -115,14 +115,14 @@ fedora_toolkit_check() {
         "Smoke:      passed" \
         "Doctor:     passed" \
         "Rebuild:    ready" \
-        "Next:       ./fedora.sh --rebuild"
+        "Next:       ./run.sh --rebuild"
     else
       theme_summary_box "Check complete" \
         "Result:     READY" \
         "Validate:   passed" \
         "Smoke:      passed" \
         "Rebuild:    ready" \
-        "Next:       ./fedora.sh --rebuild"
+        "Next:       ./run.sh --rebuild"
     fi
     return 0
   fi

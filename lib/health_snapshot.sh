@@ -2,7 +2,7 @@
 # lib/health_snapshot.sh — lightweight runtime health snapshot + dashboard
 # Version: 0.1.1
 #
-# Quiet startup snapshot for fedora.sh and explicit System menu actions.
+# Quiet startup snapshot for run.sh and explicit System menu actions.
 # Writes:
 #   runtime/health/latest.json
 #   runtime/health/latest.txt

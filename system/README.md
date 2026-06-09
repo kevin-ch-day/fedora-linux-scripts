@@ -2,9 +2,9 @@
 
 Host maintenance, **workstation readiness**, snapshots, logs, baseline checks, and cleanup.
 
-**Menu:** `./system/system.sh` · **From main entry:** `./fedora.sh` → `[1]` or `./fedora.sh --system`
+**Menu:** `./system/system.sh` · **From main entry:** `./run.sh` → `[1]` or `./run.sh --system`
 
-Fedora doctor (entry points · Android RE) lives on the **main menu** `./fedora.sh` → `[8]`, not in this lane.
+Fedora doctor (entry points · Android RE) lives on the **main menu** `./run.sh` → `[8]`, not in this lane.
 
 ---
 
@@ -14,7 +14,7 @@ Neptune-style stabilization checks. Not Mercury (no backup/DR manifests).
 
 | Task | Command |
 |------|---------|
-| **Daily driver check** | `./fedora.sh --daily-driver-check` or `./system/system.sh daily-driver` |
+| **Daily driver check** | `./run.sh --daily-driver-check` or `./system/system.sh daily-driver` |
 | Btrfs health | `./system/system.sh btrfs-health` (`--scrub` starts scrub — confirm) |
 | LUKS readiness | `./system/system.sh luks-readiness` |
 | LUKS backup passphrase | `sudo ./system/system.sh luks-readiness --add-passphrase` |
@@ -32,11 +32,11 @@ Daily driver reports: OS/kernel/model, `systemd-analyze` boot time, btrfs device
 
 | Task | Command |
 |------|---------|
-| **All-in-one toolkit check** | `./fedora.sh --check` |
-| Fix repos then re-check | `./fedora.sh --check --fix-repos` (sudo) |
+| **All-in-one toolkit check** | `./run.sh --check` |
+| Fix repos then re-check | `./run.sh --check --fix-repos` (sudo) |
 | Host snapshot | `./system/system_info.sh` |
-| Fresh install baseline | `./fedora.sh --baseline` or `./system/fresh_install_check.sh` |
-| Rebuild readiness | `./fedora.sh --rebuild-check` or `./system/rebuild_readiness_check.sh` |
+| Fresh install baseline | `./run.sh --baseline` or `./system/fresh_install_check.sh` |
+| Rebuild readiness | `./run.sh --rebuild-check` or `./system/rebuild_readiness_check.sh` |
 | Full Fedora update | `sudo ./system/system_update.sh --quick` |
 | Fix DNF repo permissions | `sudo ./system/fix_dnf_repo_permissions.sh` |
 | **OS hardening Round 1** | `./system/hardening_round1.sh --yes` |
@@ -63,7 +63,7 @@ Context libraries: see [lib/README.md](../lib/README.md) (`users`, `network`, `s
 | Logs CLI | `./system/log_engine.sh status` |
 | Full research (Android + MobSF) | `./system/research_doctor.sh` or `./system/system.sh research-doctor` |
 | MobSF stack only | `./mobsf.sh --doctor` |
-| Guided rebuild | `./fedora.sh --rebuild` |
+| Guided rebuild | `./run.sh --rebuild` |
 
 ---
 
@@ -88,7 +88,7 @@ system/system.sh
 ├── [7] View logs                 log_engine submenu
 ├── [8] Cleanup                   logs · dnf · repo fix
 ├── [9] OS hardening              Round 1 · services audit
-└── [0] Back to main menu         (when opened from ./fedora.sh)
+└── [0] Back to main menu         (when opened from ./run.sh)
 ```
 
 CLI shortcuts: `./system/system.sh daily-driver|btrfs-health|luks-readiness|virtualbox-readiness|package-noise|post-update-check|update|info|baseline|rebuild-check|monitor|backup|research-doctor|logs`
@@ -107,8 +107,8 @@ Doctor matrix: [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md#doctor-matri
 
 | Check | Command |
 |-------|---------|
-| Daily driver (stabilization) | `./fedora.sh --daily-driver-check` |
-| Fedora doctor (toolkit) | `./fedora.sh --doctor` or `./fedora.sh` → `[8]` |
+| Daily driver (stabilization) | `./run.sh --daily-driver-check` |
+| Fedora doctor (toolkit) | `./run.sh --doctor` or `./run.sh` → `[8]` |
 | Full research (Android + MobSF) | `./system/system.sh research-doctor` (rebuild finale) |
 | MobSF stack only | `./mobsf.sh --doctor` |
 

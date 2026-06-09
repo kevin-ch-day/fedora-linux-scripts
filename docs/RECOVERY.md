@@ -2,7 +2,7 @@
 
 Operator-facing recovery notes from **neptune** (Fedora 44 research workstation). Fedora-only. This repo is **not Mercury** (no database backup/DR manifests).
 
-**Readiness commands:** `./fedora.sh --daily-driver-check` · `./system/system.sh btrfs-health` · `luks-readiness` · `post-update-check`
+**Readiness commands:** `./run.sh --daily-driver-check` · `./system/system.sh btrfs-health` · `luks-readiness` · `post-update-check`
 
 ---
 
@@ -216,7 +216,7 @@ The update script prints this next step and may offer to run it interactively.
 ## Quick recovery checklist
 
 ```bash
-./fedora.sh --daily-driver-check
+./run.sh --daily-driver-check
 ./system/system.sh btrfs-health
 ./system/system.sh luks-readiness
 ./system/system.sh virtualbox-readiness

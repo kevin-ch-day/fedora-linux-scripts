@@ -3,7 +3,7 @@
 # Version: 0.3.1
 #
 # Standalone:  ./android/android.sh
-# From main:   ./fedora.sh → [3] or ./fedora.sh --android
+# From main:   ./run.sh → [3] or ./run.sh --android
 #
 # Do not execute directly.
 

@@ -4,7 +4,7 @@
 #
 # Run:
 #   sudo ./system/fix_dnf_repo_permissions.sh
-#   sudo ./fedora.sh --fix-repos
+#   sudo ./run.sh --fix-repos
 
 set -euo pipefail
 
@@ -26,7 +26,7 @@ Usage: sudo $(basename "$0") [--help]
 Fix /etc/yum.repos.d/*.repo permissions so user-level dnf check works
 (e.g. virtualbox.repo left at mode 600 after a third-party installer).
 
-Also: ./fedora.sh --fix-repos
+Also: ./run.sh --fix-repos
      System → [7] Cleanup → [6] Fix DNF repo permissions
 
 Toolkit root: ${FEDORA_ROOT}
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-require_root "Run with sudo: sudo ./fedora.sh --fix-repos"
+require_root "Run with sudo: sudo ./run.sh --fix-repos"
 
 invoker="${SUDO_USER:-${FEDORA_REAL_USER:-}}"
 theme_banner "Fix DNF repo permissions"
@@ -64,7 +64,7 @@ if [[ -n "${invoker}" && "${invoker}" != root ]]; then
     ok "dnf check: OK (as ${invoker})"
     theme_summary_box "Summary" \
       "Result:  FIXED" \
-      "Next:    ./fedora.sh --rebuild-check"
+      "Next:    ./run.sh --rebuild-check"
     exit 0
   fi
   warn "dnf check still fails (as ${invoker})"

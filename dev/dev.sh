@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./dev/dev.sh
-#   ./fedora.sh --dev
+#   ./run.sh --dev
 #   ./dev/dev.sh web-doctor
 #   ./dev/dev.sh git --status
 #   ./dev/dev.sh --help
@@ -21,7 +21,7 @@ usage() {
   cat <<EOF
 Developer workstation areas — developer tools, desktop environments, virtualization, and web/database services.
 
-From main entry: ./fedora.sh → [2]  or  ./fedora.sh --dev
+From main entry: ./run.sh → [2]  or  ./run.sh --dev
 
 Usage: $(basename "$0") [command|option]
 

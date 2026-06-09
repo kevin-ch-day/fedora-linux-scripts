@@ -3,7 +3,7 @@
 # Version: 0.3.1
 #
 # Standalone:  ./system/system.sh
-# From main:   ./fedora.sh → [1] or ./fedora.sh --system
+# From main:   ./run.sh → [1] or ./run.sh --system
 #
 # Do not execute directly.
 

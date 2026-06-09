@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./system/fresh_install_check.sh
-#   ./fedora.sh --baseline
+#   ./run.sh --baseline
 #
 # Read-only. Writes timestamped report under logs/.
 
@@ -28,7 +28,7 @@ Prints to the terminal and saves:
 
   logs/fresh_install_check_YYYYMMDD_HHMMSS.log
 
-Also: ./fedora.sh --baseline
+Also: ./run.sh --baseline
 
 Toolkit root: ${FEDORA_ROOT}
 EOF
@@ -66,6 +66,6 @@ theme_summary_box "Summary" \
   "Host:       $(health_hostname)" \
   "Fedora:     $(baseline_fedora_release_line)" \
   "Core tools: $(( 7 - MISSING_CORE ))/7 common commands present" \
-  "Next step:  ./fedora.sh --rebuild-check" \
-  "            then ./fedora.sh --rebuild when ready"
+  "Next step:  ./run.sh --rebuild-check" \
+  "            then ./run.sh --rebuild when ready"
 exit 0

@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./system/rebuild_readiness_check.sh
-#   ./fedora.sh --rebuild-check
+#   ./run.sh --rebuild-check
 
 set -uo pipefail
 
@@ -21,16 +21,16 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--help]
 
-Lightweight checks before ./fedora.sh --rebuild.
+Lightweight checks before ./run.sh --rebuild.
 Does not install packages or modify the system.
 
-Also: ./fedora.sh --rebuild-check
+Also: ./run.sh --rebuild-check
 
 Recommended flow on a new machine:
-  ./fedora.sh --doctor
-  ./fedora.sh --baseline
-  ./fedora.sh --rebuild-check
-  ./fedora.sh --rebuild
+  ./run.sh --doctor
+  ./run.sh --baseline
+  ./run.sh --rebuild-check
+  ./run.sh --rebuild
 
 Toolkit root: ${FEDORA_ROOT}
 EOF
@@ -69,19 +69,27 @@ theme_report_header "Rebuild readiness check" \
 
 _check "Fedora detected" "$(baseline_fedora_release_line)" baseline_is_fedora
 
-if [[ -d "${FEDORA_ROOT}" && -f "${FEDORA_ROOT}/fedora.sh" ]]; then
+if [[ -d "${FEDORA_ROOT}" && -f "${FEDORA_ROOT}/run.sh" ]]; then
   ok "Repo root: ${FEDORA_ROOT}"
   PASSES=$((PASSES + 1))
 else
-  warn "Repo root: FAILED (expected fedora.sh at ${FEDORA_ROOT})"
+  warn "Repo root: FAILED (expected run.sh at ${FEDORA_ROOT})"
+  ISSUES=$((ISSUES + 1))
+fi
+
+if [[ -x "${FEDORA_ROOT}/run.sh" ]]; then
+  ok "run.sh: executable"
+  PASSES=$((PASSES + 1))
+else
+  warn "run.sh: FAILED (not executable)"
   ISSUES=$((ISSUES + 1))
 fi
 
 if [[ -x "${FEDORA_ROOT}/fedora.sh" ]]; then
-  ok "fedora.sh: executable"
+  ok "fedora.sh: compatibility wrapper executable"
   PASSES=$((PASSES + 1))
 else
-  warn "fedora.sh: FAILED (not executable)"
+  warn "fedora.sh: FAILED (compatibility wrapper missing or not executable)"
   ISSUES=$((ISSUES + 1))
 fi
 
@@ -109,7 +117,7 @@ else
     fi
     if [[ -n "${_unreadable}" ]]; then
       info "  Unreadable repo files: ${_unreadable}"
-      info "  Fix: sudo ./fedora.sh --fix-repos"
+      info "  Fix: sudo ./run.sh --fix-repos"
       info "       or System → [7] Cleanup → [6] Fix DNF repo permissions"
     else
       info "  Fix: System → [4] Update Fedora  (or: sudo dnf check)"
@@ -164,7 +172,7 @@ if (( ISSUES == 0 )); then
     "Result:     READY" \
     "Passed:     ${PASSES} check(s)" \
     "Failed:     0" \
-    "Next step:  ./fedora.sh --rebuild"
+    "Next step:  ./run.sh --rebuild"
   exit 0
 fi
 
@@ -172,6 +180,6 @@ theme_summary_box "Summary" \
   "Result:     NOT READY" \
   "Passed:     ${PASSES} check(s)" \
   "Failed:     ${ISSUES} check(s)" \
-  "Next step:  fix issues above, then ./fedora.sh --rebuild-check" \
-  "            when ready: ./fedora.sh --rebuild"
+  "Next step:  fix issues above, then ./run.sh --rebuild-check" \
+  "            when ready: ./run.sh --rebuild"
 exit 1

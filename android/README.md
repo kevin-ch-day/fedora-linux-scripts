@@ -2,7 +2,7 @@
 
 Quick reference for the Android security / reverse-engineering workstation on Fedora.
 
-**Menu:** `./android/android.sh` · **From main entry:** `./fedora.sh` → `[3]` or `./fedora.sh --android`
+**Menu:** `./android/android.sh` · **From main entry:** `./run.sh` → `[3]` or `./run.sh --android`
 
 ---
 
@@ -19,7 +19,7 @@ sudo ./android/android_dev_core_setup.sh
 
 Full research doctor (Android **+** MobSF): `./system/research_doctor.sh` or `./android/android.sh research-doctor`
 
-Fedora doctor (entry points · Android RE, no MobSF): `./fedora.sh --doctor`
+Fedora doctor (entry points · Android RE, no MobSF): `./run.sh --doctor`
 
 ---
 
@@ -29,7 +29,7 @@ Fedora doctor (entry points · Android RE, no MobSF): `./fedora.sh --doctor`
 |------|---------|
 | Install one tool | `./android/android_re_install.sh jadx` |
 | Upgrade / re-fetch | `./android/android_re_install.sh --upgrade jadx` |
-| Upgrade from menu | `./fedora.sh --android` → RE tool installs → items 11–15 |
+| Upgrade from menu | `./run.sh --android` → RE tool installs → items 11–15 |
 | Install all | `./android/android_re_install.sh all` |
 | Verify one | `./android/verify_re_tool.sh apktool` |
 | Verify all | `./android/verify_re_tool.sh all` |

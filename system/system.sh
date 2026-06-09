@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./system/system.sh
-#   ./fedora.sh --system
+#   ./run.sh --system
 #   ./system/system.sh update
 #   ./system/system.sh logs
 #   ./system/system.sh --help
@@ -21,8 +21,8 @@ usage() {
   cat <<EOF
 System maintenance — host maintenance, baseline, updates, logs, cleanup.
 
-From main entry: ./fedora.sh → [1]  or  ./fedora.sh --system
-System health check: ./fedora.sh --doctor  or  ./fedora.sh → [8]
+From main entry: ./run.sh → [1]  or  ./run.sh --system
+System health check: ./run.sh --doctor  or  ./run.sh → [8]
 
 Usage: $(basename "$0") [command|option]
 
@@ -47,7 +47,7 @@ Commands:
   host-context      Live host snapshot (users · network · posture)
   wired-only        Disable Bluetooth + Wi-Fi (wired Ethernet hosts)
   services-audit    Enabled/running services (Round 2 prep)
-  doctor         Fedora doctor (same as ./fedora.sh --doctor)
+  doctor         Fedora doctor (same as ./run.sh --doctor)
   research-doctor Full research doctor (Android + MobSF — rebuild finale)
   logs           Open logs submenu
 

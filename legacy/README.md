@@ -1,7 +1,7 @@
 # Legacy scripts
 
 **Status:** Archived reference only. Scripts are **hard-disabled** (`exit 1` at top).  
-They are **not** in `./fedora.sh` or any lane menu — use the replacements below.
+They are **not** in `./run.sh` or any lane menu — use the replacements below.
 
 Do not run on a fresh Fedora install.
 

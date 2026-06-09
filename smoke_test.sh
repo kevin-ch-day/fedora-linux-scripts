@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # smoke_test.sh — dynamic CLI smoke tests (read-only, no sudo prompts)
-# Version: 0.2.2
+# Version: 0.3.0
 #
 # Run from repo root:
 #   ./smoke_test.sh
 #   ./smoke_test.sh --quick     # skip slower doctor runs
 #   NO_COLOR=1 ./smoke_test.sh
 #
-# When invoked from ./fedora.sh --check, FEDORA_SKIP_CHECK_SMOKE=1 avoids
+# When invoked from ./run.sh --check, FEDORA_SKIP_CHECK_SMOKE=1 avoids
 # re-entering --check (prevents recursion).
 #
 # Also: ./validate.sh --smoke
@@ -39,9 +39,10 @@ Options:
   --help,-h  Show this help
 
 Typical flow on a new machine:
-  ./fedora.sh --check
-  ./fedora.sh --doctor
-  ./fedora.sh --rebuild
+  ./setup.sh
+  ./run.sh --check
+  ./run.sh --doctor
+  ./run.sh --rebuild
 EOF
 }
 
@@ -144,17 +145,18 @@ theme_rule '─'
 echo
 
 theme_report_section "Help and CLI dispatch"
-_smoke_run "fedora.sh --help" 0 bash "${ROOT}/fedora.sh" --help
-_smoke_run "fedora.sh --check bad option" 1 bash "${ROOT}/fedora.sh" --check --not-a-flag
+_smoke_run "run.sh --help" 0 bash "${ROOT}/run.sh" --help
+_smoke_run "fedora.sh --help (compat)" 0 bash "${ROOT}/fedora.sh" --help
+_smoke_run "run.sh --check bad option" 1 bash "${ROOT}/run.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
 if (( CI == 0 && QUICK == 0 )); then
   _smoke_run "system.sh doctor" 0 bash "${ROOT}/system/system.sh" doctor
 elif (( CI == 0 )); then
   theme_note "Skipping system.sh doctor in quick mode (no sudo)"
 fi
-_smoke_run "fedora.sh unknown option" 1 bash "${ROOT}/fedora.sh" --not-a-flag
+_smoke_run "run.sh unknown option" 1 bash "${ROOT}/run.sh" --not-a-flag
 if (( CI == 0 && QUICK == 0 )); then
-  _smoke_run "fedora.sh --baseline" 0 bash "${ROOT}/fedora.sh" --baseline
+  _smoke_run "run.sh --baseline" 0 bash "${ROOT}/run.sh" --baseline
   _smoke_run_summary "security_audit --plan" "Recommended action plan" \
     bash "${ROOT}/system/security_audit.sh" --plan
   _smoke_run_summary "security_audit --findings" "Smart findings" \
@@ -166,15 +168,15 @@ fi
 
 if (( CI == 0 && QUICK == 0 )) && [[ -z "${FEDORA_SKIP_CHECK_SMOKE:-}" ]]; then
   theme_report_section "Readiness checks"
-  _smoke_run_summary "fedora.sh --rebuild-check" "Next step:" bash "${ROOT}/fedora.sh" --rebuild-check
-  _smoke_run_summary "fedora.sh --check" "Check complete" bash "${ROOT}/fedora.sh" --check
+  _smoke_run_summary "run.sh --rebuild-check" "Next step:" bash "${ROOT}/run.sh" --rebuild-check
+  _smoke_run_summary "run.sh --check" "Check complete" bash "${ROOT}/run.sh" --check
 elif (( CI == 0 )); then
   theme_report_section "Readiness checks skipped (--quick)"
 fi
 
 if (( QUICK == 0 && CI == 0 )); then
   theme_report_section "Doctor runs"
-  _smoke_run "fedora.sh --doctor" 0 bash "${ROOT}/fedora.sh" --doctor
+  _smoke_run "run.sh --doctor" 0 bash "${ROOT}/run.sh" --doctor
   _smoke_run "android.sh --doctor" 0 bash "${ROOT}/android/android.sh" --doctor
   _smoke_run "mobsf.sh --doctor" 1 bash "${ROOT}/mobsf.sh" --doctor
 else
@@ -242,7 +244,8 @@ theme_report_section "Workstation readiness"
 _smoke_run_summary "daily driver check" "Daily driver check complete" \
   bash "${ROOT}/system/daily_driver_check.sh"
 _smoke_run "system.sh daily-driver" 0 bash "${ROOT}/system/system.sh" daily-driver
-_smoke_run "fedora.sh --daily-driver-check" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
+_smoke_run "run.sh --daily-driver-check" 0 bash "${ROOT}/run.sh" --daily-driver-check
+_smoke_run "fedora.sh --daily-driver-check (compat)" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
 _smoke_run_summary "luks-readiness" "LUKS summary" bash "${ROOT}/system/system.sh" luks-readiness
 _smoke_run "post-update-check" 0 bash "${ROOT}/system/system.sh" post-update-check
 _smoke_run "luks-readiness --add-passphrase non-interactive" 1 \
@@ -264,23 +267,23 @@ else
   warn "health snapshot output filtered — unexpected filesystem noise"
 fi
 RUNS=$((RUNS + 1))
-startup_out="$(printf '0\n' | bash "${ROOT}/fedora.sh" 2>&1)" || startup_ec=$?
+startup_out="$(printf '0\n' | bash "${ROOT}/run.sh" 2>&1)" || startup_ec=$?
 startup_ec="${startup_ec:-0}"
 if [[ "${startup_ec}" -eq 0 ]] \
   && grep -q 'Health: ' <<< "${startup_out}" \
   && ! grep -q '\[Memory\]' <<< "${startup_out}"; then
-  ok "fedora.sh startup stays quiet (compact health line only)"
+  ok "run.sh startup stays quiet (compact health line only)"
 else
   FAILS=$((FAILS + 1))
-  FAIL_NAMES+=("fedora.sh startup stays quiet")
-  warn "fedora.sh startup health output too noisy or missing"
+  FAIL_NAMES+=("run.sh startup stays quiet")
+  warn "run.sh startup health output too noisy or missing"
 fi
 
 theme_report_section "Interactive menus (non-interactive input)"
-_smoke_menu "fedora.sh main menu" "${ROOT}/fedora.sh" '0\n'
-_smoke_menu "fedora.sh system area back path" "${ROOT}/fedora.sh" '1\n0\n0\n'
-_smoke_menu "fedora.sh android area back path" "${ROOT}/fedora.sh" '6\n0\n0\n'
-_smoke_menu "fedora.sh system disk/memory route" "${ROOT}/fedora.sh" '1\n2\n0\n0\n0\n'
+_smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
+_smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '1\n0\n0\n'
+_smoke_menu "run.sh android area back path" "${ROOT}/run.sh" '6\n0\n0\n'
+_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '1\n2\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
 _smoke_menu "android.sh from picker" "${ROOT}/android/android.sh" '0\n' 1
@@ -292,7 +295,7 @@ if (( FAILS == 0 )); then
     "Result:  PASSED" \
     "Runs:    ${RUNS}" \
     "Failed:  0" \
-    "Next:    ./fedora.sh --check  or  ./fedora.sh --doctor"
+    "Next:    ./run.sh --check  or  ./run.sh --doctor"
   exit 0
 fi
 

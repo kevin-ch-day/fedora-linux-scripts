@@ -24,8 +24,8 @@ Usage: research_doctor.sh [--android-only] [--mobsf-only]
 
 Runs readiness checks for the Fedora research workstation.
 
-  ./fedora.sh --doctor              Fedora doctor (repo · lanes · workstation health)
-  research_doctor.sh --android-only Same as ./fedora.sh --doctor
+  ./run.sh --doctor              Fedora doctor (repo · lanes · workstation health)
+  research_doctor.sh --android-only Same as ./run.sh --doctor
   research_doctor.sh                Full check incl. MobSF (rebuild finale)
   ./mobsf.sh --doctor               MobSF stack health (separate entry)
 
@@ -33,7 +33,7 @@ Exit code: 0 if all enabled checks pass, 1 otherwise.
 EOF
 }
 
-# research_check_entry_points FEDORA_ROOT — verify main launchers and fedora.sh layout
+# research_check_entry_points FEDORA_ROOT — verify main launchers and run.sh layout
 research_check_entry_points() {
   local fedora_root="${1:?fedora root required}"
   local rc=0

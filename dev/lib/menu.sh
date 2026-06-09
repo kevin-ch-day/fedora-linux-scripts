@@ -3,7 +3,7 @@
 # Version: 0.3.0
 #
 # Standalone:  ./dev/dev.sh
-# From main:   ./fedora.sh → [2] or ./fedora.sh --dev
+# From main:   ./run.sh → [2] or ./run.sh --dev
 #
 # Do not execute directly.
 
