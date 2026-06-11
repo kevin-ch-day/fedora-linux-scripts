@@ -145,9 +145,8 @@ run_logged_capture() {
   tmp="$(mktemp)"
   set +e
   if (( QUIET_TERMINAL )); then
-    "$@" > "${tmp}" 2>&1
-    rc=$?
-    cat "${tmp}" >> "${LOG_FILE}"
+    "$@" 2>&1 | tee -a "${LOG_FILE}" > "${tmp}"
+    rc=${PIPESTATUS[0]}
   else
     "$@" 2>&1 | tee "${tmp}"
     rc=${PIPESTATUS[0]}
@@ -366,6 +365,10 @@ else
   die "dnf check-update failed"
 fi
 
+if (( UPDATE_COUNT > 0 )); then
+  ui_note "Applying package upgrades; this can take several minutes"
+  ui_detail "Full transaction output is being written to ${LOG_FILE}"
+fi
 if ! run_logged_capture dnf_upgrade; then
   ui_fail "Fedora upgrade failed"
   die "dnf upgrade failed"
@@ -373,7 +376,11 @@ fi
 if (( UPDATE_COUNT == 0 )); then
   ui_ok "No package upgrades needed"
 else
-  ui_ok "${UPDATE_COUNT} package upgraded"$([[ "${UPDATE_COUNT}" -ne 1 ]] && printf 's')
+  if (( UPDATE_COUNT == 1 )); then
+    ui_ok "1 package upgraded"
+  else
+    ui_ok "${UPDATE_COUNT} packages upgraded"
+  fi
   for detail in "${UPDATE_DETAILS[@]}"; do
     ui_detail "${detail}"
   done
@@ -383,6 +390,7 @@ else
 fi
 
 ui_section "Maintenance"
+ui_note "Running post-upgrade maintenance"
 if run_logged_capture dnf_distro_sync; then
   summarize_action_output "distro-sync" "nothing to do"
 else

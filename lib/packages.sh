@@ -256,7 +256,12 @@ dnf_makecache_refresh() {
 }
 
 dnf_show_updates() {
-  dnf -q check-update || true
+  local rc=0
+  set +e
+  dnf -q check-update
+  rc=$?
+  set -e
+  return "${rc}"
 }
 
 dnf_upgrade() {

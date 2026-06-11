@@ -79,8 +79,9 @@ _fedora_open_lane() {
     6) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/android/android.sh" || ec=$? ;;
     7) FEDORA_REBUILD_VIA_FEDORA=1 bash "${FEDORA_ROOT}/fedora_rebuild.sh" || ec=$? ;;
     8) bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only || ec=$? ;;
-    9) _fedora_run_check || ec=$? ;;
-    *) die "Invalid menu item: ${lane} (use 1–9)" ;;
+    9) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh" audit || ec=$? ;;
+    10) _fedora_run_check || ec=$? ;;
+    *) die "Invalid menu item: ${lane} (use 1–10)" ;;
   esac
   if (( ec != 0 )); then
     warn "Menu item exited with status ${ec} — returning to main menu"
@@ -88,7 +89,7 @@ _fedora_open_lane() {
 }
 
 # Non-interactive lane shortcut (must run before option parsing consumes args)
-if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-9]$ ]]; then
+if [[ $# -eq 1 ]] && [[ "$1" =~ ^([1-9]|10)$ ]]; then
   _fedora_open_lane "$1"
   exit 0
 fi
@@ -121,7 +122,7 @@ MobSF stack (separate lifecycle):
 Usage: $(basename "$0") [options|menu-item]
 
 Menu item (non-interactive):
-  1..9               Run one main-menu item once, then exit
+  1..10              Run one main-menu item once, then exit
 
 Options:
   --help, -h         Show this help
@@ -235,9 +236,8 @@ _fedora_main_items() {
   theme_section "Setup and health"
   menu_item_lane 7 rebuild "Guided rebuild" "install and configure this workstation"
   menu_item_lane 8 audit "System health check" "Fedora doctor · repos · Android RE entry points"
-  menu_item_lane 9 check "Toolkit self-test" "validate · smoke · rebuild readiness"
-  theme_section "Shortcuts"
-  theme_shortcut "r" "repeat menu"
+  menu_item_lane 9 audit "Hardening and services" "firewall · services · listening ports"
+  menu_item_lane 10 check "Toolkit self-test" "validate · smoke · rebuild readiness"
   echo
   menu_item_exit
 }
@@ -266,6 +266,10 @@ _fedora_main_dispatch() {
       return 0
       ;;
     9)
+      _fedora_inline_menu system_menu_header system system_menu_hardening
+      return 0
+      ;;
+    10)
       local prev="${MENU_SCROLL_MODE}"
       MENU_SCROLL_MODE=1
       _fedora_run_check || true

@@ -51,6 +51,7 @@ Commands:
   doctor         Fedora doctor (same as ./run.sh --doctor)
   research-doctor Full research doctor (Android + MobSF — rebuild finale)
   logs           Open logs submenu
+  audit          Open Hardening and services submenu
 
 Workstation readiness (read-only by default):
   daily-driver       Daily driver check (boot · btrfs · LUKS · vbox · noise)
@@ -162,6 +163,12 @@ while [[ $# -gt 0 ]]; do
       shift
       system_menu_init "${FEDORA_ROOT}"
       system_menu_logs
+      exit 0
+      ;;
+    audit)
+      shift
+      system_menu_init "${FEDORA_ROOT}"
+      system_menu_hardening
       exit 0
       ;;
     daily-driver)

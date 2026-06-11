@@ -463,6 +463,10 @@ readiness_vbox_kernel_matches_running() {
   [[ -n "${latest}" && "${running}" == "${latest}" ]]
 }
 
+readiness_latest_installed_kernel() {
+  rpm -q kernel --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' 2>/dev/null | sort -V | tail -n 1 || true
+}
+
 readiness_vbox_packages_status() {
   local kver
   kver="$(uname -r)"
@@ -559,6 +563,12 @@ readiness_needs_restarting_probe() {
 
 # Returns 0 when a reboot is recommended, 1 when not.
 readiness_reboot_needed() {
+  local running latest
+  running="$(uname -r)"
+  latest="$(readiness_latest_installed_kernel)"
+  if [[ -n "${latest}" && "${running}" != "${latest}" ]]; then
+    return 0
+  fi
   readiness_needs_restarting_probe
   if have needs-restarting; then
     if [[ "${_READINESS_NR_OUT}" == *"Config error"* ]] || [[ "${_READINESS_NR_OUT}" == *"Permission denied"* ]]; then
@@ -577,6 +587,13 @@ readiness_reboot_needed() {
 
 # Human-readable needs-restarting output for reports (may be empty on tool errors).
 readiness_reboot_status_text() {
+  local running latest
+  running="$(uname -r)"
+  latest="$(readiness_latest_installed_kernel)"
+  if [[ -n "${latest}" && "${running}" != "${latest}" ]]; then
+    printf 'running %s · newest installed %s\n' "${running}" "${latest}"
+    return 0
+  fi
   readiness_needs_restarting_probe
   if ! have needs-restarting; then
     return 0

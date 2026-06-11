@@ -29,6 +29,7 @@ MENU_ROOT="${MENU_ROOT:-$(fedora_toolkit_root)}"
 MENU_HEADER_FN="menu_header"
 MENU_STACK=()
 MENU_LAST_CHOICE=""
+declare -a MENU_LAST_CHOICE_STACK=()
 MENU_SCROLL_MODE=0
 MENU_IS_ROOT=0
 MENU_PARENT_CONTEXT="${MENU_PARENT_CONTEXT:-}"
@@ -63,6 +64,7 @@ menu_init() {
   MENU_IS_ROOT="${is_root}"
   MENU_STACK=()
   MENU_LAST_CHOICE=""
+  MENU_LAST_CHOICE_STACK=()
   MENU_PARENT_CONTEXT="${MENU_PARENT_CONTEXT:-}"
   theme_init
 }
@@ -180,9 +182,7 @@ menu_lane_exit_msg() {
 }
 
 menu_print_nav_hint() {
-  if [[ -n "${MENU_LAST_CHOICE}" ]]; then
-    theme_shortcut "r" "repeat last choice (${MENU_LAST_CHOICE})"
-  fi
+  :
 }
 
 menu_read_choice() {
@@ -289,10 +289,15 @@ menu_loop() {
   local dispatch_fn="$4"
   local choice=""
   local rc=0
+  local menu_idx=0
 
   MENU_STACK+=("${title}")
+  MENU_LAST_CHOICE_STACK+=("")
+  menu_idx=$((${#MENU_LAST_CHOICE_STACK[@]} - 1))
+  MENU_LAST_CHOICE="${MENU_LAST_CHOICE_STACK[$menu_idx]}"
 
   while true; do
+    MENU_LAST_CHOICE="${MENU_LAST_CHOICE_STACK[$menu_idx]}"
     "${MENU_HEADER_FN}" "${title}" "${subtitle}"
     menu_hr
     "${render_fn}"
@@ -318,11 +323,18 @@ menu_loop() {
     case "${rc}" in
       0)
         if [[ -n "${choice}" && "${choice}" != "0" && "${choice}" != [rR] ]]; then
+          MENU_LAST_CHOICE_STACK[$menu_idx]="${choice}"
           MENU_LAST_CHOICE="${choice}"
         fi
         ;;
       1)
         unset 'MENU_STACK[${#MENU_STACK[@]}-1]'
+        unset 'MENU_LAST_CHOICE_STACK[${#MENU_LAST_CHOICE_STACK[@]}-1]'
+        if ((${#MENU_LAST_CHOICE_STACK[@]} > 0)); then
+          MENU_LAST_CHOICE="${MENU_LAST_CHOICE_STACK[-1]}"
+        else
+          MENU_LAST_CHOICE=""
+        fi
         return 0
         ;;
       *) menu_invalid ;;
