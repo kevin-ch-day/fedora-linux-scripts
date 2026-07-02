@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # dev/lib/menu.sh — Developer workstation area menus (uses lib/menu.sh theme)
-# Version: 0.3.0
+# Version: 0.3.3
 #
 # Standalone:  ./dev/dev.sh
-# From main:   ./run.sh → [2] or ./run.sh --dev
+# From main:   ./run.sh → [4] Developer tools or ./run.sh --dev
 #
 # Do not execute directly.
 
@@ -245,8 +245,35 @@ dev_menu_help() {
   menu_help_docs_loop "dev/README.md" "guides · dev lane"
 }
 
+_dev_hub_items() {
+  theme_section "Workstation areas"
+  menu_item_lane 1 dev "Developer tools" "git · vscode · shell helpers"
+  menu_item_lane 2 desktop "Desktop environments" "cinnamon · kde · mate · lxqt"
+  menu_item_lane 3 virt "Virtualization & containers" "podman · docker · kvm · virtualbox"
+  menu_item_lane 4 web "Web/database stack" "apache · mariadb · php · phpmyadmin"
+  theme_section "Docs"
+  menu_item 5 "Help & docs" "dev/README.md · getting started"
+  menu_item_lane_exit
+}
+
+_dev_hub_dispatch() {
+  case "$1" in
+    0) menu_lane_handle_main_exit ;;
+    1) dev_menu_developer_tools; return 0 ;;
+    2) dev_menu_desktop_environments; return 0 ;;
+    3) dev_menu_infrastructure; return 0 ;;
+    4) dev_menu_web_stack; return 0 ;;
+    5) dev_menu_help; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
 dev_main_menu() {
-  dev_menu_help
+  local prev_header="${MENU_HEADER_FN}"
+  menu_set_header_fn dev_menu_developer_header
+  menu_loop "Developer workstation" "pick an install area" \
+    _dev_hub_items _dev_hub_dispatch
+  menu_set_header_fn "${prev_header}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

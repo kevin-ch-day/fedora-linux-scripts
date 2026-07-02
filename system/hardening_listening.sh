@@ -49,7 +49,7 @@ Options:
   --help,-h        Show this help
 
 Also: ./system/system.sh listening-harden
-      System menu → [8] OS hardening → [8]
+      System maintenance → [11] Hardening and security → Round 2 → [3]
 
 Toolkit root: ${FEDORA_ROOT}
 EOF

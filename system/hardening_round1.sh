@@ -58,7 +58,7 @@ AllowUsers modes:
   login   all /home/* interactive accounts
 
 Also: ./system/system.sh hardening-round1
-      System menu → [8] OS hardening → [1]
+      System maintenance → [11] Hardening and security → Round 1 → [1]
 
 Round 2 prep: ./system/hardening_services_audit.sh
 

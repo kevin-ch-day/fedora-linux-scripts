@@ -23,7 +23,7 @@ Read-only, profile-aware audit of systemd services on this host.
 Highlights Round 2 disable candidates based on desktop vs headless profile.
 
 Also: ./system/system.sh services-audit
-      System menu → [8] OS hardening → [2]
+      System maintenance → [11] Hardening and security → Round 1 → [3]
 
 Toolkit root: ${FEDORA_ROOT}
 EOF

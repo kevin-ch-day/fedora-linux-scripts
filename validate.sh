@@ -113,13 +113,27 @@ else
 fi
 
 theme_report_section "Documentation"
-for doc in docs/README.md docs/GETTING-STARTED.md docs/AUDIT.md mobsf/GUIDE.md; do
+for doc in docs/README.md docs/GETTING-STARTED.md docs/INSTALL-PROFILES.md docs/AUDIT.md mobsf/GUIDE.md; do
   if [[ -f "${VALIDATE_ROOT}/${doc}" ]]; then
     _validate_ok "${doc}"
   else
     _validate_fail "missing: ${doc}"
   fi
 done
+
+theme_report_section "Install profiles"
+# shellcheck source=lib/profiles.sh
+source "${VALIDATE_ROOT}/lib/profiles.sh"
+profile_fail=0
+for p in $(profile_list_names); do
+  if profile_validate_steps "${VALIDATE_ROOT}" "${p}"; then
+    _validate_ok "profile ${p} — step scripts present"
+  else
+    profile_fail=1
+    _validate_fail "profile ${p} — missing step script(s)"
+  fi
+done
+(( profile_fail == 0 )) || true
 
 if (( DO_SHELLCHECK )); then
   theme_report_section "ShellCheck (-S warning, excluding legacy/)"

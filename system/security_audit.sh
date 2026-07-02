@@ -50,7 +50,7 @@ Output:
   /data/logs/security_audit/<stamp>/findings_<host>_<stamp>.txt
 
 Also: ./system/system.sh security-audit
-      System menu → [8] OS hardening → [9]
+      System maintenance → [11] Hardening and security → Security audit → [1]
 
 Toolkit root: ${FEDORA_ROOT}
 EOF

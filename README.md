@@ -9,8 +9,9 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 | **`./run.sh`** | Main menu — setup lanes, workstation readiness, rebuild |
 | **`./setup.sh`** | Repo/toolkit readiness (validate · optional smoke) |
 | **`./mobsf.sh`** | MobSF stack — install/start/**doctor** (separate lifecycle) |
+| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `mobsf`, …) |
 | **`./fedora.sh`** | Compatibility wrapper → `./run.sh` (older docs/scripts) |
-| **`./fedora_rebuild.sh`** | Rebuild engine · compat → `./run.sh --rebuild` |
+| **`./fedora_rebuild.sh`** | Rebuild engine · compat → `./install.sh research` |
 
 ```bash
 ./setup.sh            # first-run repo check (no sudo · no installs)
@@ -22,13 +23,16 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ./run.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
 ./run.sh --baseline   # fresh-install host baseline → logs/
 ./run.sh --rebuild-check   # pre-rebuild readiness only
-./run.sh --rebuild    # guided full setup
+./run.sh --rebuild    # guided full setup (research profile)
+./install.sh list     # all install profiles
+./install.sh research --plan
+./run.sh --onboard    # fresh machine wizard
 ./run.sh --smoke      # dynamic CLI/menu tests
 ./run.sh --fix-repos  # fix DNF .repo permissions (sudo)
 ./mobsf.sh --doctor      # MobSF stack health (separate)
 ```
 
-**Start here:** [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) · **Docs index:** [docs/README.md](docs/README.md)
+**Start here:** [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) · **Install profiles:** [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md) · **Docs index:** [docs/README.md](docs/README.md)
 
 ---
 
@@ -37,7 +41,7 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ```text
 fedora-linux-scripts/
 ├── README.md · docs/ · validate.sh
-├── run.sh · setup.sh · fedora.sh (compat) · mobsf.sh · fedora_rebuild.sh
+├── run.sh · setup.sh · install.sh · fedora.sh (compat) · mobsf.sh · fedora_rebuild.sh
 ├── lib/                 ← shared libraries
 ├── system/ · dev/ · android/
 ├── mobsf/               ← Podman stack (see mobsf/GUIDE.md)
@@ -74,7 +78,7 @@ Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Dail
 
 ## Install (summary)
 
-Full path: **`./run.sh --rebuild`**. Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Full path: **`./run.sh --rebuild`** or **`./install.sh research --yes`**. Profile catalog: [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md). Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 

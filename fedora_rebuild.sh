@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # fedora_rebuild.sh — Guided workstation rebuild sequence (implementation)
-# Version: 0.4.6
+# Version: 0.5.0
 #
-# Prefer: ./run.sh --rebuild
+# Prefer: ./run.sh --rebuild  ·  ./install.sh research
 #
 # This script is retained for compatibility. When invoked directly it delegates
 # to ./run.sh --rebuild (see FEDORA_REBUILD_VIA_FEDORA guard below).
 #
 # Run:
 #   ./run.sh --rebuild                 # preferred
+#   ./install.sh research --yes        # same profile engine
 #   ./fedora_rebuild.sh              # compatibility → run.sh --rebuild
 #   ./run.sh --rebuild --yes         # no prompts between steps
 #   ./run.sh --rebuild --dry-run     # show steps only
@@ -30,31 +31,43 @@ theme_init
 theme_set_lane rebuild
 # shellcheck source=lib/logging.sh
 source "${FEDORA_ROOT}/lib/logging.sh"
+# shellcheck source=lib/menu.sh
+source "${FEDORA_ROOT}/lib/menu.sh"
+# shellcheck source=lib/install_engine.sh
+source "${FEDORA_ROOT}/lib/install_engine.sh"
 
 AUTO_YES=0
 DRY_RUN=0
 USE_LOG=0
-SKIP_MOBSF=0
-SKIP_DOCTOR=0
+FEDORA_SKIP_MOBSF=0
+FEDORA_SKIP_DOCTOR=0
+PROFILE="${FEDORA_REBUILD_PROFILE:-research}"
+PLAN_ONLY=0
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Guided rebuild: system update → KVM/containers → Android core → RE tools →
-verify → optional MobSF → research doctor.
+Guided rebuild using the research install profile (system update → KVM →
+Android → RE tools → optional MobSF → research doctor).
+
+Equivalent: ./install.sh research [options]
 
 Not included (run from Dev lane after rebuild): git, VS Code, Cinnamon desktop,
 LAMP/phpMyAdmin — see docs/GETTING-STARTED.md § After rebuild.
 
 Options:
+  --profile NAME         Install profile (default: research)
   --yes, -y              Auto-run all core steps (no step prompts)
   --dry-run              Show steps only
   --log                  Tee orchestrator output to logs/fedora_rebuild.log
   --skip-mobsf           Do not offer/run MobSF install
   --skip-doctor          Skip final research_doctor.sh
   --skip-final-doctor    Alias for --skip-doctor
+  --plan                 Print research profile step plan (no execution)
   --help, -h             Show this help
+
+Profiles: ./install.sh list
 
 With --yes: auto-installs MobSF when compose is missing; runs research doctor at end.
 
@@ -65,8 +78,6 @@ EOF
 }
 
 rebuild_mode_menu() {
-  # shellcheck source=lib/menu.sh
-  source "${FEDORA_ROOT}/lib/menu.sh"
   menu_init "Fedora Rebuild" "${FEDORA_ROOT}"
 
   _rebuild_mode_items() {
@@ -91,21 +102,33 @@ rebuild_mode_menu() {
   }
 
   menu_loop "Choose rebuild mode" \
-    "5 core steps + optional MobSF + research doctor" \
+    "profile: ${PROFILE} · ./install.sh list for others" \
     _rebuild_mode_items _rebuild_mode_dispatch
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --profile)
+      PROFILE="${2:?--profile requires a name}"
+      shift 2
+      ;;
     --yes|-y) AUTO_YES=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --log) USE_LOG=1; shift ;;
-    --skip-mobsf) SKIP_MOBSF=1; shift ;;
-    --skip-doctor|--skip-final-doctor) SKIP_DOCTOR=1; shift ;;
+    --skip-mobsf) FEDORA_SKIP_MOBSF=1; shift ;;
+    --skip-doctor|--skip-final-doctor) FEDORA_SKIP_DOCTOR=1; shift ;;
+    --plan) PLAN_ONLY=1; shift ;;
     --help|-h) usage; exit 0 ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
 done
+
+profile_is_valid "${PROFILE}" || die "Unknown profile: ${PROFILE} (try: ./install.sh list)"
+
+if (( PLAN_ONLY )); then
+  install_engine_run_profile "${FEDORA_ROOT}" "${PROFILE}" 0 0 0 0 1
+  exit 0
+fi
 
 if (( AUTO_YES == 0 && DRY_RUN == 0 && USE_LOG == 0 )) && [[ -t 0 ]] && [[ "${FEDORA_FROM_MENU:-}" != 1 ]]; then
   rebuild_mode_menu
@@ -115,140 +138,6 @@ if [[ "${FEDORA_FROM_MENU:-}" == 1 ]]; then
   info "Rebuild from run.sh — confirm each step (no mode picker)"
 fi
 
-if (( USE_LOG )); then
-  init_script_logging "${FEDORA_LOG_REBUILD}" "fedora_rebuild.sh" "Fedora Rebuild Sequence"
-  (( DRY_RUN )) && log_warn "DRY RUN — no scripts will execute"
-fi
-
-REBUILD_TOTAL=5
-(( SKIP_MOBSF )) || REBUILD_TOTAL=$(( REBUILD_TOTAL + 1 ))
-(( SKIP_DOCTOR )) || REBUILD_TOTAL=$(( REBUILD_TOTAL + 1 ))
-REBUILD_STEP=0
-REBUILD_FAILED=0
-
-run_step() {
-  local title="$1"
-  local rel="$2"
-  shift 2
-  local use_sudo=0
-  local use_sudo_e=0
-  local extra=()
-
-  if [[ "${1:-}" == "--sudo" ]]; then use_sudo=1; shift; fi
-  if [[ "${1:-}" == "--sudo-E" ]]; then use_sudo_e=1; shift; fi
-  extra=("$@")
-
-  REBUILD_STEP=$(( REBUILD_STEP + 1 ))
-
-  echo
-  theme_report_step "${REBUILD_STEP}" "${REBUILD_TOTAL}" "${title}" "Script: ${rel}"
-
-  if (( USE_LOG )); then
-    log_step "${REBUILD_STEP}" "${REBUILD_TOTAL}" "STEP: ${title} (${rel})"
-  fi
-
-  if (( DRY_RUN )); then
-    info "(dry-run) would execute: ${rel} ${extra[*]:-}"
-    if (( USE_LOG )); then
-      log_info "(dry-run) would execute: ${rel} ${extra[*]:-}"
-    fi
-    return 0
-  fi
-
-  if (( AUTO_YES )) || confirm "Run this step?"; then
-    local script="${FEDORA_ROOT}/${rel}"
-    local rc=0
-    assert_file "${script}" "Rebuild step script missing: ${rel}"
-    if (( use_sudo_e )); then
-      sudo -E bash "${script}" "${extra[@]}" || rc=$?
-    elif (( use_sudo )); then
-      sudo bash "${script}" "${extra[@]}" || rc=$?
-    else
-      bash "${script}" "${extra[@]}" || rc=$?
-    fi
-    if (( rc != 0 )); then
-      warn "Step failed (exit ${rc}): ${title}"
-      REBUILD_FAILED=$(( REBUILD_FAILED + 1 ))
-      if (( USE_LOG )); then
-        log_warn "Step failed: ${title} (exit ${rc})"
-      fi
-    else
-      ok "Step complete: ${title}"
-      if (( USE_LOG )); then
-        log_info "Step complete: ${title}"
-      fi
-    fi
-  else
-    warn "Skipped: ${title}"
-    if (( USE_LOG )); then
-      log_warn "Skipped: ${title}"
-    fi
-  fi
-}
-
-maybe_mobsf_step() {
-  (( SKIP_MOBSF )) && return 0
-
-  # shellcheck source=lib/mobsf.sh
-  source "${FEDORA_ROOT}/lib/mobsf.sh"
-
-  if (( DRY_RUN )); then
-    info "(dry-run) would offer: MobSF install/reset"
-    return 0
-  fi
-
-  if (( AUTO_YES )); then
-    if mobsf_compose_installed; then
-      info "MobSF compose present — skipping auto install (reset manually if needed)"
-      return 0
-    fi
-    run_step "MobSF install" "mobsf/mobsf_install.sh" --sudo-E
-    return 0
-  fi
-
-  if confirm "Run MobSF install/reset? (install if first time; reset if stack exists)"; then
-    if mobsf_compose_installed; then
-      run_step "MobSF reset (keep data)" "mobsf/mobsf_reset.sh" --sudo-E --keep
-    else
-      run_step "MobSF install" "mobsf/mobsf_install.sh" --sudo-E
-    fi
-  fi
-}
-
-maybe_research_doctor() {
-  (( SKIP_DOCTOR )) && return 0
-  if (( DRY_RUN )); then
-    info "(dry-run) would offer: research doctor"
-    return 0
-  fi
-  if (( AUTO_YES )) || confirm "Run research doctor (Android + MobSF)?"; then
-    run_step "Research doctor" "system/research_doctor.sh"
-  fi
-}
-
-info "Fedora workstation rebuild sequence"
-info "Root: ${FEDORA_ROOT}"
-(( DRY_RUN )) && warn "DRY RUN — no scripts will execute"
-(( USE_LOG )) && info "Logging to: $(log_file_path "${FEDORA_LOG_REBUILD}")"
 echo "[NOTE] system_update.sh always logs to logs/system_update.log on its own."
 
-run_step "System update" "system/system_update.sh" --sudo-E --quick
-run_step "Containers + KVM" "dev/fedora_container_kvm_setup.sh" --sudo
-run_step "Android core tools" "android/android_dev_core_setup.sh" --sudo
-run_step "Install RE tools (all)" "android/android_re_install.sh" all
-run_step "Verify all RE tools" "android/verify_re_tool.sh" all
-
-maybe_mobsf_step
-maybe_research_doctor
-
-echo
-if (( REBUILD_FAILED > 0 )); then
-  warn "Rebuild finished with ${REBUILD_FAILED} failed step(s) — review output above"
-else
-  ok "Rebuild sequence finished"
-fi
-echo "[NEXT] source ~/.bashrc  OR  log out/in for PATH/group changes"
-echo "[NEXT] ./run.sh  OR  ./android/android.sh  OR  ./mobsf.sh"
-if (( USE_LOG )); then
-  echo "[NEXT] ./system/log_engine.sh tail --file fedora_rebuild.log --lines 50"
-fi
+install_engine_run_profile "${FEDORA_ROOT}" "${PROFILE}" "${AUTO_YES}" "${DRY_RUN}" "${USE_LOG}" "${FEDORA_FROM_MENU:-0}" 0

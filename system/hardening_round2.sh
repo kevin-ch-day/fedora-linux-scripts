@@ -63,7 +63,7 @@ Recommended flow:
   ./system/hardening_round2.sh --yes
 
 Also: ./system/system.sh hardening-round2
-      System menu → [8] OS hardening → [5]
+      System maintenance → [11] Hardening and security → Round 2 → [1]
 
 Toolkit root: ${FEDORA_ROOT}
 EOF

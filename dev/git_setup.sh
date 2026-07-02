@@ -20,6 +20,7 @@ DEFAULT_BRANCH="main"
 FORCE=0
 DRY_RUN=0
 STATUS=0
+SKIP_IF_CONFIGURED=0
 GIT_NAME="${GIT_NAME:-${FEDORA_GIT_NAME:-}}"
 GIT_EMAIL="${GIT_EMAIL:-${FEDORA_GIT_EMAIL:-}}"
 
@@ -39,6 +40,7 @@ Options:
   --status       Show current global git config (no prompts)
   --force        Overwrite existing user.name / user.email
   --dry-run      Print planned changes without writing
+  --skip-if-configured   Skip when user.name and user.email already set (profile-safe)
 
 Environment:
   GIT_NAME, GIT_EMAIL          Identity (prompted if unset)
@@ -54,6 +56,7 @@ while [[ $# -gt 0 ]]; do
     --status) STATUS=1; shift ;;
     --force) FORCE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --skip-if-configured) SKIP_IF_CONFIGURED=1; shift ;;
     *)
       die "Unknown option: $1 (try --help)"
       ;;
@@ -72,6 +75,19 @@ fi
 
 if [[ "${EUID}" -eq 0 && -z "${SUDO_USER:-}" ]]; then
   die "Run as your normal user, not root. Use: ./dev/git_setup.sh"
+fi
+
+if (( SKIP_IF_CONFIGURED )); then
+  local_name="$(git_as_user config --global user.name 2>/dev/null || true)"
+  local_email="$(git_as_user config --global user.email 2>/dev/null || true)"
+  if [[ -n "${local_name}" && -n "${local_email}" ]]; then
+    ok "Git identity already configured (${local_name} <${local_email}>) — skipping"
+    exit 0
+  fi
+  if [[ -z "${GIT_NAME}" && -z "${GIT_EMAIL}" && ! -t 0 ]]; then
+    warn "Git identity not set — skipping (set GIT_NAME/GIT_EMAIL or run interactively)"
+    exit 0
+  fi
 fi
 
 if [[ -z "${GIT_NAME}" ]]; then

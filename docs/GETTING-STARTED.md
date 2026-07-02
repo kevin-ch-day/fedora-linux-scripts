@@ -12,7 +12,8 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | **`./setup.sh`** | **Repo readiness** — executable check, `./validate.sh --quick`, optional smoke |
 | **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate from `./run.sh`) |
 | **`./fedora.sh`** | **Compatibility** — wrapper for `./run.sh` (older docs/scripts) |
-| **`./fedora_rebuild.sh`** | **Rebuild engine** — same as `./run.sh --rebuild` when invoked directly |
+| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `dev-stack`, …) |
+| **`./fedora_rebuild.sh`** | **Rebuild engine** — same as `./install.sh research` / `./run.sh --rebuild` |
 
 `./fedora.sh` remains as a compatibility wrapper for older docs and scripts.
 
@@ -22,7 +23,9 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Disk/memory summary | `./run.sh --disk-summary` or `./system/health_snapshot.sh --show` |
 | Btrfs / LUKS / VirtualBox readiness | `./system/system.sh btrfs-health` · `luks-readiness` · `virtualbox-readiness` |
 | Package update noise | `./system/system.sh package-noise` |
-| After `dnf upgrade` | `./run.sh --post-update-check` or `./system/system.sh post-update-check` |
+| **Update Fedora** | `./run.sh --update` or main menu **[1]** |
+| **Daily sync (update + verify)** | `./run.sh --daily` or main menu **[2]** |
+| After `dnf upgrade` only | `./run.sh --post-update-check` or main menu **[3]** |
 | **All-in-one toolkit check** | `./run.sh --check` |
 | Fix DNF repos then re-check | `./run.sh --check --fix-repos` (sudo) |
 | Full check (+ doctor smoke) | `./run.sh --check --full` |
@@ -36,25 +39,42 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Fresh install report | `./run.sh --baseline` |
 | Rebuild readiness | `./run.sh --rebuild-check` |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
-| System readiness menu | `./run.sh --system` → `[1] Daily driver check` · `[2] Post-update check` |
-| Logs CLI | `./system/log_engine.sh` or System menu `[7]` |
+| Install workstation | `./run.sh --install` or main menu **[5]** |
+| Install profiles | `./install.sh list` · `./install.sh research --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
+| Fresh machine wizard | `./run.sh --onboard` · `./setup.sh --guided` |
+| System readiness menu | `./run.sh --system` → **[1] Update** · **[2] Daily sync** |
+| Logs CLI | `./system/log_engine.sh` or System maintenance → **[9] View logs** |
 | Repo validation | `./validate.sh` |
 | Dynamic smoke tests | `./smoke_test.sh` or `./validate.sh --smoke --quick` |
 
 ```text
 ./run.sh                 Main menu (Fedora Workstation Toolkit)
-                              [1] System maintenance · [2] Developer tools
-                              [3] Desktop environments · [4] Virtualization
-                              [5] Web/database stack · [6] Android RE tools
+                              [1] Update Fedora
+                              [2] Update + post-update check  ← daily workflow
+                              [3] Post-update check only
+                              [4] Guided rebuild
+                              [5] Install workstation hub
+                              [6] System maintenance · [7] Doctor · [8] Self-test
 
-./run.sh --rebuild       Guided sequence (update → KVM → Android → RE tools → …)
-./mobsf.sh                  MobSF stack (separate entry — own menu)
+./run.sh --daily         Update then post-update check (recommended)
+./run.sh --install       Install hub (dev · desktop · profiles · rebuild)
+./install.sh list        Profile catalog (research · android-re · dev-stack · …)
+./run.sh --onboard       Fresh machine wizard (setup → check → rebuild)
+./run.sh --rebuild       Guided sequence (research profile)
+./mobsf.sh               MobSF stack (separate entry — own menu)
 ```
 
 Shortcuts:
 
 ```bash
-./run.sh                    # interactive main menu
+./run.sh                    # interactive main menu — [1] Update Fedora first
+./run.sh --update           # full Fedora update (sudo)
+./run.sh --daily            # update + post-update check (recommended)
+./run.sh --daily --quick    # faster daily sync
+./run.sh --install          # install workstation hub
+./run.sh --onboard          # fresh machine: setup → check → rebuild
+./install.sh list           # profile catalog
+./install.sh research --yes # full research workstation (non-interactive)
 ./run.sh --check            # validate + smoke + rebuild readiness (start here)
 ./run.sh --check --fix-repos   # same, but fixes DNF .repo permissions first (sudo)
 ./run.sh --check --full     # includes full smoke + Fedora doctor
@@ -87,6 +107,14 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
    ```
 2. **Validate before major setup** (read-only; installs nothing):
    ```bash
+   ./setup.sh
+   # or guided path:
+   ./setup.sh --guided
+   # or full wizard:
+   ./run.sh --onboard
+   ```
+   Manual check:
+   ```bash
    ./run.sh --check
    ```
    If rebuild readiness fails on **dnf repo permissions** (common on fresh installs):
@@ -107,6 +135,8 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 3. Run the full rebuild:
    ```bash
    ./run.sh --rebuild
+   # or non-interactive:
+   ./install.sh research --yes
    ```
    Pick a mode (interactive or auto-yes), confirm each major step. If a step fails, the rebuild continues and reports a failure count at the end.
 4. Log out/in (or reboot) after desktop/KVM group changes; `source ~/.bashrc` for PATH.

@@ -21,7 +21,7 @@ usage() {
   cat <<EOF
 Developer workstation areas — developer tools, desktop environments, virtualization, and web/database services.
 
-From main entry: ./run.sh → [2]  or  ./run.sh --dev
+From main entry: ./run.sh → [4] Developer tools  or  ./run.sh --dev
 
 Usage: $(basename "$0") [command|option]
 
@@ -62,7 +62,7 @@ EOF
 
 if [[ $# -eq 0 ]]; then
   dev_menu_init "${FEDORA_ROOT}"
-  dev_menu_developer_tools
+  dev_main_menu
   exit 0
 fi
 

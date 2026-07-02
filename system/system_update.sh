@@ -245,7 +245,7 @@ summarize_health() {
 offer_post_update_check() {
   local user ans
   ui_section "Next"
-  ui_line "Run  ./system/system.sh post-update-check"
+  ui_line "Run  ./run.sh --post-update-check  (or main menu [3])"
   if (( TEST_MODE )); then
     return 0
   fi

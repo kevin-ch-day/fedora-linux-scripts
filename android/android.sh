@@ -23,7 +23,7 @@ usage() {
 Android RE tools launcher — core setup, RE tools, verification, and ADB checks.
 MobSF stack (separate): ./mobsf.sh
 
-From main entry: ./run.sh → [6]  or  ./run.sh --android
+From main entry: ./run.sh → [8] Android RE tools  or  ./run.sh --android
 
 Usage: $(basename "$0") [command|option]
 

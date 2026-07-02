@@ -45,7 +45,7 @@ Options:
   --help, -h         Show this help
 
 Also: ./system/system.sh wired-only
-      System menu → [8] OS hardening → [6]
+      System maintenance → [11] Hardening and security → Round 2 → [4]
 
 Expected after apply:
   Bluetooth: masked / inactive

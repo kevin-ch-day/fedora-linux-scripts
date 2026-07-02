@@ -250,21 +250,21 @@ else
   _audit_fail "cmd_binary_path could not resolve httpd (${out:-empty}, rc=${mock_rc})"
 fi
 
-if pkg_present python3 python3 2>/dev/null; then
-  bp="$(pkg_binary_path python3 2>/dev/null || true)"
-  _audit_ok "live: python3 present (${bp:-path unknown})"
-elif _audit_pkg_installed python3 2>/dev/null; then
-  _audit_fail "live: python3 RPM installed but pkg_present failed (PATH/sbin bug?)"
-fi
-
-if pkg_present code code 2>/dev/null; then
-  _audit_ok "live: VS Code (code) pkg_present OK"
-elif _audit_pkg_installed code 2>/dev/null; then
-  _audit_fail "live: code RPM installed but pkg_present failed — VS Code sudo bug class"
-fi
-
 if (( QUICK == 0 )); then
   theme_report_section "Live host checks (RPM vs binary)"
+
+  if pkg_present python3 python3 2>/dev/null; then
+    bp="$(pkg_binary_path python3 2>/dev/null || true)"
+    _audit_ok "live: python3 present (${bp:-path unknown})"
+  elif _audit_pkg_installed python3 2>/dev/null; then
+    _audit_fail "live: python3 RPM installed but pkg_present failed (PATH/sbin bug?)"
+  fi
+
+  if pkg_present code code 2>/dev/null; then
+    _audit_ok "live: VS Code (code) pkg_present OK"
+  elif _audit_pkg_installed code 2>/dev/null; then
+    _audit_fail "live: code RPM installed but pkg_present failed — VS Code sudo bug class"
+  fi
   LIVE_PKGS=(
     "git:git"
     "podman:podman"

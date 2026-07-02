@@ -27,7 +27,7 @@ fedora_entry_points_check() {
     theme_section "Entry points"
   fi
 
-  for path in run.sh setup.sh fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do
+  for path in run.sh setup.sh install.sh fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do
     if [[ -x "${fedora_root}/${path}" ]]; then
       ok "./${path}"
     else

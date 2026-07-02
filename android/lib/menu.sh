@@ -3,7 +3,7 @@
 # Version: 0.3.2
 #
 # Standalone:  ./android/android.sh
-# From main:   ./run.sh → [3] or ./run.sh --android
+# From main:   ./run.sh → [8] Android RE tools or ./run.sh --android
 #
 # Do not execute directly.
 
@@ -91,58 +91,78 @@ android_menu_setup() {
 }
 
 # ---------- RE installs ----------
-_android_re_items() {
-  theme_section "Quick picks"
-  menu_item 5 "Install all four tools" "apktool · jadx · smali · dex2jar"
-  menu_item 6 "Install all + verify all" "recommended after rebuild"
-  menu_item 11 "Upgrade all" "re-download latest releases"
-  theme_section "Individual install"
+_android_re_install_one_items() {
   menu_item 1 "Install apktool"
   menu_item 2 "Install jadx"
   menu_item 3 "Install smali/baksmali"
   menu_item 4 "Install dex2jar"
-  theme_section "Install + verify one tool"
-  menu_item 7 "Install + verify apktool"
-  menu_item 8 "Install + verify jadx"
-  menu_item 9 "Install + verify smali/baksmali"
-  menu_item 10 "Install + verify dex2jar"
-  theme_section "Upgrade one tool"
-  menu_item 12 "Upgrade apktool"
-  menu_item 13 "Upgrade jadx"
-  menu_item 14 "Upgrade smali/baksmali"
-  menu_item 15 "Upgrade dex2jar"
   menu_item_back
 }
 
-_android_re_install_verify() {
-  local tool="$1"
-  menu_run_script "android/android_re_install.sh" "${tool}"
-  menu_run_script_scroll "android/verify_re_tool.sh" "${tool}"
-}
-
-_android_re_dispatch() {
+_android_re_install_one_dispatch() {
   case "$1" in
     0) return 1 ;;
     1) menu_run_script android/android_re_install.sh apktool; menu_pause; return 0 ;;
     2) menu_run_script android/android_re_install.sh jadx; menu_pause; return 0 ;;
     3) menu_run_script android/android_re_install.sh smali; menu_pause; return 0 ;;
     4) menu_run_script android/android_re_install.sh dex2jar; menu_pause; return 0 ;;
-    5) menu_run_script android/android_re_install.sh all; menu_pause; return 0 ;;
-    6)
+    *) return 2 ;;
+  esac
+}
+
+android_menu_re_install_one() {
+  menu_loop "Install one RE tool" "user-scope → ~/.local/" \
+    _android_re_install_one_items _android_re_install_one_dispatch
+}
+
+_android_re_upgrade_one_items() {
+  menu_item 1 "Upgrade apktool"
+  menu_item 2 "Upgrade jadx"
+  menu_item 3 "Upgrade smali/baksmali"
+  menu_item 4 "Upgrade dex2jar"
+  menu_item_back
+}
+
+_android_re_upgrade_one_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script android/android_re_install.sh --upgrade apktool; menu_pause; return 0 ;;
+    2) menu_run_script android/android_re_install.sh --upgrade jadx; menu_pause; return 0 ;;
+    3) menu_run_script android/android_re_install.sh --upgrade smali; menu_pause; return 0 ;;
+    4) menu_run_script android/android_re_install.sh --upgrade dex2jar; menu_pause; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+android_menu_re_upgrade_one() {
+  menu_loop "Upgrade one RE tool" "re-download latest release" \
+    _android_re_upgrade_one_items _android_re_upgrade_one_dispatch
+}
+
+_android_re_items() {
+  theme_section "Recommended"
+  menu_item 1 "Install all four tools" "apktool · jadx · smali · dex2jar"
+  menu_item 2 "Install all + verify all" "best after guided rebuild"
+  menu_item 3 "Upgrade all" "re-download latest releases"
+  theme_section "One tool"
+  menu_item 4 "Install one tool…" "apktool · jadx · smali · dex2jar"
+  menu_item 5 "Upgrade one tool…" "pick a single tool"
+  menu_item_back
+}
+
+_android_re_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script android/android_re_install.sh all; menu_pause; return 0 ;;
+    2)
       menu_run_script android/android_re_install.sh all
       menu_run_script_scroll android/verify_re_tool.sh all
       menu_pause
       return 0
       ;;
-    7) _android_re_install_verify apktool; menu_pause; return 0 ;;
-    8) _android_re_install_verify jadx; menu_pause; return 0 ;;
-    9) _android_re_install_verify smali; menu_pause; return 0 ;;
-    10) _android_re_install_verify dex2jar; menu_pause; return 0 ;;
-    11) menu_run_script android/android_re_install.sh --upgrade all; menu_pause; return 0 ;;
-    12) menu_run_script android/android_re_install.sh --upgrade apktool; menu_pause; return 0 ;;
-    13) menu_run_script android/android_re_install.sh --upgrade jadx; menu_pause; return 0 ;;
-    14) menu_run_script android/android_re_install.sh --upgrade smali; menu_pause; return 0 ;;
-    15) menu_run_script android/android_re_install.sh --upgrade dex2jar; menu_pause; return 0 ;;
+    3) menu_run_script android/android_re_install.sh --upgrade all; menu_pause; return 0 ;;
+    4) android_menu_re_install_one; return 0 ;;
+    5) android_menu_re_upgrade_one; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -155,7 +175,8 @@ android_menu_re_install() {
 # ---------- Verify ----------
 _android_verify_items() {
   theme_section "Verify"
-  menu_item 1 "Verify all RE tools" "recommended"
+  menu_item 1 "Verify all RE tools" "recommended after install"
+  theme_section "One tool"
   menu_item 2 "Verify apktool"
   menu_item 3 "Verify jadx"
   menu_item 4 "Verify smali/baksmali"
@@ -207,18 +228,20 @@ android_menu_doctors() {
 }
 
 _android_main_items() {
-  theme_section "Setup"
-  menu_item 1 "Install Android core tools" "adb · sdkmanager · Python tools · Android Studio"
-  menu_item 2 "Install APK RE tools" "apktool · jadx · smali · dex2jar"
+  theme_section "Install — start here"
+  menu_item_lane 1 android "Install Android core tools" "adb · sdkmanager · Python tools · Android Studio"
+  menu_item_lane 2 android "Install APK RE tools" "apktool · jadx · smali · dex2jar"
+  theme_section "Verify"
+  menu_item 3 "Verify all RE tools" "check ~/.local installs"
   theme_section "Checks"
-  menu_item 3 "Android workstation doctor" "sdk · adb · core tools · RE tools"
-  menu_item 4 "ADB and device checks" "devices · udev · permissions"
+  menu_item 4 "Android workstation doctor" "sdk · adb · core tools · RE tools"
+  menu_item 5 "ADB and device checks" "devices · udev · permissions"
   theme_section "Mobile analysis"
-  menu_item 5 "Open MobSF stack" "separate lifecycle · ./mobsf.sh"
+  menu_item 6 "Open MobSF stack" "separate lifecycle · ./mobsf.sh"
   theme_section "Maintenance"
-  menu_item 6 "Repair Node/npm tooling" "optional · apk-mitm only"
+  menu_item 7 "Repair Node/npm tooling" "optional · apk-mitm only"
   theme_section "Docs"
-  menu_item 7 "Lane guide" "android/README.md"
+  menu_item 8 "Lane guide" "android/README.md"
   menu_item_lane_exit
 }
 
@@ -227,11 +250,12 @@ _android_main_dispatch() {
     0) menu_lane_handle_main_exit ;;
     1) android_menu_setup; return 0 ;;
     2) android_menu_re_install; return 0 ;;
-    3) menu_run_script_scroll android/doctor_android_research.sh; menu_pause; return 0 ;;
-    4) android_adb_status; menu_pause; return 0 ;;
-    5) menu_run_script mobsf.sh; menu_pause; return 0 ;;
-    6) FEDORA_ANDROID_MENU_MODE=1 menu_run_sudo_env_script_scroll android/android_dev_core_setup.sh --repair-node; menu_pause; return 0 ;;
-    7) menu_open_file "${MENU_ROOT}/android/README.md"; menu_pause; return 0 ;;
+    3) menu_run_script_scroll android/verify_re_tool.sh all; menu_pause; return 0 ;;
+    4) menu_run_script_scroll android/doctor_android_research.sh; menu_pause; return 0 ;;
+    5) android_adb_status; menu_pause; return 0 ;;
+    6) menu_run_script mobsf.sh; menu_pause; return 0 ;;
+    7) FEDORA_ANDROID_MENU_MODE=1 menu_run_sudo_env_script_scroll android/android_dev_core_setup.sh --repair-node; menu_pause; return 0 ;;
+    8) menu_open_file "${MENU_ROOT}/android/README.md"; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }

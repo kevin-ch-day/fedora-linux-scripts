@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # system/lib/menu.sh — System maintenance menus (host, maintenance, logs)
-# Version: 0.3.3
+# Version: 0.5.0
 #
 # Standalone:  ./system/system.sh
-# From main:   ./run.sh → [1] or ./run.sh --system
+# From main:   ./run.sh → [9] System maintenance · [1] Update Fedora
 #
 # Do not execute directly.
 
@@ -67,6 +67,147 @@ system_menu_init() {
   menu_init "System maintenance" "${fedora_root}" 0
   theme_set_lane system
   menu_set_header_fn system_menu_header
+}
+
+# quick=1 → skip slow rpm -Va (daily driver); quick=0 → full verify pass
+system_menu_run_update() {
+  local quick="${1:-0}"
+  local -a args=()
+  (( quick )) && args+=(--quick)
+  info "Update logs to: $(log_dir)/system_update.log"
+  menu_run_sudo_env_script_scroll system/system_update.sh "${args[@]}"
+  theme_status_info "After upgrade: Post-update check (main [3] or --post-update-check)"
+}
+
+system_menu_run_daily_sync() {
+  local quick="${1:-0}"
+  local ec=0
+  # shellcheck source=../../lib/workflows.sh
+  source "${_FEDORA_ROOT}/lib/workflows.sh"
+  if workflow_daily_sync "${quick}" "${_FEDORA_ROOT}"; then
+    ec=0
+  else
+    ec=$?
+  fi
+  return "${ec}"
+}
+
+# ---------- Security audit submenu ----------
+_system_security_audit_items() {
+  menu_item 1 "Security audit" "full report → logs/"
+  menu_item 2 "Audit summary" "fast · live findings only"
+  menu_item 3 "Audit action plan" "ordered remediation steps"
+  menu_item 4 "Host context" "users · network · posture snapshot"
+  menu_item_back
+}
+
+_system_security_audit_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll system/security_audit.sh; return 0 ;;
+    2) menu_run_script_scroll system/security_audit.sh --summary; return 0 ;;
+    3) menu_run_script_scroll system/security_audit.sh --plan; return 0 ;;
+    4) menu_run_script_scroll system/host_context.sh --summary; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_security_audit() {
+  menu_loop "Security audit" "read-only · findings · remediation plan" \
+    _system_security_audit_items _system_security_audit_dispatch
+}
+
+# ---------- Round 1 hardening submenu ----------
+_system_hardening_round1_items() {
+  menu_item 1 "OS hardening Round 1" "sudo · auto-detect · idempotent"
+  menu_item 2 "Round 1 status" "read-only · what's applied"
+  menu_item 3 "Services audit" "profile-aware · read-only"
+  menu_item 4 "Help" "hardening notes"
+  menu_item_back
+}
+
+_system_hardening_round1_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll system/hardening_round1.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/hardening_round1.sh --status; return 0 ;;
+    3) menu_run_script_scroll system/hardening_services_audit.sh; menu_pause; return 0 ;;
+    4)
+      cat <<EOF
+
+Round 1 — safe OS hardening
+───────────────────────────
+Baseline, SELinux, SSH, sysctl, journald, firewalld.
+Idempotent — skips steps already applied (--force to redo).
+
+  ./system/hardening_round1.sh --status
+  ./system/hardening_round1.sh --dry-run
+  ./system/hardening_round1.sh --yes --allow-users wheel
+
+Baselines: logs/hardening/<host>/<stamp>/
+EOF
+      menu_pause
+      return 0
+      ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_hardening_round1() {
+  menu_loop "Round 1 — safe baseline" "SELinux · SSH · sysctl · firewalld" \
+    _system_hardening_round1_items _system_hardening_round1_dispatch
+}
+
+# ---------- Round 2 strict submenu ----------
+_system_hardening_round2_items() {
+  theme_section "Strict profile — review audit first"
+  menu_item_danger 1 "OS hardening Round 2" "sudo · firewall + services"
+  menu_item_danger 2 "Strict firewall (SSH only)" "custom zone · wired NM"
+  menu_item_danger 3 "Listening hardening" "MariaDB · Avahi · LLMNR · BT/Wi-Fi"
+  menu_item_danger 4 "Wired only (BT/Wi-Fi off)" "wired Ethernet · mask BT"
+  menu_item_back
+}
+
+_system_hardening_round2_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) menu_run_script_scroll system/hardening_round2.sh; menu_pause; return 0 ;;
+    2) menu_run_script_scroll system/hardening_firewall_strict.sh; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/hardening_listening.sh; menu_pause; return 0 ;;
+    4) menu_run_script_scroll system/hardening_wired_only.sh; menu_pause; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_hardening_round2() {
+  menu_loop "Round 2 — strict profile" "firewall · services · listening" \
+    _system_hardening_round2_items _system_hardening_round2_dispatch
+}
+
+# ---------- Hardening hub ----------
+_system_hardening_hub_items() {
+  theme_section "Baseline"
+  menu_item 1 "Round 1 — safe baseline" "SELinux · SSH · sysctl"
+  theme_section "Audit"
+  menu_item 2 "Security audit" "findings · summary · action plan"
+  theme_section "Strict profile"
+  menu_item_danger 3 "Round 2 — strict profile" "firewall · services · danger zone"
+  menu_item_back
+}
+
+_system_hardening_hub_dispatch() {
+  case "$1" in
+    0) return 1 ;;
+    1) system_menu_hardening_round1; return 0 ;;
+    2) system_menu_security_audit; return 0 ;;
+    3) system_menu_hardening_round2; return 0 ;;
+    *) return 2 ;;
+  esac
+}
+
+system_menu_hardening() {
+  menu_loop "Hardening and security" "Round 1 safe · audit · Round 2 strict" \
+    _system_hardening_hub_items _system_hardening_hub_dispatch
 }
 
 # ---------- Cleanup submenu ----------
@@ -165,80 +306,7 @@ system_menu_readiness() {
     _system_readiness_items _system_readiness_dispatch
 }
 
-# ---------- OS hardening submenu ----------
-_system_hardening_items() {
-  theme_section "Round 1 — safe baseline"
-  menu_item 1 "OS hardening Round 1" "sudo · auto-detect · idempotent"
-  menu_item 4 "Round 1 status" "read-only · what's applied"
-  theme_section "Round 2 — strict profile"
-  menu_item_danger 5 "OS hardening Round 2" "sudo · firewall + services"
-  menu_item_danger 7 "Strict firewall (SSH only)" "custom zone · wired NM"
-  menu_item_danger 8 "Listening hardening" "MariaDB · Avahi · LLMNR · BT/Wi-Fi"
-  menu_item_danger 6 "Wired only (BT/Wi-Fi off)" "wired Ethernet · mask BT"
-  theme_section "Audit"
-  menu_item 9 "Security audit" "read-only · findings · full report"
-  menu_item 10 "Audit summary" "fast · live findings only"
-  menu_item 11 "Audit action plan" "ordered remediation steps"
-  menu_item 12 "Host context" "users · network · posture snapshot"
-  theme_section "Round 2 prep"
-  menu_item 2 "Services audit" "profile-aware · read-only"
-  menu_item 3 "Help" "hardening notes"
-  menu_item_back
-}
-
-_system_hardening_dispatch() {
-  case "$1" in
-    0) return 1 ;;
-    1) menu_run_script_scroll system/hardening_round1.sh; menu_pause; return 0 ;;
-    5) menu_run_script_scroll system/hardening_round2.sh; menu_pause; return 0 ;;
-    6) menu_run_script_scroll system/hardening_wired_only.sh; menu_pause; return 0 ;;
-    7) menu_run_script_scroll system/hardening_firewall_strict.sh; menu_pause; return 0 ;;
-    8) menu_run_script_scroll system/hardening_listening.sh; menu_pause; return 0 ;;
-    9) menu_run_script_scroll system/security_audit.sh; return 0 ;;
-    10) menu_run_script_scroll system/security_audit.sh --summary; return 0 ;;
-    11) menu_run_script_scroll system/security_audit.sh --plan; return 0 ;;
-    12) menu_run_script_scroll system/host_context.sh --summary; return 0 ;;
-    2) menu_run_script_scroll system/hardening_services_audit.sh; menu_pause; return 0 ;;
-    3)
-      cat <<EOF
-
-OS hardening
-────────────
-Round 1: baseline, SELinux, SSH, sysctl, journald, firewalld.
-  Host/OS/profile/users detected automatically.
-  Idempotent — skips steps already applied (--force to redo).
-
-AllowUsers modes (--allow-users):
-  auto   wheel admins if any, else login users (merges existing sshd)
-  wheel  wheel group only
-  login  all /home/* accounts
-
-Round 2 (strict research): firewall public zone · ssh only · disable avahi/cups/bt
-  ./system/hardening_round2.sh --dry-run --yes
-  ./system/hardening_round2.sh --yes
-  ./system/security_audit.sh
-  ./system/security_audit.sh --summary
-  ./system/security_audit.sh --findings --compare
-  ./system/security_audit.sh --plan
-  ./system/hardening_round1.sh --status
-  ./system/hardening_round1.sh --dry-run
-  ./system/hardening_round1.sh --yes --allow-users wheel
-  ./system/hardening_services_audit.sh
-
-Baselines: /data/logs/hardening/<host>/<stamp>/ (or logs/hardening/)
-EOF
-      menu_pause
-      return 0
-      ;;
-    4) menu_run_script_scroll system/hardening_round1.sh --status; return 0 ;;
-    *) return 2 ;;
-  esac
-}
-
-system_menu_hardening() {
-  menu_loop "Hardening and services" "firewall · services · listening ports · audit" \
-    _system_hardening_items _system_hardening_dispatch
-}
+# ---------- OS hardening (legacy flat menu removed — use hub above) ----------
 
 # ---------- Logs submenu ----------
 _system_logs_items() {
@@ -281,40 +349,39 @@ system_menu_help() {
 }
 
 _system_main_items() {
+  theme_section "Updates — start here"
+  menu_item_lane 1 update "Update Fedora" "sudo · dnf upgrade · full verify · log saved"
+  menu_item_lane 2 postupdate "Update + post-update check" "recommended daily workflow"
+  menu_item_lane 3 postupdate "Post-update check only" "reboot · btrfs · failed units"
+  menu_item_lane 4 update "Quick update" "skip rpm -Va · faster"
   theme_section "Readiness"
-  menu_item_lane 1 readiness "Daily driver check" "btrfs · LUKS · VirtualBox · services"
-  menu_item_lane 2 postupdate "Post-update check" "reboot · btrfs · failed units · package noise"
-  menu_item_lane 3 rebuild "Rebuild readiness" "pre-rebuild validation"
+  menu_item_lane 5 readiness "Daily driver check" "btrfs · LUKS · VirtualBox · services"
+  menu_item_lane 6 rebuild "Rebuild readiness" "pre-rebuild validation"
   theme_section "Host information"
-  menu_item_lane 4 host "Host snapshot" "OS · kernel · hardware · mounts"
-  menu_item_lane 5 disk "Disk and memory" "storage · RAM · swap"
+  menu_item_lane 7 host "Host snapshot" "OS · kernel · hardware · mounts"
+  menu_item_lane 8 disk "Disk and memory" "storage · RAM · swap"
   theme_section "Operations"
-  menu_item_lane 6 update "Update Fedora" "dnf upgrade · compact summary · log saved"
-  menu_item_lane 7 logs "View logs" "recent logs · follow · search"
-  menu_item_lane 8 cleanup "Cleanup" "logs · dnf cache · repo permissions"
+  menu_item_lane 9 logs "View logs" "recent logs · follow · search"
+  menu_item_lane 10 cleanup "Cleanup" "logs · dnf cache · repo permissions"
   theme_section "Security"
-  menu_item_lane 9 audit "Hardening and services" "firewall · services · listening ports"
+  menu_item_lane 11 audit "Hardening and security" "Round 1 · audit · Round 2 strict"
   menu_item_lane_exit
 }
 
 _system_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
-    1) menu_run_script_scroll system/daily_driver_check.sh; menu_pause; return 0 ;;
-    2) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
-    3) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
-    4) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
-    5) system_menu_disk_memory; return 0 ;;
-    6)
-      info "Update logs to: $(log_dir)/system_update.log"
-      menu_run_sudo_env_script_scroll system/system_update.sh --quick
-      theme_status_info "After a successful upgrade, run Post-update check ([2])"
-      menu_pause
-      return 0
-      ;;
-    7) system_menu_logs; return 0 ;;
-    8) system_menu_cleanup; return 0 ;;
-    9) system_menu_hardening; return 0 ;;
+    1) system_menu_run_update 0; menu_pause; return 0 ;;
+    2) system_menu_run_daily_sync 0; menu_pause; return 0 ;;
+    3) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
+    4) system_menu_run_update 1; menu_pause; return 0 ;;
+    5) menu_run_script_scroll system/daily_driver_check.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/rebuild_readiness_check.sh; menu_pause; return 0 ;;
+    7) menu_run_script_scroll system/system_info.sh; menu_pause; return 0 ;;
+    8) system_menu_disk_memory; return 0 ;;
+    9) system_menu_logs; return 0 ;;
+    10) system_menu_cleanup; return 0 ;;
+    11) system_menu_hardening; return 0 ;;
     *) return 2 ;;
   esac
 }
@@ -322,7 +389,7 @@ _system_main_dispatch() {
 system_main_menu() {
   local prev_header="${MENU_HEADER_FN}"
   menu_set_header_fn system_menu_maintenance_header
-  menu_loop "System maintenance" "daily readiness · updates · logs · cleanup" \
+  menu_loop "System maintenance" "updates first · readiness · logs · cleanup" \
     _system_main_items _system_main_dispatch
   menu_set_header_fn "${prev_header}"
 }

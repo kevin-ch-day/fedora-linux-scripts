@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # smoke_test.sh — dynamic CLI smoke tests (read-only, no sudo prompts)
-# Version: 0.3.0
+# Version: 0.4.0
 #
 # Run from repo root:
 #   ./smoke_test.sh
@@ -146,6 +146,14 @@ echo
 
 theme_report_section "Help and CLI dispatch"
 _smoke_run "run.sh --help" 0 bash "${ROOT}/run.sh" --help
+_smoke_run "install.sh --help" 0 bash "${ROOT}/install.sh" --help
+_smoke_run "install.sh list" 0 bash "${ROOT}/install.sh" list
+_smoke_run "install.sh research --plan" 0 bash "${ROOT}/install.sh" research --plan
+_smoke_run "install.sh research --validate" 0 bash "${ROOT}/install.sh" research --validate
+_smoke_run "install.sh research --dry-run --yes" 0 bash "${ROOT}/install.sh" research --dry-run --yes
+_smoke_run "install.sh not-a-profile" 1 bash "${ROOT}/install.sh" not-a-profile --validate
+_smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan
+_smoke_run "fedora_rebuild --plan (via run.sh)" 0 bash "${ROOT}/run.sh" --rebuild --plan
 _smoke_run "fedora.sh --help (compat)" 0 bash "${ROOT}/fedora.sh" --help
 _smoke_run "run.sh --check bad option" 1 bash "${ROOT}/run.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
@@ -283,9 +291,10 @@ fi
 
 theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
-_smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '1\n0\n0\n'
-_smoke_menu "run.sh android area back path" "${ROOT}/run.sh" '6\n0\n0\n'
-_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '1\n5\n1\n0\n0\n0\n'
+_smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '6\n0\n0\n'
+_smoke_menu "run.sh install hub back path" "${ROOT}/run.sh" '5\n0\n0\n'
+_smoke_menu "run.sh install profiles submenu" "${ROOT}/run.sh" '5\n6\n0\n0\n0\n'
+_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '6\n8\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
 _smoke_menu "android.sh from picker" "${ROOT}/android/android.sh" '0\n' 1

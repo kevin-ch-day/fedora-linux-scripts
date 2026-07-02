@@ -21,9 +21,9 @@ usage() {
   cat <<EOF
 System maintenance — daily readiness, host snapshot, updates, logs, cleanup.
 
-From main entry: ./run.sh → [1]  or  ./run.sh --system
+From main entry: ./run.sh → [1] Update · [2] Daily sync · [6] System maintenance
 Daily driver: ./run.sh --daily-driver-check · Disk summary: ./run.sh --disk-summary
-Post-update: ./run.sh --post-update-check · Fedora doctor: ./run.sh --doctor (main menu [8])
+Post-update: ./run.sh --post-update-check (main [3]) · Doctor: ./run.sh --doctor (main [7])
 
 Usage: $(basename "$0") [command|option]
 
@@ -32,7 +32,7 @@ Options:
   --menu         Interactive menu (default)
 
 Commands:
-  update         Full Fedora update (sudo; default --quick)
+  update         Full Fedora update (sudo; add --quick to skip rpm -Va)
   info           Host snapshot
   monitor        Live dashboard
   backup         Export system state
@@ -81,12 +81,13 @@ while [[ $# -gt 0 ]]; do
       ;;
     update)
       shift
-      if [[ $# -eq 0 ]]; then
-        set -- --quick
-      fi
       case "${1:-}" in
         --help|-h)
           exec bash "${SYSTEM_LAUNCHER_DIR}/system_update.sh" "$@"
+          ;;
+        --quick)
+          shift
+          exec sudo -E bash "${SYSTEM_LAUNCHER_DIR}/system_update.sh" --quick "$@"
           ;;
       esac
       exec sudo -E bash "${SYSTEM_LAUNCHER_DIR}/system_update.sh" "$@"

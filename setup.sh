@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # setup.sh — lightweight repo/toolkit readiness (no installs, no sudo)
-# Version: 0.1.0
+# Version: 0.2.0
 #
 # Run:
 #   ./setup.sh
 #   ./setup.sh --smoke
-#   ./setup.sh --help
+#   ./setup.sh --guided   # validate then offer ./run.sh --onboard --skip-setup
 
 set -euo pipefail
 
@@ -18,6 +18,7 @@ theme_init
 theme_set_lane audit
 
 RUN_SMOKE=0
+GUIDED=0
 
 usage() {
   cat <<EOF
@@ -29,6 +30,7 @@ Does not install packages or change system state.
 Options:
   --help, -h   Show this help
   --smoke      Also run ./smoke_test.sh --quick after validate
+  --guided     After validate, continue with onboard wizard (check → rebuild)
 
 Default:
   Ensure root entry scripts are executable
@@ -43,6 +45,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
     --smoke) RUN_SMOKE=1; shift ;;
+    --guided) GUIDED=1; shift ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
 done
@@ -54,7 +57,7 @@ theme_rule '─'
 echo
 
 theme_section "Entry script permissions"
-for script in run.sh fedora.sh fedora_rebuild.sh mobsf.sh validate.sh smoke_test.sh setup.sh; do
+for script in run.sh fedora.sh fedora_rebuild.sh install.sh mobsf.sh validate.sh smoke_test.sh setup.sh; do
   path="${ROOT}/${script}"
   if [[ ! -f "${path}" ]]; then
     warn "Missing: ${script}"
@@ -89,10 +92,17 @@ fi
 
 echo
 if (( val_ec == 0 && smoke_ec == 0 )); then
+  if (( GUIDED )); then
+    # shellcheck source=lib/workflows.sh
+    source "${ROOT}/lib/workflows.sh"
+    workflow_onboard_fresh_machine "${ROOT}" 1
+    exit $?
+  fi
   theme_summary_box "Setup complete" \
     "Result:     OK" \
-    "Next:       ./run.sh --daily-driver-check" \
-    "            ./run.sh --check"
+    "Next:       ./run.sh --onboard" \
+    "            ./run.sh --daily" \
+    "            ./install.sh list"
   exit 0
 fi
 

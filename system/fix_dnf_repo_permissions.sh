@@ -27,7 +27,8 @@ Fix /etc/yum.repos.d/*.repo permissions so user-level dnf check works
 (e.g. virtualbox.repo left at mode 600 after a third-party installer).
 
 Also: ./run.sh --fix-repos
-     System → [7] Cleanup → [6] Fix DNF repo permissions
+     System maintenance → [10] Cleanup → [6] Fix DNF repo permissions
+     ./run.sh --fix-repos
 
 Toolkit root: ${FEDORA_ROOT}
 EOF

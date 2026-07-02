@@ -5,6 +5,7 @@ Guides for **fedora-linux-scripts**.
 | Doc | Audience | Purpose |
 |-----|----------|---------|
 | **[GETTING-STARTED.md](GETTING-STARTED.md)** | Everyone | Onboarding, doctors, shims, rebuild sequence |
+| **[INSTALL-PROFILES.md](INSTALL-PROFILES.md)** | Everyone | One-command install profiles (`./install.sh`) |
 | **[../README.md](../README.md)** | Everyone | Script index |
 | **[AUDIT.md](AUDIT.md)** | Maintainers | Security matrix, open items, menu QA |
 | **[RECOVERY.md](RECOVERY.md)** | Operators | Btrfs · LUKS · boot · VirtualBox · package noise recovery |

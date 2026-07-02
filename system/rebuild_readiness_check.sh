@@ -118,9 +118,9 @@ else
     if [[ -n "${_unreadable}" ]]; then
       info "  Unreadable repo files: ${_unreadable}"
       info "  Fix: sudo ./run.sh --fix-repos"
-      info "       or System → [7] Cleanup → [6] Fix DNF repo permissions"
+      info "       or System maintenance → [10] Cleanup → [6] Fix DNF repo permissions"
     else
-      info "  Fix: System → [4] Update Fedora  (or: sudo dnf check)"
+      info "  Fix: ./run.sh --update  or  System maintenance → [1] Update Fedora"
     fi
     ISSUES=$((ISSUES + 1))
   fi
