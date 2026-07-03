@@ -30,6 +30,7 @@ One-command workstation setup via **`./install.sh`** and the shared profile engi
 | **mobsf** | MobSF Podman install | MobSF doctor |
 | **daily-sync** | Full update → post-update check | — |
 | **update-only** | Full Fedora update | — |
+| **workstation** | Daily sync + dev-full (update → git → VS Code → KVM) | — |
 
 **research** is the same sequence as **`./run.sh --rebuild`** (default profile).
 

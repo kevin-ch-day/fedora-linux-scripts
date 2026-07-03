@@ -6,12 +6,12 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 
 | Entry | Use |
 |-------|-----|
-| **`./run.sh`** | Main menu — setup lanes, workstation readiness, rebuild |
-| **`./setup.sh`** | Repo/toolkit readiness (validate · optional smoke) |
-| **`./mobsf.sh`** | MobSF stack — install/start/**doctor** (separate lifecycle) |
-| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `mobsf`, …) |
-| **`./fedora.sh`** | Compatibility wrapper → `./run.sh` (older docs/scripts) |
-| **`./fedora_rebuild.sh`** | Rebuild engine · compat → `./install.sh research` |
+| **`./run.sh`** | **Start here** — main menu, updates, install, rebuild, doctor |
+| **`./setup.sh`** | First-run repo check (validate · optional smoke) |
+| **`./install.sh`** | Install profiles — one-command stacks (`research`, `android-re`, `mobsf`, …) |
+| **`./mobsf.sh`** | MobSF stack only — install/start/**doctor** |
+
+Legacy names `./fedora.sh` and `./fedora_rebuild.sh` redirect to `./run.sh` (old bookmarks still work).
 
 ```bash
 ./setup.sh            # first-run repo check (no sudo · no installs)
@@ -26,7 +26,8 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ./run.sh --rebuild    # guided full setup (research profile)
 ./install.sh list     # all install profiles
 ./install.sh research --plan
-./run.sh --onboard    # fresh machine wizard
+./run.sh --workstation   # daily dev profile
+./run.sh --list-profiles # profile catalog
 ./run.sh --smoke      # dynamic CLI/menu tests
 ./run.sh --fix-repos  # fix DNF .repo permissions (sudo)
 ./mobsf.sh --doctor      # MobSF stack health (separate)
@@ -41,7 +42,8 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ```text
 fedora-linux-scripts/
 ├── README.md · docs/ · validate.sh
-├── run.sh · setup.sh · install.sh · fedora.sh (compat) · mobsf.sh · fedora_rebuild.sh
+├── run.sh · setup.sh · install.sh · mobsf.sh    ← use ./run.sh
+├── fedora.sh · fedora_rebuild.sh                ← legacy redirects → run.sh
 ├── lib/                 ← shared libraries
 ├── system/ · dev/ · android/
 ├── mobsf/               ← Podman stack (see mobsf/GUIDE.md)
@@ -90,11 +92,11 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
-| `run.sh` | Main workstation entry |
+| `run.sh` | **Primary entry** — menu, CLI, rebuild |
 | `setup.sh` | Lightweight repo readiness helper |
-| `fedora.sh` | Compatibility wrapper → `run.sh` |
+| `install.sh` | Install profile launcher |
 | `mobsf.sh` | MobSF wrapper → `mobsf/mobsf.sh` |
-| `fedora_rebuild.sh` | Rebuild engine + compat redirect |
+| `fedora.sh` · `fedora_rebuild.sh` | Legacy redirects → `run.sh` |
 | `system/system.sh` · `dev/dev.sh` · `android/android.sh` | Lane menus + CLI |
 | `validate.sh` | Syntax, entry points, ShellCheck; `--smoke` runs smoke_test |
 | `smoke_test.sh` | Dynamic CLI/menu smoke tests (read-only) |

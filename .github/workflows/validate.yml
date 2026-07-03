@@ -19,5 +19,8 @@ jobs:
       - name: Static validation
         run: ./validate.sh --shellcheck --install-audit
 
+      - name: Install profile validation
+        run: ./install.sh research --validate && ./install.sh workstation --validate
+
       - name: Smoke tests (CI mode)
         run: ./smoke_test.sh --ci

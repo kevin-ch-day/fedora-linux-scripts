@@ -78,19 +78,26 @@ else
 fi
 
 if [[ -x "${FEDORA_ROOT}/run.sh" ]]; then
-  ok "run.sh: executable"
+  ok "run.sh: primary entry (executable)"
   PASSES=$((PASSES + 1))
 else
-  warn "run.sh: FAILED (not executable)"
+  warn "run.sh: FAILED (not executable — run ./setup.sh)"
+  ISSUES=$((ISSUES + 1))
+fi
+
+if [[ -x "${FEDORA_ROOT}/install.sh" ]]; then
+  ok "install.sh: profile launcher executable"
+  PASSES=$((PASSES + 1))
+else
+  warn "install.sh: FAILED (not executable)"
   ISSUES=$((ISSUES + 1))
 fi
 
 if [[ -x "${FEDORA_ROOT}/fedora.sh" ]]; then
-  ok "fedora.sh: compatibility wrapper executable"
+  ok "fedora.sh: legacy redirect present"
   PASSES=$((PASSES + 1))
 else
-  warn "fedora.sh: FAILED (compatibility wrapper missing or not executable)"
-  ISSUES=$((ISSUES + 1))
+  theme_note "fedora.sh: optional legacy redirect (use ./run.sh)"
 fi
 
 if baseline_ping_ok 1.1.1.1 1; then

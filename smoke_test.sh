@@ -150,11 +150,15 @@ _smoke_run "install.sh --help" 0 bash "${ROOT}/install.sh" --help
 _smoke_run "install.sh list" 0 bash "${ROOT}/install.sh" list
 _smoke_run "install.sh research --plan" 0 bash "${ROOT}/install.sh" research --plan
 _smoke_run "install.sh research --validate" 0 bash "${ROOT}/install.sh" research --validate
+_smoke_run "install.sh workstation --plan" 0 bash "${ROOT}/install.sh" workstation --plan
 _smoke_run "install.sh research --dry-run --yes" 0 bash "${ROOT}/install.sh" research --dry-run --yes
 _smoke_run "install.sh not-a-profile" 1 bash "${ROOT}/install.sh" not-a-profile --validate
-_smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan
+_smoke_run "run.sh --version" 0 bash "${ROOT}/run.sh" --version
+_smoke_run "run.sh --list-profiles" 0 bash "${ROOT}/run.sh" --list-profiles
+_smoke_run "run.sh --workstation --plan" 0 bash "${ROOT}/run.sh" --workstation --plan
 _smoke_run "fedora_rebuild --plan (via run.sh)" 0 bash "${ROOT}/run.sh" --rebuild --plan
-_smoke_run "fedora.sh --help (compat)" 0 bash "${ROOT}/fedora.sh" --help
+_smoke_run "fedora.sh --help (legacy redirect)" 0 bash "${ROOT}/fedora.sh" --help
+_smoke_run "fedora_rebuild.sh --plan (legacy redirect)" 0 bash "${ROOT}/fedora_rebuild.sh" --plan
 _smoke_run "run.sh --check bad option" 1 bash "${ROOT}/run.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
 if (( CI == 0 && QUICK == 0 )); then
@@ -253,11 +257,13 @@ _smoke_run_summary "daily driver check" "Daily driver check complete" \
   bash "${ROOT}/system/daily_driver_check.sh"
 _smoke_run "system.sh daily-driver" 0 bash "${ROOT}/system/system.sh" daily-driver
 _smoke_run "run.sh --daily-driver-check" 0 bash "${ROOT}/run.sh" --daily-driver-check
-_smoke_run "run.sh --post-update-check" 0 bash "${ROOT}/run.sh" --post-update-check
+_smoke_run_summary "run.sh --post-update-check" "Post-update summary" \
+  bash "${ROOT}/run.sh" --post-update-check
 _smoke_run "run.sh --disk-summary" 0 bash "${ROOT}/run.sh" --disk-summary
-_smoke_run "fedora.sh --daily-driver-check (compat)" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
+_smoke_run "fedora.sh --daily-driver-check (legacy redirect)" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
 _smoke_run_summary "luks-readiness" "LUKS summary" bash "${ROOT}/system/system.sh" luks-readiness
-_smoke_run "post-update-check" 0 bash "${ROOT}/system/system.sh" post-update-check
+_smoke_run_summary "post-update-check" "Post-update summary" \
+  bash "${ROOT}/system/system.sh" post-update-check
 _smoke_run "luks-readiness --add-passphrase non-interactive" 1 \
   bash "${ROOT}/system/luks_readiness.sh" --add-passphrase </dev/null
 
@@ -293,7 +299,8 @@ theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
 _smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '6\n0\n0\n'
 _smoke_menu "run.sh install hub back path" "${ROOT}/run.sh" '5\n0\n0\n'
-_smoke_menu "run.sh install profiles submenu" "${ROOT}/run.sh" '5\n6\n0\n0\n0\n'
+_smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan
+_smoke_menu "run.sh install all profiles submenu" "${ROOT}/run.sh" '5\n8\n0\n0\n0\n'
 _smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '6\n8\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1

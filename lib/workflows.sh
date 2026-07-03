@@ -150,7 +150,7 @@ workflow_onboard_fresh_machine() {
   local rebuild_state="skipped"
   if (( skip_setup )) || confirm "Run guided rebuild now? (--yes, research profile)"; then
     rebuild_state="done"
-    FEDORA_REBUILD_VIA_FEDORA=1 bash "${root}/fedora_rebuild.sh" --yes --profile research || {
+    bash "${root}/run.sh" --rebuild --yes --profile research || {
       rebuild_ec=$?
       rebuild_state="failed"
     }

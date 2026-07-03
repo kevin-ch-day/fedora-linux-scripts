@@ -2,7 +2,7 @@
 
 Host maintenance, workstation readiness, updates, logs, and cleanup for Fedora research workstations.
 
-**Menu:** `./system/system.sh` · **From main entry:** `./run.sh` → `[1]` or `./run.sh --system`
+**Menu:** `./system/system.sh` · **From main entry:** `./run.sh` → `[6]` or `./run.sh --system`
 
 ---
 
@@ -10,44 +10,46 @@ Host maintenance, workstation readiness, updates, logs, and cleanup for Fedora r
 
 | Check | Command |
 |-------|---------|
-| **Daily driver check** | `./run.sh --daily-driver-check` or `./system/system.sh daily-driver` |
-| Post-update validation | `./run.sh --post-update-check` or `./system/system.sh post-update-check` |
-| Disk/memory summary | `./run.sh --disk-summary` or `./system/health_snapshot.sh --show` |
-| Btrfs health | `./system/system.sh btrfs-health` |
-| LUKS readiness | `./system/system.sh luks-readiness` |
-| VirtualBox readiness | `./system/system.sh virtualbox-readiness` |
-| Package / update noise | `./system/system.sh package-noise` |
-| Rebuild readiness | `./run.sh --rebuild-check` or `./system/system.sh rebuild-check` |
+| **Daily driver check** | `./run.sh --daily-driver-check` or System menu `[5]` |
+| **Daily sync** | `./run.sh --daily` or main menu `[2]` / System menu `[2]` |
+| Post-update validation | `./run.sh --post-update-check` or System menu `[3]` |
+| Disk/memory summary | `./run.sh --disk-summary` or System menu `[8]` |
+| Btrfs health | System menu `[8]` → More readiness → `[1]` |
+| LUKS readiness | System menu `[8]` → More readiness → `[2]` |
+| VirtualBox readiness | System menu `[8]` → More readiness → `[3]` |
+| Package / update noise | System menu `[8]` → More readiness → `[4]` |
+| Rebuild readiness | `./run.sh --rebuild-check` or System menu `[6]` |
 
 Recovery playbook: [docs/RECOVERY.md](../docs/RECOVERY.md) · Phase 2 validation: [docs/PHASE2-VALIDATION.md](../docs/PHASE2-VALIDATION.md)
 
 | Check | Command |
 |-------|---------|
-| Fresh install report | `./run.sh --baseline` or `./system/system.sh baseline` |
-| Host snapshot | `./system/system.sh info` |
-| Disk and memory summary | `./system/health_snapshot.sh --show` |
+| Fresh install report | `./run.sh --baseline` or More readiness → `[5]` |
+| Host snapshot | System menu `[7]` |
+| Disk and memory summary | System menu `[8]` |
 
 ---
 
 ## Menu structure
 
 ```text
-system/system.sh
+system/system.sh  (also ./run.sh → [6])
+├── [Updates — start here]
+│   ├── [1] Update Fedora
+│   ├── [2] Update + post-update check   ← daily workflow
+│   ├── [3] Post-update check only
+│   └── [4] Quick update
 ├── [Readiness]
-│   ├── [1] Daily driver check        btrfs · LUKS · VirtualBox · services
-│   ├── [2] Post-update check         after dnf upgrade
-│   └── [3] Rebuild readiness         pre-rebuild validation
+│   ├── [5] Daily driver check
+│   └── [6] Rebuild readiness
 ├── [Host information]
-│   ├── [4] Host snapshot             OS · kernel · hardware · mounts
-│   └── [5] Disk and memory           storage · RAM · swap
-│       └── More readiness checks     btrfs · LUKS · fresh install · …
+│   ├── [7] Host snapshot
+│   └── [8] Disk and memory → More readiness (btrfs · LUKS · …)
 ├── [Operations]
-│   ├── [6] Update Fedora             sudo · scroll · log
-│   ├── [7] View logs                 log_engine submenu
-│   └── [8] Cleanup                   logs · dnf · repo fix
-├── [Security]
-│   └── [9] Hardening and services    firewall · services · audit
-└── [0] Back to main menu             (when opened from ./run.sh)
+│   ├── [9] View logs
+│   └── [10] Cleanup → [6] Fix DNF repo permissions
+└── [Security]
+    └── [11] Hardening and security
 ```
 
 CLI shortcuts: `./system/system.sh daily-driver|post-update-check|btrfs-health|luks-readiness|virtualbox-readiness|package-noise|update|info|baseline|rebuild-check|monitor|backup|research-doctor|logs`
@@ -66,8 +68,8 @@ Doctor matrix: [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md#doctor-matri
 
 | Check | Command |
 |-------|---------|
-| Daily driver (stabilization) | `./run.sh --daily-driver-check` (System menu `[1]`) |
-| Fedora doctor (toolkit) | `./run.sh --doctor` or `./run.sh` → `[8]` |
+| Daily driver (stabilization) | `./run.sh --daily-driver-check` (System menu `[5]`) |
+| Fedora doctor (toolkit) | `./run.sh --doctor` or main menu `[7]` |
 | Full research (Android + MobSF) | `./system/system.sh research-doctor` (rebuild finale) |
 | MobSF stack only | `./mobsf.sh --doctor` |
 
@@ -77,5 +79,3 @@ Doctor matrix: [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md#doctor-matri
 
 - `lib/readiness.sh` — daily driver, btrfs, LUKS, VirtualBox, package noise probes
 - `lib/health_snapshot.sh` — disk/memory summary (auto-refresh if stale; no full `du` in quick mode)
-
-See [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md) · [docs/README.md](../docs/README.md)

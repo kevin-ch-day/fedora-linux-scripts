@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # system/lib/menu.sh — System maintenance menus (host, maintenance, logs)
-# Version: 0.5.0
+# Version: 0.5.1
 #
 # Standalone:  ./system/system.sh
-# From main:   ./run.sh → [9] System maintenance · [1] Update Fedora
+# From main:   ./run.sh → [6] System maintenance · [1] Update Fedora
 #
 # Do not execute directly.
 

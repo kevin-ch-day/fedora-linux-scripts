@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# fedora.sh — compatibility wrapper for ./run.sh (older docs and scripts)
-# Version: 0.1.0
+# fedora.sh — compatibility redirect → ./run.sh
+# Version: 0.2.0
 #
 # Prefer: ./run.sh
 

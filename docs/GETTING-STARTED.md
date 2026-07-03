@@ -8,14 +8,12 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 
 | Script | Use when |
 |--------|----------|
-| **`./run.sh`** | **Main Fedora toolkit** — system maintenance, workstation areas, guided rebuild, health checks |
-| **`./setup.sh`** | **Repo readiness** — executable check, `./validate.sh --quick`, optional smoke |
-| **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate from `./run.sh`) |
-| **`./fedora.sh`** | **Compatibility** — wrapper for `./run.sh` (older docs/scripts) |
-| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `dev-stack`, …) |
-| **`./fedora_rebuild.sh`** | **Rebuild engine** — same as `./install.sh research` / `./run.sh --rebuild` |
+| **`./run.sh`** | **Start here** — main menu, updates, install hub, guided rebuild, doctor |
+| **`./setup.sh`** | **First clone** — executable check, `./validate.sh --quick`, optional smoke |
+| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `mobsf`, …) |
+| **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate lifecycle) |
 
-`./fedora.sh` remains as a compatibility wrapper for older docs and scripts.
+`./fedora.sh` and `./fedora_rebuild.sh` are legacy names that redirect to `./run.sh` (old bookmarks still work).
 
 | Goal | Command |
 |------|---------|
@@ -40,7 +38,7 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Rebuild readiness | `./run.sh --rebuild-check` |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
 | Install workstation | `./run.sh --install` or main menu **[5]** |
-| Install profiles | `./install.sh list` · `./install.sh research --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
+| Install profiles | `./install.sh list` · `./install.sh workstation --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
 | Fresh machine wizard | `./run.sh --onboard` · `./setup.sh --guided` |
 | System readiness menu | `./run.sh --system` → **[1] Update** · **[2] Daily sync** |
 | Logs CLI | `./system/log_engine.sh` or System maintenance → **[9] View logs** |
@@ -57,7 +55,9 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
                               [6] System maintenance · [7] Doctor · [8] Self-test
 
 ./run.sh --daily         Update then post-update check (recommended)
-./run.sh --install       Install hub (dev · desktop · profiles · rebuild)
+./run.sh --install       Install hub (profiles [6–8] · dev · Android · rebuild)
+./run.sh --list-profiles Profile catalog
+./run.sh --workstation   Daily dev profile (update + VS Code + KVM)
 ./install.sh list        Profile catalog (research · android-re · dev-stack · …)
 ./run.sh --onboard       Fresh machine wizard (setup → check → rebuild)
 ./run.sh --rebuild       Guided sequence (research profile)

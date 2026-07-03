@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # lib/profiles.sh — named install / rebuild profiles (step lists)
-# Version: 0.2.0
+# Version: 0.3.0
 #
-# Profiles are consumed by lib/install_engine.sh, install.sh, fedora_rebuild.sh.
+# Profiles are consumed by lib/install_engine.sh, install.sh, lib/rebuild.sh.
 # Do not execute directly.
 
 if [[ -n "${FEDORA_PROFILES_SH_LOADED:-}" ]]; then
@@ -16,7 +16,7 @@ source "${_PROFILES_LIB_DIR}/common.sh"
 
 # profile_list_names — one profile id per line
 profile_list_names() {
-  printf '%s\n' research android-re dev-stack dev-full web-stack mobsf daily-sync update-only
+  printf '%s\n' research android-re dev-stack dev-full web-stack mobsf daily-sync update-only workstation
 }
 
 profile_is_valid() {
@@ -52,6 +52,9 @@ profile_description() {
       ;;
     update-only)
       printf '%s\n' "Fedora update only (dnf upgrade, no post-update check)"
+      ;;
+    workstation)
+      printf '%s\n' "Daily dev workstation — full update, post-update, git, VS Code, KVM"
       ;;
     *)
       printf '%s\n' "unknown profile"
@@ -132,6 +135,10 @@ profile_iter_steps() {
       ;;
     mobsf)
       printf '%s\n' $'MobSF install\tmobsf/mobsf_install.sh\tsudo-E\t'
+      ;;
+    workstation)
+      profile_iter_steps daily-sync
+      profile_iter_steps dev-full
       ;;
   esac
 }

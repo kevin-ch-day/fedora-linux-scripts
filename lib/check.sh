@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/check.sh — unified toolkit readiness checks
-# Version: 0.2.2
+# Version: 0.3.0
 #
 # Source after lib/common.sh.
 # Used by: ./run.sh --check
@@ -115,14 +115,14 @@ fedora_toolkit_check() {
         "Smoke:      passed" \
         "Doctor:     passed" \
         "Rebuild:    ready" \
-        "Next:       ./run.sh --rebuild"
+        "Next:       ./run.sh --daily  ·  ./run.sh --rebuild"
     else
       theme_summary_box "Check complete" \
         "Result:     READY" \
         "Validate:   passed" \
         "Smoke:      passed" \
         "Rebuild:    ready" \
-        "Next:       ./run.sh --rebuild"
+        "Next:       ./run.sh --daily  ·  ./install.sh workstation --plan"
     fi
     return 0
   fi

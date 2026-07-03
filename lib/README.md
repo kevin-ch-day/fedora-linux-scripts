@@ -8,7 +8,10 @@ Do not execute directly — each file guards with `FEDORA_*_SH_LOADED`.
 ```
 common.sh          Base helpers (paths, messaging, real_user, sudo)
 theme.sh           Console colors and menu styling (lane accents, gauges, status lines)
-workflows.sh       Chained flows: daily sync (update + post-update), install hints
+workflows.sh       Chained flows: daily sync, onboarding wizard
+profiles.sh        Named install profile step lists
+install_engine.sh  Profile step runner (plan · validate · execute)
+rebuild.sh         Guided rebuild mode menu + research profile
 logging.sh         Report paths under logs/ or /data/logs/
 health.sh          Host identity, CPU/RAM/disk, basic network
 services.sh        systemd unit visibility, web stack doctor

@@ -45,6 +45,7 @@ Profiles:
   dev-full      Git (if needed) + VS Code + containers/KVM
   web-stack     Apache · MariaDB · PHP · phpMyAdmin
   mobsf         MobSF Podman stack install + doctor
+  workstation   Daily sync + dev-full (update · git · VS Code · KVM)
   daily-sync    Full update + post-update check
   update-only   Fedora update only
 
@@ -113,7 +114,7 @@ while [[ $# -gt 0 ]]; do
     --plan) PLAN_ONLY=1; shift ;;
     --validate) VALIDATE_ONLY=1; shift ;;
     --log) USE_LOG=1; shift ;;
-    research|android-re|dev-stack|dev-full|web-stack|mobsf|daily-sync|update-only)
+    research|android-re|dev-stack|dev-full|web-stack|mobsf|workstation|daily-sync|update-only)
       PROFILE="$1"
       shift
       ;;
@@ -145,4 +146,4 @@ if (( VALIDATE_ONLY )); then
   exit 1
 fi
 
-install_engine_run_profile "${FEDORA_ROOT}" "${PROFILE}" "${AUTO_YES}" "${DRY_RUN}" "${USE_LOG}" 0 "${PLAN_ONLY}"
+install_engine_run_profile "${FEDORA_ROOT}" "${PROFILE}" "${AUTO_YES}" "${DRY_RUN}" "${USE_LOG}" "${FEDORA_FROM_MENU:-0}" "${PLAN_ONLY}"

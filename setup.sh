@@ -57,7 +57,7 @@ theme_rule '─'
 echo
 
 theme_section "Entry script permissions"
-for script in run.sh fedora.sh fedora_rebuild.sh install.sh mobsf.sh validate.sh smoke_test.sh setup.sh; do
+for script in run.sh install.sh setup.sh mobsf.sh validate.sh smoke_test.sh; do
   path="${ROOT}/${script}"
   if [[ ! -f "${path}" ]]; then
     warn "Missing: ${script}"
@@ -68,6 +68,17 @@ for script in run.sh fedora.sh fedora_rebuild.sh install.sh mobsf.sh validate.sh
   else
     chmod +x "${path}"
     ok "${script}: made executable"
+  fi
+done
+for script in fedora.sh fedora_rebuild.sh; do
+  path="${ROOT}/${script}"
+  if [[ -x "${path}" ]]; then
+    ok "${script}: legacy redirect OK"
+  elif [[ -f "${path}" ]]; then
+    chmod +x "${path}"
+    ok "${script}: legacy redirect (made executable)"
+  else
+    theme_note "${script}: optional legacy redirect missing"
   fi
 done
 
@@ -100,7 +111,7 @@ if (( val_ec == 0 && smoke_ec == 0 )); then
   fi
   theme_summary_box "Setup complete" \
     "Result:     OK" \
-    "Next:       ./run.sh --onboard" \
+    "Next:       ./run.sh" \
     "            ./run.sh --daily" \
     "            ./install.sh list"
   exit 0

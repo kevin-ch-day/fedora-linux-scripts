@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/entry_points.sh — shared launcher layout checks (validate.sh + Fedora doctor)
-# Version: 0.2.0
+# Version: 0.3.0
 #
 # Source after lib/common.sh:
 #   fedora_entry_points_check ROOT [fail_count_var]
@@ -27,13 +27,21 @@ fedora_entry_points_check() {
     theme_section "Entry points"
   fi
 
-  for path in run.sh setup.sh install.sh fedora.sh mobsf.sh fedora_rebuild.sh validate.sh smoke_test.sh; do
+  for path in run.sh setup.sh install.sh mobsf.sh validate.sh smoke_test.sh; do
     if [[ -x "${fedora_root}/${path}" ]]; then
       ok "./${path}"
     else
       warn "Missing or not executable: ./${path}"
       rc=1
       n=$((n + 1))
+    fi
+  done
+
+  for path in fedora.sh fedora_rebuild.sh; do
+    if [[ -x "${fedora_root}/${path}" ]]; then
+      ok "./${path} (legacy redirect → run.sh)"
+    else
+      warn "Legacy redirect missing: ./${path} (optional — use ./run.sh)"
     fi
   done
 
@@ -50,7 +58,7 @@ fedora_entry_points_check() {
     rc=1
     n=$((n + 1))
   else
-    ok "run.sh — MobSF not listed as an active lane"
+    ok "run.sh — primary entry (MobSF separate)"
   fi
 
   if [[ -n "${fail_var}" ]]; then
