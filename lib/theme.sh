@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/theme.sh — Fedora workstation console theme (dark-first, black-terminal friendly)
-# Version: 0.5.1
+# Version: 0.8.0
 #
 # Respects NO_COLOR and FEDORA_NO_COLOR=1.
 # FEDORA_THEME=dark|light (default: dark)
@@ -41,6 +41,14 @@ THEME_INFO=""
 THEME_MUTED=""
 THEME_BORDER=""
 
+# Explicit semantic aliases. The older short names remain supported throughout
+# the shell UI, while these names preserve intent for future renderers.
+THEME_SIGNAL=""
+THEME_STATUS_SUCCESS=""
+THEME_STATUS_WARNING=""
+THEME_STATUS_FAILURE=""
+THEME_STATUS_MUTED=""
+
 # Backward compatibility with lib/common.sh / lib/health.sh
 CYAN=""
 GREEN=""
@@ -63,6 +71,11 @@ theme_reset_vars() {
   THEME_INFO=""
   THEME_MUTED=""
   THEME_BORDER=""
+  THEME_SIGNAL=""
+  THEME_STATUS_SUCCESS=""
+  THEME_STATUS_WARNING=""
+  THEME_STATUS_FAILURE=""
+  THEME_STATUS_MUTED=""
   CYAN=""
   GREEN=""
   YELLOW=""
@@ -78,26 +91,34 @@ theme_use_color() {
 
 theme_resolved_width() {
   local configured="${THEME_WIDTH:-54}"
-  local cols=""
+  local cols="${COLUMNS:-}"
+  local max_width=0
 
   if [[ ! "${configured}" =~ ^[0-9]+$ ]] || (( configured <= 0 )); then
     configured=54
   fi
 
-  if [[ -t 1 ]] && _theme_have tput; then
+  if [[ ! "${cols}" =~ ^[0-9]+$ || "${cols}" -le 0 ]] && [[ -t 1 ]] && _theme_have tput; then
     cols="$(tput cols 2>/dev/null || true)"
-    if [[ "${cols}" =~ ^[0-9]+$ ]] && (( cols > 0 )); then
-      if (( cols < 52 )); then
-        printf '%s\n' "${cols}"
-        return 0
-      fi
-      if (( configured > cols - 4 )); then
-        configured=$(( cols - 4 ))
-      fi
+  fi
+
+  if [[ "${cols}" =~ ^[0-9]+$ ]] && (( cols > 0 )); then
+    max_width=$(( cols - 4 ))
+    (( max_width < 12 )) && max_width=12
+    if (( configured > max_width )); then
+      configured="${max_width}"
     fi
   fi
 
-  (( configured < 48 )) && configured=48
+  # Keep rules inside the terminal while retaining a useful minimum on very
+  # narrow displays. COLUMNS also makes width behavior testable without a TTY.
+  if (( configured < 24 )); then
+    if (( max_width > 0 && max_width < 24 )); then
+      configured="${max_width}"
+    else
+      configured=24
+    fi
+  fi
   printf '%s\n' "${configured}"
 }
 
@@ -119,52 +140,68 @@ _theme_fg256() {
   fi
 }
 
-theme_lane_accent_code() {
-  local lane="${1:-}"
-  case "${lane}" in
-    system) printf '%s' 75 ;;       # steel blue
-    dev|development) printf '%s' 78 ;; # sea green
-    desktop) printf '%s' 117 ;;     # cool sky
-    virt|virtualization) printf '%s' 111 ;; # pale cyan
-    web) printf '%s' 180 ;;         # sand
-    android) printf '%s' 208 ;;     # orange
-    mobsf) printf '%s' 141 ;;       # violet
-    rebuild) printf '%s' 220 ;;     # gold
-    audit|security) printf '%s' 117 ;; # sky
-    check|selftest) printf '%s' 82 ;; # mint
-    main|fedora) printf '%s' 86 ;;  # cyan
-    *) printf '%s' 86 ;;
+theme_signal_code() {
+  case "${THEME_MODE}" in
+    light) printf '%s' 160 ;;
+    *) printf '%s' 160 ;;
   esac
+}
+
+theme_status_code() {
+  local status="${1:?status required}"
+  case "${THEME_MODE}:${status}" in
+    light:success) printf '%s' 28 ;;
+    light:warning) printf '%s' 172 ;;
+    light:failure) printf '%s' 124 ;;
+    dark:success|*:success) printf '%s' 82 ;;
+    dark:warning|*:warning) printf '%s' 214 ;;
+    dark:failure|*:failure) printf '%s' 203 ;;
+    *) return 1 ;;
+  esac
+}
+
+theme_lane_accent_code() {
+  # Lanes are identified by labels, not a rainbow. A single signal-red accent
+  # keeps the control surface coherent; green/amber/red remain status-only.
+  theme_signal_code
 }
 
 theme_lane_icon() {
   case "${1:-}" in
-    system) printf '⚙ ' ;;
-    dev|development) printf '⚡ ' ;;
-    desktop) printf '🖥 ' ;;
-    virt|virtualization|disk) printf '▣ ' ;;
-    web|host) printf '◇ ' ;;
-    android) printf '◈ ' ;;
-    mobsf) printf '⬡ ' ;;
-    rebuild|update|postupdate) printf '↻ ' ;;
-    audit|security|readiness) printf '◉ ' ;;
-    check|selftest) printf '✓ ' ;;
-    main|fedora|cleanup) printf '◆ ' ;;
-    hardening) printf '◆ ' ;;
-    logs) printf '≡ ' ;;
-    *) printf '· ' ;;
+    system) printf 'SYS / ' ;;
+    install|setup) printf 'SET / ' ;;
+    dev|development) printf 'DEV / ' ;;
+    desktop) printf 'UI  / ' ;;
+    virt|virtualization) printf 'VRT / ' ;;
+    disk) printf 'DSK / ' ;;
+    web) printf 'WEB / ' ;;
+    host) printf 'HST / ' ;;
+    android) printf 'ADR / ' ;;
+    mobsf) printf 'MOB / ' ;;
+    rebuild) printf 'BLD / ' ;;
+    update|postupdate) printf 'UPD / ' ;;
+    audit|security|readiness) printf 'AUD / ' ;;
+    check|selftest) printf 'TST / ' ;;
+    main|fedora) printf 'CTL / ' ;;
+    profile) printf 'PRF / ' ;;
+    cleanup) printf 'CLN / ' ;;
+    hardening) printf 'SEC / ' ;;
+    logs) printf 'LOG / ' ;;
+    *) printf 'CTL / ' ;;
   esac
 }
 
 theme_lane_subtitle() {
   case "${1:-}" in
     system) printf '%s' "daily readiness · updates · logs · cleanup" ;;
+    install|setup) printf '%s' "select · review · approve" ;;
     dev|development) printf '%s' "developer tools · desktops · virtualization · web stack" ;;
     android) printf '%s' "sdk · re tools · verify" ;;
     mobsf) printf '%s' "podman stack · static analysis" ;;
     rebuild) printf '%s' "guided workstation setup" ;;
+    update|postupdate) printf '%s' "upgrade · maintain · verify" ;;
     audit|security) printf '%s' "readiness · compliance · findings" ;;
-    main|fedora) printf '%s' "rebuild · verify · maintain a Fedora research workstation" ;;
+    main|fedora) printf '%s' "inspect · plan · apply · verify" ;;
     *) printf '%s' "" ;;
   esac
 }
@@ -178,17 +215,9 @@ theme_set_lane() {
   if [[ "${THEME_USE_256:-0}" -eq 1 ]]; then
     THEME_ACCENT="$(_theme_fg256 "${code}")${THEME_BOLD}"
   else
-    case "${lane}" in
-      system) THEME_ACCENT="$(tput setaf 4 2>/dev/null || true)${THEME_BOLD}" ;;
-      dev|development) THEME_ACCENT="$(tput setaf 2 2>/dev/null || true)${THEME_BOLD}" ;;
-      desktop) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
-      virt|virtualization) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
-      web) THEME_ACCENT="$(tput setaf 7 2>/dev/null || true)${THEME_BOLD}" ;;
-      android) THEME_ACCENT="$(tput setaf 3 2>/dev/null || true)${THEME_BOLD}" ;;
-      mobsf) THEME_ACCENT="$(tput setaf 5 2>/dev/null || true)${THEME_BOLD}" ;;
-      *) THEME_ACCENT="$(tput setaf 6 2>/dev/null || true)${THEME_BOLD}" ;;
-    esac
+    THEME_ACCENT="$(tput setaf 1 2>/dev/null || true)${THEME_BOLD}"
   fi
+  THEME_SIGNAL="${THEME_ACCENT}"
   CYAN="${THEME_ACCENT}"
 }
 
@@ -223,24 +252,24 @@ theme_init() {
       THEME_DIM="$(_theme_fg256 240)"
       THEME_MUTED="$(_theme_fg256 245)"
       THEME_BORDER="$(_theme_fg256 250)"
-      THEME_ACCENT="$(_theme_fg256 32)${THEME_BOLD}"
-      THEME_TITLE="$(_theme_fg256 25)${THEME_BOLD}"
-      THEME_SUCCESS="$(_theme_fg256 28)${THEME_BOLD}"
-      THEME_WARN="$(_theme_fg256 172)${THEME_BOLD}"
-      THEME_ERROR="$(_theme_fg256 160)${THEME_BOLD}"
-      THEME_INFO="$(_theme_fg256 32)"
+      THEME_ACCENT="$(_theme_fg256 "$(theme_signal_code)")${THEME_BOLD}"
+      THEME_TITLE="$(_theme_fg256 232)${THEME_BOLD}"
+      THEME_SUCCESS="$(_theme_fg256 "$(theme_status_code success)")${THEME_BOLD}"
+      THEME_WARN="$(_theme_fg256 "$(theme_status_code warning)")${THEME_BOLD}"
+      THEME_ERROR="$(_theme_fg256 "$(theme_status_code failure)")${THEME_BOLD}"
+      THEME_INFO="$(_theme_fg256 240)"
       ;;
     dark|*)
       THEME_FG="$(_theme_fg256 252)"
       THEME_DIM="$(_theme_fg256 245)"
       THEME_MUTED="$(_theme_fg256 240)"
       THEME_BORDER="$(_theme_fg256 238)"
-      THEME_ACCENT="$(_theme_fg256 86)${THEME_BOLD}"
+      THEME_ACCENT="$(_theme_fg256 "$(theme_signal_code)")${THEME_BOLD}"
       THEME_TITLE="$(_theme_fg256 255)${THEME_BOLD}"
-      THEME_SUCCESS="$(_theme_fg256 82)${THEME_BOLD}"
-      THEME_WARN="$(_theme_fg256 214)${THEME_BOLD}"
-      THEME_ERROR="$(_theme_fg256 203)${THEME_BOLD}"
-      THEME_INFO="$(_theme_fg256 117)"
+      THEME_SUCCESS="$(_theme_fg256 "$(theme_status_code success)")${THEME_BOLD}"
+      THEME_WARN="$(_theme_fg256 "$(theme_status_code warning)")${THEME_BOLD}"
+      THEME_ERROR="$(_theme_fg256 "$(theme_status_code failure)")${THEME_BOLD}"
+      THEME_INFO="$(_theme_fg256 250)"
       ;;
   esac
 
@@ -249,13 +278,19 @@ theme_init() {
     THEME_MUTED="$(tput setaf 7 2>/dev/null || true)"
     THEME_BORDER="${THEME_DIM}"
     THEME_FG="${THEME_RESET}"
-    THEME_ACCENT="$(tput setaf 14 2>/dev/null || tput setaf 6 2>/dev/null || true)${THEME_BOLD}"
+    THEME_ACCENT="$(tput setaf 1 2>/dev/null || true)${THEME_BOLD}"
     THEME_TITLE="$(tput setaf 15 2>/dev/null || true)${THEME_BOLD}"
     THEME_SUCCESS="$(tput setaf 10 2>/dev/null || tput setaf 2 2>/dev/null || true)${THEME_BOLD}"
     THEME_WARN="$(tput setaf 11 2>/dev/null || tput setaf 3 2>/dev/null || true)${THEME_BOLD}"
     THEME_ERROR="$(tput setaf 9 2>/dev/null || tput setaf 1 2>/dev/null || true)${THEME_BOLD}"
-    THEME_INFO="$(tput setaf 12 2>/dev/null || tput setaf 6 2>/dev/null || true)"
+    THEME_INFO="$(tput setaf 7 2>/dev/null || true)"
   fi
+
+  THEME_SIGNAL="${THEME_ACCENT}"
+  THEME_STATUS_SUCCESS="${THEME_SUCCESS}"
+  THEME_STATUS_WARNING="${THEME_WARN}"
+  THEME_STATUS_FAILURE="${THEME_ERROR}"
+  THEME_STATUS_MUTED="${THEME_MUTED}"
 
   CYAN="${THEME_ACCENT}"
   GREEN="${THEME_SUCCESS}"
@@ -312,7 +347,11 @@ theme_lane_banner() {
   local icon sub="" width
   width="$(theme_resolved_width)"
   icon="$(theme_lane_icon "${lane}")"
-  sub="$(theme_lane_subtitle "${lane}")"
+  if (( $# >= 3 )); then
+    sub="$3"
+  else
+    sub="$(theme_lane_subtitle "${lane}")"
+  fi
   if theme_use_color; then
     theme_rule '═' "${width}"
     echo "${THEME_ACCENT}${icon}${THEME_RESET}${THEME_TITLE}${title}${THEME_RESET}"
@@ -356,19 +395,21 @@ theme_report_step() {
   local total="$2"
   local title="$3"
   local detail="${4:-}"
+  local width
+  width="$(theme_resolved_width)"
   echo
   if theme_use_color; then
-    theme_rule '═'
+    theme_rule '═' "${width}"
     printf '%sSTEP %s%s/%s%s  %s%s%s\n' \
       "${THEME_ACCENT}" "${THEME_RESET}" "${step}" "${total}" \
       "${THEME_BOLD}" "${title}" "${THEME_RESET}"
     [[ -n "${detail}" ]] && theme_meta_line "${detail}"
-    theme_rule '─'
+    theme_rule '─' "${width}"
   else
-    echo "============================================================"
+    theme_rule '=' "${width}"
     echo "STEP [${step}/${total}]: ${title}"
     [[ -n "${detail}" ]] && echo "${detail}"
-    echo "============================================================"
+    theme_rule '=' "${width}"
   fi
 }
 
@@ -480,6 +521,7 @@ theme_option_lane() {
   local icon key_color="${THEME_ACCENT}"
   local saved_lane="${THEME_LANE:-}"
   local last_mark=""
+  local danger_mark=""
 
   icon="$(theme_lane_icon "${lane}")"
   theme_set_lane "${lane}"
@@ -488,6 +530,7 @@ theme_option_lane() {
     key_color="${THEME_DIM}"
   elif [[ "${style}" == danger ]]; then
     key_color="${THEME_ERROR}"
+    danger_mark="DANGER / "
   elif theme_use_color && [[ "${THEME_USE_256:-0}" -eq 1 ]]; then
     key_color="$(_theme_fg256 "$(theme_lane_accent_code "${lane}")")${THEME_BOLD}"
   fi
@@ -501,12 +544,15 @@ theme_option_lane() {
   fi
 
   if theme_use_color; then
-    printf '  %s[%s]%s %s%s%s %s%s%s\n' \
-      "${key_color}" "${num}" "${THEME_RESET}" \
+    printf '  %s[%s]%s ' "${key_color}" "${num}" "${THEME_RESET}"
+    if [[ -n "${danger_mark}" ]]; then
+      printf '%s%s%s' "${THEME_ERROR}" "${danger_mark}" "${THEME_RESET}"
+    fi
+    printf '%s%s%s%s%s%s\n' \
       "${THEME_ACCENT}" "${icon}" "${THEME_RESET}" \
       "${THEME_FG}" "${label}" "${THEME_RESET}${last_mark}"
   else
-    printf '  [%s] %s%s%s\n' "${num}" "${icon}" "${label}" "${last_mark}"
+    printf '  [%s] %s%s%s%s\n' "${num}" "${danger_mark}" "${icon}" "${label}" "${last_mark}"
   fi
 
   if [[ -n "${hint}" ]]; then
@@ -529,11 +575,13 @@ theme_option() {
   local style="${4:-}"
   local last_mark=""
   local key_color="${THEME_ACCENT}"
+  local danger_mark=""
 
   if [[ "${num}" == "0" ]]; then
     key_color="${THEME_DIM}"
   elif [[ "${style}" == danger ]]; then
     key_color="${THEME_ERROR}"
+    danger_mark="DANGER / "
   fi
 
   if [[ -n "${MENU_LAST_CHOICE:-}" && "${num}" == "${MENU_LAST_CHOICE}" && "${num}" != "0" ]]; then
@@ -545,11 +593,14 @@ theme_option() {
   fi
 
   if theme_use_color; then
-    printf '  %s[%s]%s %s%s%s\n' \
-      "${key_color}" "${num}" "${THEME_RESET}" \
+    printf '  %s[%s]%s ' "${key_color}" "${num}" "${THEME_RESET}"
+    if [[ -n "${danger_mark}" ]]; then
+      printf '%s%s%s' "${THEME_ERROR}" "${danger_mark}" "${THEME_RESET}"
+    fi
+    printf '%s%s%s\n' \
       "${THEME_FG}" "${label}" "${THEME_RESET}${last_mark}"
   else
-    printf '  [%s] %s%s\n' "${num}" "${label}" "${last_mark}"
+    printf '  [%s] %s%s%s\n' "${num}" "${danger_mark}" "${label}" "${last_mark}"
   fi
 
   if [[ -n "${hint}" ]]; then
@@ -635,14 +686,39 @@ theme_msg_info() {
   fi
 }
 
-theme_msg_miss() {
+theme_msg_absent() {
   if theme_use_color; then
-    printf '%s[MISS]%s %s%s%s\n' \
+    printf '%s[ABSENT]%s %s%s%s\n' \
       "${THEME_MUTED}" "${THEME_RESET}" \
       "${THEME_DIM}" "$*" "${THEME_RESET}"
   else
-    printf '[MISS] %s\n' "$*"
+    printf '[ABSENT] %s\n' "$*"
   fi
+}
+
+theme_msg_unavail() {
+  if theme_use_color; then
+    printf '%s[UNAVAIL]%s %s%s%s\n' \
+      "${THEME_MUTED}" "${THEME_RESET}" \
+      "${THEME_DIM}" "$*" "${THEME_RESET}"
+  else
+    printf '[UNAVAIL] %s\n' "$*"
+  fi
+}
+
+theme_msg_skip() {
+  if theme_use_color; then
+    printf '%s[SKIP]%s %s%s%s\n' \
+      "${THEME_MUTED}" "${THEME_RESET}" \
+      "${THEME_DIM}" "$*" "${THEME_RESET}"
+  else
+    printf '[SKIP] %s\n' "$*"
+  fi
+}
+
+# Backward-compatible function name; a missing installed tool is ABSENT.
+theme_msg_miss() {
+  theme_msg_absent "$@"
 }
 
 theme_result_ready() {
@@ -655,7 +731,7 @@ theme_result_issues() {
 
 theme_status_ok() {
   if theme_use_color; then
-    printf '  %s✓%s %s%s%s\n' \
+    printf '  %s[OK]%s   %s%s%s\n' \
       "${THEME_SUCCESS}" "${THEME_RESET}" \
       "${THEME_FG}" "$*" "${THEME_RESET}"
   else
@@ -665,7 +741,7 @@ theme_status_ok() {
 
 theme_status_warn() {
   if theme_use_color; then
-    printf '  %s!%s %s%s%s\n' \
+    printf '  %s[WARN]%s %s%s%s\n' \
       "${THEME_WARN}" "${THEME_RESET}" \
       "${THEME_FG}" "$*" "${THEME_RESET}"
   else
@@ -675,7 +751,7 @@ theme_status_warn() {
 
 theme_status_info() {
   if theme_use_color; then
-    printf '  %s·%s %s%s%s\n' \
+    printf '  %s[INFO]%s %s%s%s\n' \
       "${THEME_INFO}" "${THEME_RESET}" \
       "${THEME_DIM}" "$*" "${THEME_RESET}"
   else
@@ -708,55 +784,50 @@ theme_gauge_bar() {
   for ((i = 0; i < empty; i++)); do printf '░'; done
 }
 
-# Tool/version row: status = ok | warn | err | miss | skip
+# Tool/version row: status = ok | warn | err | absent | unavail | skip
 theme_tool_row() {
   local status="$1"
   local label="$2"
   local detail="${3:-}"
   local tag="${label}:"
+  local state_tag="" state_color="${THEME_MUTED}"
 
   case "${status}" in
     ok)
-      if theme_use_color; then
-        printf '  %s[OK]%s   %s%-12s%s %s%s%s\n' \
-          "${THEME_SUCCESS}" "${THEME_RESET}" \
-          "${THEME_FG}" "${tag}" "${THEME_RESET}" \
-          "${THEME_DIM}" "${detail}" "${THEME_RESET}"
-      else
-        printf '  [OK]   %-12s %s\n' "${tag}" "${detail}"
-      fi
+      state_tag="[OK]"
+      state_color="${THEME_SUCCESS}"
       ;;
     warn)
-      if theme_use_color; then
-        printf '  %s[WARN]%s %s%-12s%s %s%s%s\n' \
-          "${THEME_WARN}" "${THEME_RESET}" \
-          "${THEME_FG}" "${tag}" "${THEME_RESET}" \
-          "${THEME_DIM}" "${detail}" "${THEME_RESET}"
-      else
-        printf '  [WARN] %-12s %s\n' "${tag}" "${detail}"
-      fi
+      state_tag="[WARN]"
+      state_color="${THEME_WARN}"
       ;;
     err)
-      if theme_use_color; then
-        printf '  %s[ERR]%s  %s%-12s%s %s%s%s\n' \
-          "${THEME_ERROR}" "${THEME_RESET}" \
-          "${THEME_FG}" "${tag}" "${THEME_RESET}" \
-          "${THEME_DIM}" "${detail}" "${THEME_RESET}"
-      else
-        printf '  [ERROR] %-12s %s\n' "${tag}" "${detail}"
-      fi
+      state_tag="[ERROR]"
+      state_color="${THEME_ERROR}"
       ;;
-    miss|skip)
-      if theme_use_color; then
-        printf '  %s[--]%s  %s%-12s%s %s%s%s\n' \
-          "${THEME_MUTED}" "${THEME_RESET}" \
-          "${THEME_DIM}" "${tag}" "${THEME_RESET}" \
-          "${THEME_MUTED}" "${detail:-not installed}" "${THEME_RESET}"
-      else
-        printf '  [--]   %-12s %s\n' "${tag}" "${detail:-not installed}"
-      fi
+    miss|absent)
+      state_tag="[ABSENT]"
+      detail="${detail:-not installed}"
       ;;
+    unavail)
+      state_tag="[UNAVAIL]"
+      detail="${detail:-unavailable}"
+      ;;
+    skip)
+      state_tag="[SKIP]"
+      detail="${detail:-not checked}"
+      ;;
+    *) return 2 ;;
   esac
+
+  if theme_use_color; then
+    printf '  %s%-9s%s %s%-12s%s %s%s%s\n' \
+      "${state_color}" "${state_tag}" "${THEME_RESET}" \
+      "${THEME_FG}" "${tag}" "${THEME_RESET}" \
+      "${THEME_DIM}" "${detail}" "${THEME_RESET}"
+  else
+    printf '  %-9s %-12s %s\n' "${state_tag}" "${tag}" "${detail}"
+  fi
 }
 
 theme_verify_heading() {
@@ -767,14 +838,28 @@ theme_report_progress() {
   local step="$1"
   local total="$2"
   local title="$3"
-  if theme_use_color; then
-    printf '%s▸%s Step %s/%s  %s%s%s\n' \
-      "${THEME_ACCENT}" "${THEME_RESET}" \
-      "${step}" "${total}" \
-      "${THEME_BOLD}" "${title}" "${THEME_RESET}"
-  else
-    printf 'Step %s/%s — %s\n' "${step}" "${total}" "${title}"
+  local pct=0 width=18 filled empty i
+  if [[ "${step}" =~ ^[0-9]+$ && "${total}" =~ ^[0-9]+$ ]] && (( total > 0 )); then
+    pct=$(( (step * 100) / total ))
   fi
+  (( pct > 100 )) && pct=100
+  filled=$(( (pct * width) / 100 ))
+  empty=$(( width - filled ))
+
+  if theme_use_color; then
+    printf '%sProgress%s  %s/%s  %s' \
+      "${THEME_ACCENT}" "${THEME_RESET}" "${step}" "${total}" "${THEME_SIGNAL}"
+    for ((i = 0; i < filled; i++)); do printf '█'; done
+    printf '%s' "${THEME_RESET}"
+    for ((i = 0; i < empty; i++)); do printf '░'; done
+    printf '  %3s%%\n' "${pct}"
+  else
+    printf 'Progress  %s/%s  ' "${step}" "${total}"
+    for ((i = 0; i < filled; i++)); do printf '#'; done
+    for ((i = 0; i < empty; i++)); do printf '.'; done
+    printf '  %3s%%\n' "${pct}"
+  fi
+  theme_meta_line "ACTION / ${title}"
 }
 
 _theme_summary_value_color() {

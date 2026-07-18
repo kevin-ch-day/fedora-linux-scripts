@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # run.sh — Fedora workstation control plane (primary entry point)
-# Version: 1.7.0
+# Version: 1.8.0
 #
 # Run: ./run.sh [--help|--check|--daily|--rebuild|--install|--onboard|…]
 #
@@ -19,6 +19,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Inspect dispatch is intentionally before library and menu initialization.
+# This preserves the no-write/no-sudo inspection contract.
+if [[ "${1:-}" == "--inspect" ]]; then
+  shift
+  exec bash "${FEDORA_ROOT}/inspect.sh" "$@"
+fi
+
 # shellcheck source=lib/menu.sh
 source "${FEDORA_ROOT}/lib/menu.sh"
 # shellcheck source=lib/health_snapshot.sh
@@ -35,7 +42,7 @@ source "${FEDORA_ROOT}/lib/workflows.sh"
 # shellcheck source=lib/rebuild.sh
 source "${FEDORA_ROOT}/lib/rebuild.sh"
 
-menu_init "Fedora Workstation Toolkit" "${FEDORA_ROOT}" 1
+menu_init "Fedora Workstation Control" "${FEDORA_ROOT}" 1
 
 _fedora_run_rebuild() {
   fedora_rebuild_run "${FEDORA_ROOT}" "$@"
@@ -163,6 +170,7 @@ More shortcuts:
   ./run.sh --check --full   Include full smoke + Fedora doctor
   ./run.sh --check --fix-repos   Fix DNF repos (sudo) then re-check
   ./run.sh --daily-driver-check
+  ./run.sh --inspect         Non-mutating host inventory (JSON by default)
   ./run.sh --post-update-check
   ./run.sh --disk-summary
   ./run.sh --doctor
@@ -210,6 +218,7 @@ Options:
   --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
   --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
   --daily-driver-check  Read-only daily driver / workstation readiness
+  --inspect [opts]      Detailed no-sudo host inventory; no writes without --save
   --post-update-check   Validate system after dnf upgrade
   --disk-summary        Disk/memory snapshot (auto-refresh if older than 15m)
   --doctor           Fedora doctor (repo · lanes · workstation health)
@@ -252,7 +261,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) fedora_usage; exit 0 ;;
     --version|-V)
-      echo "fedora-linux-scripts run.sh 1.7.0"
+      echo "fedora-linux-scripts run.sh 1.8.0"
       exit 0
       ;;
     --no-color) shift ;;
@@ -347,8 +356,8 @@ fedora_main_header() {
   local health_line=""
   menu_clear_screen
   theme_lane_banner "${MENU_APP_NAME}" main
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Root: ${MENU_ROOT}"
+  theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+  theme_meta_line "ROOT / ${MENU_ROOT}"
   if health_line="$(health_snapshot_status_line_from_file 2>/dev/null || true)" && [[ -n "${health_line}" ]]; then
     theme_meta_line "${health_line}"
   fi
@@ -359,14 +368,9 @@ fedora_main_header() {
 
 _fedora_install_header() {
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s▣ Install workstation%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '▣ Install workstation\n'
-  fi
-  theme_meta_line "developer tools · desktop · containers · web · Android RE"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "Install workstation" install \
+    "developer tools · desktop · containers · web · Android RE"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "Install workstation"
   theme_meta_line "pick an area — profiles [6–8] · rebuild [9]"
@@ -385,7 +389,7 @@ _fedora_install_items() {
   menu_item_lane 7 profile "Research profile" "update · Android RE · optional MobSF"
   menu_item_lane 8 profile "All install profiles" "full catalog · mobsf · web-stack · …"
   theme_section "All-in-one"
-  menu_item_lane 9 rebuild "Guided rebuild" "same as research · confirm each step"
+  menu_item_lane 9 rebuild "Broad guided setup" "research profile · review and confirm each step"
   menu_item_back
 }
 
@@ -401,7 +405,7 @@ _fedora_install_dispatch() {
     7) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/install.sh" research || true; menu_pause; return 0 ;;
     8) bash "${FEDORA_ROOT}/install.sh" || true; menu_pause; return 0 ;;
     9)
-      info "Guided rebuild (confirm each step)"
+      warn "Broad guided setup: review each step and skip anything not intended for this host."
       FEDORA_FROM_MENU=1 _fedora_run_rebuild || true
       menu_pause
       return 0
@@ -426,12 +430,12 @@ _fedora_main_items() {
   menu_item_lane 2 postupdate "Update + post-update check" "recommended daily workflow"
   menu_item_lane 3 postupdate "Post-update check only" "after manual dnf upgrade"
   theme_section "Fresh machine / full setup"
-  menu_item_lane 4 rebuild "Guided rebuild" "update → KVM → Android → RE tools → doctor"
+  menu_item_lane 4 rebuild "Broad guided setup" "review plan · confirm update → KVM → Android → RE"
   menu_item_lane 5 dev "Install workstation components" "dev · desktop · virt · web · Android"
   theme_section "Maintenance and health"
   menu_item_lane 6 system "System maintenance" "logs · cleanup · disk · hardening"
   menu_item_lane 7 audit "System health check" "Fedora doctor · repos · lane entry points"
-  menu_item_lane 8 check "Toolkit self-test" "validate · smoke · rebuild readiness"
+  menu_item_lane 8 check "Repository self-test" "validate · smoke · rebuild readiness"
   echo
   menu_item_exit
 }
@@ -443,7 +447,7 @@ _fedora_main_dispatch() {
     2) system_menu_run_daily_sync 0; menu_pause; return 0 ;;
     3) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
     4)
-      info "Guided rebuild (confirm each step)"
+      warn "Broad guided setup: review each step and skip anything not intended for this host."
       FEDORA_FROM_MENU=1 _fedora_run_rebuild || true
       menu_pause
       return 0

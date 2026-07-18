@@ -39,15 +39,15 @@ fedora_toolkit_check() {
 
   theme_init
   theme_set_lane audit
-  theme_lane_banner "Fedora toolkit check" audit
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Context: $(host_context_posture_summary | tr -d '\n')"
-  theme_meta_line "Root: ${root}"
+  theme_lane_banner "Fedora Workstation Control check" audit
+  theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+  theme_meta_line "CONTEXT / $(host_context_posture_summary | tr -d '\n')"
+  theme_meta_line "ROOT / ${root}"
   if (( full_smoke )); then
-    theme_meta_line "Mode: full (includes doctor smoke tests)"
+    theme_meta_line "MODE / full · includes doctor smoke tests"
   fi
   if (( fix_repos )); then
-    theme_meta_line "Fix repos: yes (sudo before rebuild check)"
+    theme_meta_line "FIX REPOS / yes · sudo before rebuild check"
   fi
   theme_rule '─'
   echo

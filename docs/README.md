@@ -8,6 +8,9 @@ Guides for **fedora-linux-scripts**.
 | **[INSTALL-PROFILES.md](INSTALL-PROFILES.md)** | Everyone | One-command install profiles (`./install.sh`) |
 | **[../README.md](../README.md)** | Everyone | Script index |
 | **[AUDIT.md](AUDIT.md)** | Maintainers | Security matrix, open items, menu QA |
+| **[architecture/ADR-0001](architecture/ADR-0001-project-identity-and-control-model.md)** | Maintainers | Accepted project identity, boundaries, command contracts, and control model |
+| **[architecture/INVENTORY-V1.md](architecture/INVENTORY-V1.md)** | Maintainers | Non-mutating host inspection contract and inventory schema v1 |
+| **[design/VISUAL-IDENTITY.md](design/VISUAL-IDENTITY.md)** | Maintainers | Dark-first visual language, tokens, terminal rules, and originality boundaries |
 | **[RECOVERY.md](RECOVERY.md)** | Operators | Btrfs · LUKS · boot · VirtualBox · package noise recovery |
 | **[PHASE2-VALIDATION.md](PHASE2-VALIDATION.md)** | Operators | Manual checklist after Phase 2 / major system work |
 

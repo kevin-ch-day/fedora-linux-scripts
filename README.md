@@ -7,6 +7,7 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 | Entry | Use |
 |-------|-----|
 | **`./run.sh`** | **Start here** — main menu, updates, install, rebuild, doctor |
+| **`./inspect.sh`** | Non-mutating host inventory — JSON to stdout, explicit `--save` |
 | **`./setup.sh`** | First-run repo check (validate · optional smoke) |
 | **`./install.sh`** | Install profiles — one-command stacks (`research`, `android-re`, `mobsf`, …) |
 | **`./mobsf.sh`** | MobSF stack only — install/start/**doctor** |
@@ -20,6 +21,7 @@ Legacy names `./fedora.sh` and `./fedora_rebuild.sh` redirect to `./run.sh` (old
 ./run.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
 ./run.sh --check --full        # + full smoke + Fedora doctor
 ./run.sh --daily-driver-check  # read-only daily driver / stabilization report
+./run.sh --inspect             # no-sudo host inventory; saves nothing by default
 ./run.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
 ./run.sh --baseline   # fresh-install host baseline → logs/
 ./run.sh --rebuild-check   # pre-rebuild readiness only
@@ -93,6 +95,7 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 | Script | Purpose |
 |--------|---------|
 | `run.sh` | **Primary entry** — menu, CLI, rebuild |
+| `inspect.sh` | Non-mutating inventory v1 — JSON/text stdout, explicit XDG-state save |
 | `setup.sh` | Lightweight repo readiness helper |
 | `install.sh` | Install profile launcher |
 | `mobsf.sh` | MobSF wrapper → `mobsf/mobsf.sh` |
@@ -133,7 +136,7 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
-| `android_dev_core_setup.sh` | Java, SDK, Frida, ADB, pip tools |
+| `android_dev_core_setup.sh` | Flexible `minimal` / `standard` / `full` Android core presets |
 | `android_re_install.sh` | RE tools (apktool/jadx/smali/dex2jar/all, `--upgrade`) |
 | `verify_re_tool.sh` | Verify one or all |
 | `doctor_android_research.sh` | Android doctor (`--with-mobsf`) |

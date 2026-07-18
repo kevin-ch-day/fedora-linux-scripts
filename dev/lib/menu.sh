@@ -24,14 +24,9 @@ dev_menu_desktop_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s🖥 Desktop environments%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '🖥 Desktop environments\n'
-  fi
-  theme_meta_line "install and manage Fedora graphical login sessions"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "Desktop environments" desktop \
+    "install and manage Fedora graphical login sessions"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
@@ -43,14 +38,9 @@ dev_menu_developer_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s⚡ Developer tools%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '⚡ Developer tools\n'
-  fi
-  theme_meta_line "configure and verify local developer tooling"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "Developer tools" dev \
+    "configure and verify local developer tooling"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
@@ -62,14 +52,9 @@ dev_menu_virtualization_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s▣ Virtualization & containers%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '▣ Virtualization & containers\n'
-  fi
-  theme_meta_line "containers and VM host support"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "Virtualization & containers" virt \
+    "containers and VM host support"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
@@ -81,14 +66,9 @@ dev_menu_web_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s◇ Web/database stack%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '◇ Web/database stack\n'
-  fi
-  theme_meta_line "install and verify local web and database services"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "Web/database stack" web \
+    "install and verify local web and database services"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then
@@ -211,12 +191,13 @@ dev_menu_infrastructure() {
 _dev_web_items() {
   theme_section "Components"
   menu_item 1 "Apache" "install/enable httpd only"
-  menu_item 2 "MariaDB" "install/enable database only"
-  menu_item 3 "PHP" "install php + extensions only"
-  menu_item 4 "phpMyAdmin" "localhost default"
+  menu_item 2 "MariaDB packages only" "migration-safe · no service start or explicit init"
+  menu_item_danger 3 "Enable/start MariaDB" "changes database service state"
+  menu_item 4 "PHP" "install php + extensions only"
+  menu_item 5 "phpMyAdmin" "localhost default · restarts Apache"
   theme_section "Checks"
-  menu_item 5 "Check web/database status" "Apache · MariaDB · PHP · phpMyAdmin"
-  menu_item 6 "Remove public info.php" "if created during PHP testing"
+  menu_item 6 "Check web/database status" "Apache · MariaDB · PHP · phpMyAdmin"
+  menu_item 7 "Remove public info.php" "if created during PHP testing"
   menu_item_back
 }
 
@@ -224,11 +205,21 @@ _dev_web_dispatch() {
   case "$1" in
     0) return 1 ;;
     1) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --apache-only; menu_pause; return 0 ;;
-    2) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --mariadb-only; menu_pause; return 0 ;;
-    3) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --php-only; menu_pause; return 0 ;;
-    4) menu_run_sudo_script_scroll dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
-    5) menu_run_script_scroll dev/web_stack_doctor.sh; menu_pause; return 0 ;;
-    6) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
+    2) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --mariadb-only --no-start; menu_pause; return 0 ;;
+    3)
+      warn "This enables and starts MariaDB. Do not continue until the database migration plan is finalized."
+      if confirm "Enable and start MariaDB now?"; then
+        menu_run_sudo_script_scroll dev/lamp_python_setup.sh --mariadb-only
+      else
+        info "MariaDB service activation cancelled"
+      fi
+      menu_pause
+      return 0
+      ;;
+    4) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --php-only; menu_pause; return 0 ;;
+    5) menu_run_sudo_script_scroll dev/phpmyadmin_setup.sh; menu_pause; return 0 ;;
+    6) menu_run_script_scroll dev/web_stack_doctor.sh; menu_pause; return 0 ;;
+    7) menu_run_sudo_script_scroll dev/lamp_python_setup.sh --remove-info-php; menu_pause; return 0 ;;
     *) return 2 ;;
   esac
 }

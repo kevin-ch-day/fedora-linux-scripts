@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # system_monitor.sh — Live system dashboard (CPU, RAM, disk, network, PSI)
-# Version: 0.2.0
+# Version: 0.2.1
 #
 # Run:
 #   ./system/system_monitor.sh
@@ -327,9 +327,10 @@ header() {
   diskpct="$(root_disk_pct)"
 
   if theme_use_color; then
-    printf '%s⚙ System monitor%s\n' "${THEME_ACCENT}" "${THEME_RESET}"
+    printf '%sSYS / %s%sSystem monitor%s\n' \
+      "${THEME_ACCENT}" "${THEME_RESET}" "${THEME_TITLE}" "${THEME_RESET}"
   else
-    echo "System monitor"
+    echo "SYS / System monitor"
   fi
   _mon_hr
   _mon_kv "Host" "${host}"; printf '  '
@@ -418,4 +419,3 @@ while true; do
   disk_table || true
   sleep "$INTERVAL"
 done
-

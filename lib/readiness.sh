@@ -616,7 +616,7 @@ readiness_print_daily_driver() {
 
   theme_set_lane audit
   theme_report_header "Daily driver check" \
-    "Host: $(health_hostname) · User: $(real_user)" \
+    "HOST / $(health_hostname) · USER / $(real_user)" \
     "Read-only workstation readiness (Fedora control plane)"
 
   readiness_print_section "System"

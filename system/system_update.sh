@@ -4,7 +4,7 @@ set -euo pipefail
 # ============================================================
 # Filename: system_update.sh
 # Purpose : Fedora system update + cleanup (deterministic, ops-grade)
-# Version : 0.6.0
+# Version : 0.7.0
 #
 # Run:
 #   sudo ./system/system_update.sh
@@ -101,13 +101,13 @@ ui_rule() {
 ui_status() {
   local level="$1"
   shift
-  ui_line "$(printf '%-4s %s' "${level}" "$*")"
+  ui_line "$(printf '%-8s %s' "[${level}]" "$*")"
 }
 
 ui_ok() { ui_status "OK" "$*"; }
 ui_warn() { ui_status "WARN" "$*"; }
 ui_fail() { ui_status "FAIL" "$*"; }
-ui_note() { ui_status "NOTE" "$*"; }
+ui_note() { ui_status "INFO" "$*"; }
 
 ui_detail() {
   ui_line "     $*"
@@ -120,10 +120,10 @@ ui_section() {
 
 ui_header() {
   ui_rule '═'
-  ui_line "⚙ Fedora update"
+  ui_line "UPD / Fedora update"
   ui_rule '─'
-  ui_line "Host: $(hostname)"
-  ui_line "Log : logs/${FEDORA_LOG_SYSTEM_UPDATE}"
+  ui_line "HOST / $(hostname)"
+  ui_line "LOG / logs/${FEDORA_LOG_SYSTEM_UPDATE}"
   ui_rule '─'
 }
 
@@ -245,7 +245,7 @@ summarize_health() {
 offer_post_update_check() {
   local user ans
   ui_section "Next"
-  ui_line "Run  ./run.sh --post-update-check  (or main menu [3])"
+  ui_line "ACTION / ./run.sh --post-update-check  (or main menu [3])"
   if (( TEST_MODE )); then
     return 0
   fi
@@ -457,7 +457,7 @@ else
   log_warn "Update run complete — ${UPDATE_ISSUES} soft-fail step(s); see log above"
   ui_warn "Fedora update completed with ${UPDATE_ISSUES} issue(s)"
 fi
-ui_line "Log  ${LOG_FILE}"
+ui_line "LOG / ${LOG_FILE}"
 offer_post_update_check
 
 exit $(( UPDATE_ISSUES > 0 ? 1 : 0 ))

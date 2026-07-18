@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # setup.sh — lightweight repo/toolkit readiness (no installs, no sudo)
-# Version: 0.2.0
+# Version: 0.2.1
 #
 # Run:
 #   ./setup.sh
@@ -50,14 +50,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-theme_lane_banner "Fedora toolkit setup" audit
-theme_meta_line "Root: ${ROOT}"
+theme_lane_banner "Fedora Workstation Control setup" audit
+theme_meta_line "ROOT / ${ROOT}"
 theme_meta_line "Read-only · no sudo · no package installs"
 theme_rule '─'
 echo
 
 theme_section "Entry script permissions"
-for script in run.sh install.sh setup.sh mobsf.sh validate.sh smoke_test.sh; do
+for script in run.sh inspect.sh install.sh setup.sh mobsf.sh validate.sh smoke_test.sh; do
   path="${ROOT}/${script}"
   if [[ ! -f "${path}" ]]; then
     warn "Missing: ${script}"

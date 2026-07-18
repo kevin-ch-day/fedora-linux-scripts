@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install_audit.sh — Static + helper tests for all install targets
-# Version: 0.1.1
+# Version: 0.1.2
 #
 # Run from repo root:
 #   ./install_audit.sh
@@ -34,7 +34,7 @@ Checks:
   - bash -n on each install script
   - --help smoke (non-interactive)
   - Anti-patterns: post-install \`have\` without pkg_present
-  - pkg_present / pkg_binary_path unit tests (mocked)
+  - dnf_installed / pkg_present / pkg_binary_path unit tests (mocked)
   - Live: common tools when RPM is installed
 EOF
 }
@@ -91,7 +91,7 @@ theme_init
 theme_set_lane audit
 
 theme_lane_banner "Install audit" audit
-theme_meta_line "Root: ${AUDIT_ROOT}"
+theme_meta_line "ROOT / ${AUDIT_ROOT}"
 theme_rule '─'
 echo
 
@@ -175,7 +175,7 @@ else
   _audit_fail "pkg_install_optional missing pkg_present guard"
 fi
 
-theme_report_section "pkg_present / pkg_binary_path unit tests (mocked)"
+theme_report_section "Package helper unit tests (mocked)"
 
 _audit_test_result() {
   local label="$1"
@@ -208,6 +208,37 @@ _audit_pkg_present_sbin() (
   }
   pkg_present httpd httpd
 )
+
+# Regression: DNF5 can return success for `dnf list installed missing-pkg`
+# while showing an available package. Installed-state detection must trust the
+# local RPM database and must not consult DNF.
+_audit_dnf_installed_rejects_dnf_false_positive() (
+  # shellcheck source=lib/packages.sh
+  source "${AUDIT_ROOT}/lib/packages.sh"
+  rpm() { return 1; }
+  dnf() { return 0; }
+  dnf_installed definitely-not-installed
+)
+
+_audit_dnf_installed_accepts_rpm() (
+  # shellcheck source=lib/packages.sh
+  source "${AUDIT_ROOT}/lib/packages.sh"
+  rpm() { [[ "${1:-}" == "-q" && "${2:-}" == mockpkg ]]; }
+  dnf() { return 1; }
+  dnf_installed mockpkg
+)
+
+if _audit_dnf_installed_rejects_dnf_false_positive; then
+  _audit_test_result "dnf_installed rejects DNF5 false positive" fail 0
+else
+  _audit_test_result "dnf_installed rejects DNF5 false positive" fail 1
+fi
+
+if _audit_dnf_installed_accepts_rpm; then
+  _audit_test_result "dnf_installed accepts installed RPM" pass 0
+else
+  _audit_test_result "dnf_installed accepts installed RPM" pass 1
+fi
 
 if _audit_pkg_present_rpm_only; then
   _audit_test_result "rpm-only pkg_present" pass 0

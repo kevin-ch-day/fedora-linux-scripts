@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/android.sh — Android security / RE tool checks and diagnostics
-# Version: 0.2.5
+# Version: 0.2.6
 #
 # Do not execute directly.
 
@@ -37,7 +37,7 @@ android_install_hint() {
       ;;
     all)
       theme_note "Install all: ./android/android_re_install.sh all"
-      theme_note "Menu: Android RE > RE tool installs > Install all + verify all"
+      theme_note "Menu: Android RE > RE tool installs > Install all four tools"
       ;;
   esac
 }
@@ -82,7 +82,8 @@ android_user_download() {
   local url="$1"
   local dest="$2"
   run_as_real_user mkdir -p "$(dirname "$dest")"
-  retry 3 2 run_as_real_user curl -L --fail -o "$dest" "$url" \
+  retry 3 2 run_as_real_user curl --location --fail --silent --show-error \
+    -o "$dest" "$url" \
     || die_with_hint "Download failed: ${url}" \
       "Check network connectivity and disk space under $(real_home)"
 }
@@ -308,6 +309,38 @@ android_verify_all_re_tools() {
   return "${rc}"
 }
 
+android_re_tools_brief_status() {
+  local rc=0
+  local label bin raw line
+  local -a checks=(
+    "apktool|apktool|--version"
+    "jadx|jadx|--version"
+    "smali|smali|--version"
+    "baksmali|baksmali|--version"
+    "dex2jar|d2j-dex2jar|-h"
+  )
+  local check args
+
+  android_user_path_export
+  for check in "${checks[@]}"; do
+    IFS='|' read -r label bin args <<< "${check}"
+    if ! cmd_available "${bin}"; then
+      theme_tool_row miss "${label}" "not installed"
+      rc=1
+      continue
+    fi
+    raw="$("${bin}" "${args}" 2>&1)" || {
+      theme_tool_row err "${label}" "installed but not runnable"
+      rc=1
+      continue
+    }
+    line="$(printf '%s\n' "${raw}" | sed -n '/./{p;q;}')"
+    [[ -n "${line}" ]] || line="installed"
+    theme_tool_row ok "${label}" "${line}"
+  done
+  return "${rc}"
+}
+
 # ---------- ADB / core tooling ----------
 android_check_version() {
   local label="$1"
@@ -342,8 +375,22 @@ android_check_version() {
   fi
 }
 
+android_sdkmanager_binary() {
+  local home candidate
+  home="$(real_home)"
+  for candidate in \
+    "${ANDROID_HOME:-}/cmdline-tools/latest/bin/sdkmanager" \
+    "${ANDROID_SDK_ROOT:-}/cmdline-tools/latest/bin/sdkmanager" \
+    "${home}/Android/Sdk/cmdline-tools/latest/bin/sdkmanager" \
+    "${home}/.local/share/android-sdk/cmdline-tools/latest/bin/sdkmanager"; do
+    [[ "${candidate}" == /cmdline-tools/* ]] && continue
+    [[ -x "${candidate}" ]] && { printf '%s\n' "${candidate}"; return 0; }
+  done
+  return 1
+}
+
 android_core_tool_status() {
-  local rc=0
+  local rc=0 sdkmanager_path=""
   if ! cmd_available java; then
     warn "Java not on PATH (install OpenJDK or run android_dev_core_setup.sh)"
     rc=1
@@ -353,11 +400,15 @@ android_core_tool_status() {
   android_check_version Frida frida --version
   android_check_version Objection objection version
   android_check_version Mitmproxy mitmproxy --version
-  if ! cmd_available sdkmanager; then
-    warn "sdkmanager not on PATH (run android_dev_core_setup.sh)"
-    rc=1
-  else
+  if cmd_available sdkmanager; then
     android_check_version sdkmanager sdkmanager --version
+  elif sdkmanager_path="$(android_sdkmanager_binary 2>/dev/null)"; then
+    theme_tool_row warn "sdkmanager" "installed · reload shell"
+    theme_note "${sdkmanager_path}"
+    theme_note "Run: source ~/.bashrc"
+  else
+    theme_tool_row absent "sdkmanager" "run android_dev_core_setup.sh"
+    rc=1
   fi
   return "${rc}"
 }
@@ -407,8 +458,8 @@ doctor_android_research() {
 
   common_init_colors
   theme_set_lane android
-  theme_report_header "Android Research Workstation Doctor" \
-    "Host: $(hostname) · User: $(real_user)"
+  theme_lane_banner "Android workstation doctor" android \
+    "HOST / $(hostname) · USER / $(real_user)"
   if [[ "${FEDORA_SKIP_RUNTIME_AWARENESS:-0}" != 1 ]]; then
     health_print_runtime_awareness
     echo
@@ -424,7 +475,8 @@ doctor_android_research() {
   echo
 
   theme_section "Reverse-engineering tools"
-  android_verify_all_re_tools || rc=1
+  android_re_tools_brief_status || rc=1
+  theme_note "Detailed verification: ./android/verify_re_tool.sh all"
 
   echo
   theme_rule '─'

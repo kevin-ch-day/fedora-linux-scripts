@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # health_snapshot.sh — quick disk/memory snapshot + dashboard
-# Version: 0.1.4
+# Version: 0.1.5
 #
 # Run:
 #   ./system/health_snapshot.sh --show
@@ -67,12 +67,11 @@ case "${MODE}" in
     out="$(health_snapshot_export_full_report)"
     if (( QUIET == 0 )); then
       theme_init
-      theme_rule '═'
-      printf '◉ Full diagnostic report exported\n'
-      theme_rule '─'
-      theme_meta_line "Report: ${out}"
-      theme_meta_line "Latest: runtime/health/latest.txt"
-      theme_status_info "Open report: less ${out}"
+      theme_set_lane audit
+      theme_lane_banner "Full diagnostic report exported" audit ""
+      theme_meta_line "REPORT / ${out}"
+      theme_meta_line "LATEST / runtime/health/latest.txt"
+      theme_status_info "OPEN / less ${out}"
     fi
     ;;
 esac

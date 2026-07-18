@@ -11,7 +11,7 @@ One-command workstation setup via **`./install.sh`** and the shared profile engi
 ./install.sh research --plan           # numbered step plan (no sudo)
 ./install.sh research --validate       # verify scripts exist
 ./install.sh research --dry-run --yes  # show what would run
-./install.sh research --yes            # full research workstation
+./install.sh research --yes            # broad research workstation (review plan first)
 ./run.sh --profile dev-full --yes      # same as install.sh
 ./run.sh --rebuild --plan              # research plan (compat)
 ```
@@ -22,11 +22,12 @@ One-command workstation setup via **`./install.sh`** and the shared profile engi
 
 | Profile | Steps | Optional tail |
 |---------|-------|----------------|
-| **research** | Quick update → post-update → KVM → Android core → RE install → verify | MobSF install · research doctor |
-| **android-re** | Android core → RE install → verify | Android RE doctor |
-| **dev-stack** | VS Code → containers/KVM | — |
-| **dev-full** | Git (skip if configured) → VS Code → containers/KVM | — |
+| **research** | Quick update → post-update → Podman/KVM → standard Android core → RE install → verify | MobSF install · research doctor |
+| **android-re** | Standard Android core → RE install → verify | Android RE doctor |
+| **dev-stack** | VS Code → Podman/KVM (Docker opt-in) | — |
+| **dev-full** | Git (skip if configured) → VS Code → Podman/KVM (Docker opt-in) | — |
 | **web-stack** | LAMP → phpMyAdmin | Web stack doctor |
+| **mariadb-no-start** | MariaDB packages only; no service activation or explicit initialization | — |
 | **mobsf** | MobSF Podman install | MobSF doctor |
 | **daily-sync** | Full update → post-update check | — |
 | **update-only** | Full Fedora update | — |
@@ -43,6 +44,8 @@ One-command workstation setup via **`./install.sh`** and the shared profile engi
 | **Git** (`dev-full`) | Uses `--skip-if-configured`; set `GIT_NAME` / `GIT_EMAIL` to force configure |
 | **MobSF** (`research`) | With `--yes`, installs only when compose is missing |
 | **Doctors** | With `--yes`, runs automatically at end when profile includes one |
+| **web-stack auto mode** | Requires `--yes --allow-service-start`; the plan identifies service and SELinux effects |
+| **Docker** | Never selected by a broad profile; use the explicit Docker menu/flag |
 
 ---
 

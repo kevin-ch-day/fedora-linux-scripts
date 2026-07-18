@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/install_engine.sh — run named install/rebuild profiles (step engine)
-# Version: 0.2.0
+# Version: 0.3.0
 #
 # Source after lib/common.sh, lib/theme.sh, lib/profiles.sh, lib/logging.sh.
 # Do not execute directly.
@@ -131,6 +131,7 @@ install_engine_plan_profile() {
   theme_set_lane rebuild
   theme_lane_banner "Install plan: ${profile}" rebuild
   theme_meta_line "$(profile_description "${profile}")"
+  theme_meta_line "RISK / $(profile_risk_level "${profile}") · IMPACT / $(profile_impact_summary "${profile}")"
   theme_meta_line "Root: ${root}"
   theme_rule '─'
   echo
@@ -166,6 +167,9 @@ install_engine_plan_profile() {
 
   echo
   theme_note "Run: ./install.sh ${profile} [--yes] [--dry-run]"
+  if profile_requires_service_ack "${profile}"; then
+    theme_note "Auto mode: add --allow-service-start with --yes to acknowledge service activation"
+  fi
   return 0
 }
 
@@ -200,6 +204,11 @@ install_engine_run_profile() {
   if ! install_engine_validate_profile "${root}" "${profile}"; then
     die "Profile '${profile}' references missing scripts (fix repo or run: ./install.sh ${profile} --plan)"
   fi
+  if (( auto_yes && ! dry_run )) \
+    && profile_requires_service_ack "${profile}" \
+    && [[ "${INSTALL_ENGINE_ALLOW_SERVICE_START:-0}" != 1 ]]; then
+    die "Profile '${profile}' enables system services. Review --plan, then add --allow-service-start with --yes."
+  fi
 
   INSTALL_ENGINE_AUTO_YES="${auto_yes}"
   INSTALL_ENGINE_DRY_RUN="${dry_run}"
@@ -221,6 +230,8 @@ install_engine_run_profile() {
   theme_set_lane rebuild
   theme_lane_banner "Install profile: ${profile}" rebuild
   theme_meta_line "$(profile_description "${profile}")"
+  theme_meta_line "RISK / $(profile_risk_level "${profile}")"
+  theme_meta_line "IMPACT / $(profile_impact_summary "${profile}")"
   theme_meta_line "Root: ${root}"
   (( dry_run )) && theme_meta_line "Mode: dry-run"
   (( auto_yes )) && theme_meta_line "Mode: auto-yes"
@@ -250,6 +261,15 @@ install_engine_run_profile() {
   install_engine_maybe_doctor "${root}" "${profile}"
 
   echo
+  if (( dry_run )); then
+    ok "Dry run for profile '${profile}' finished; no steps executed"
+    theme_summary_box "Dry run complete" \
+      "Profile: ${profile}" \
+      "Changes: none" \
+      "Next: review the plan; remove --dry-run only when ready"
+    return 0
+  fi
+
   if (( INSTALL_ENGINE_FAILED > 0 )); then
     warn "Profile '${profile}' finished with ${INSTALL_ENGINE_FAILED} failed step(s)"
   else
@@ -259,7 +279,7 @@ install_engine_run_profile() {
   theme_summary_box "Profile complete" \
     "Profile: ${profile}" \
     "Failed: ${INSTALL_ENGINE_FAILED}" \
-    "Next: ./run.sh --doctor  ·  source ~/.bashrc"
+    "Next: $(profile_next_action "${profile}")"
 
   return $(( INSTALL_ENGINE_FAILED > 0 ? 1 : 0 ))
 }

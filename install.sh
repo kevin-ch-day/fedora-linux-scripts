@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install.sh — profile-based workstation install launcher
-# Version: 0.2.0
+# Version: 0.3.0
 #
 # Run:
 #   ./install.sh list
@@ -27,9 +27,10 @@ USE_LOG=0
 LIST_ONLY=0
 PLAN_ONLY=0
 VALIDATE_ONLY=0
+ALLOW_SERVICE_START=0
 
 _PROFILE_IDS=(
-  research android-re dev-stack dev-full web-stack mobsf daily-sync update-only
+  research android-re dev-stack dev-full web-stack mariadb-no-start mobsf daily-sync update-only workstation
 )
 
 usage() {
@@ -44,6 +45,8 @@ Profiles:
   dev-stack     VS Code + containers/KVM
   dev-full      Git (if needed) + VS Code + containers/KVM
   web-stack     Apache · MariaDB · PHP · phpMyAdmin
+  mariadb-no-start
+                Install MariaDB packages without enabling/starting the service
   mobsf         MobSF Podman stack install + doctor
   workstation   Daily sync + dev-full (update · git · VS Code · KVM)
   daily-sync    Full update + post-update check
@@ -56,6 +59,8 @@ Options:
   --plan         Print numbered step plan (no execution)
   --validate     Verify profile step scripts exist, then exit
   --log          Tee output to logs/fedora_rebuild.log
+  --allow-service-start
+                 Required with --yes for profiles that enable system services
   --help, -h     Show this help
 
 Examples:
@@ -114,7 +119,8 @@ while [[ $# -gt 0 ]]; do
     --plan) PLAN_ONLY=1; shift ;;
     --validate) VALIDATE_ONLY=1; shift ;;
     --log) USE_LOG=1; shift ;;
-    research|android-re|dev-stack|dev-full|web-stack|mobsf|workstation|daily-sync|update-only)
+    --allow-service-start) ALLOW_SERVICE_START=1; shift ;;
+    research|android-re|dev-stack|dev-full|web-stack|mariadb-no-start|mobsf|workstation|daily-sync|update-only)
       PROFILE="$1"
       shift
       ;;
@@ -123,6 +129,8 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+INSTALL_ENGINE_ALLOW_SERVICE_START="${ALLOW_SERVICE_START}"
 
 if (( LIST_ONLY )); then
   profile_print_catalog

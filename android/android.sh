@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # android.sh — Android RE tools launcher (standalone menu + CLI shortcuts)
-# Version: 0.1.3
+# Version: 0.2.0
 #
 # Run:
 #   ./android/android.sh
@@ -20,10 +20,10 @@ source "${ANDROID_LAUNCHER_DIR}/lib/menu.sh"
 
 usage() {
   cat <<EOF
-Android RE tools launcher — core setup, RE tools, verification, and ADB checks.
+Android RE tools launcher — flexible core presets, APK tools, verification, and ADB checks.
 MobSF stack (separate): ./mobsf.sh
 
-From main entry: ./run.sh → [8] Android RE tools  or  ./run.sh --android
+From main entry: ./run.sh --android
 
 Usage: $(basename "$0") [command|option]
 
@@ -34,8 +34,13 @@ Options:
 
 Commands:
   verify TOOL    apktool | jadx | smali | dex2jar | all
-  core           Run android_dev_core_setup.sh (sudo)
+  core [PRESET]  Install minimal | standard | full core (sudo; default standard)
+  plan [PRESET]  Preview resolved core capabilities; no changes
   core-status    Show Android core status
+  apk-install [TOOL]
+                 Install apktool | jadx | smali | dex2jar | all (default all)
+  apk-upgrade [TOOL]
+                 Re-download one/all APK tools (default all)
   repair-node    Repair node/npm + apk-mitm tooling (sudo)
   research-doctor Full Android + MobSF doctor (rebuild finale)
 
@@ -66,7 +71,25 @@ while [[ $# -gt 0 ]]; do
       ;;
     core)
       shift
-      exec sudo bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" "$@"
+      core_args=()
+      if [[ "${1:-}" =~ ^(minimal|standard|full)$ ]]; then
+        core_args+=(--preset "$1")
+        shift
+      fi
+      exec sudo -E bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" "${core_args[@]}" "$@"
+      ;;
+    plan)
+      shift
+      plan_preset="${1:-standard}"
+      if [[ "${plan_preset}" =~ ^(minimal|standard|full)$ ]]; then
+        if (($# > 0)); then
+          shift
+        fi
+      else
+        plan_preset="standard"
+      fi
+      exec bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" \
+        --preset "${plan_preset}" --plan "$@"
       ;;
     core-status)
       shift
@@ -75,6 +98,24 @@ while [[ $# -gt 0 ]]; do
     repair-node)
       shift
       exec sudo -E bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" --repair-node "$@"
+      ;;
+    apk-install)
+      shift
+      apk_tool="${1:-all}"
+      if (($# > 0)); then
+        shift
+      fi
+      (($# == 0)) || die "apk-install accepts one tool"
+      exec bash "${ANDROID_LAUNCHER_DIR}/android_re_install.sh" "${apk_tool}"
+      ;;
+    apk-upgrade)
+      shift
+      apk_tool="${1:-all}"
+      if (($# > 0)); then
+        shift
+      fi
+      (($# == 0)) || die "apk-upgrade accepts one tool"
+      exec bash "${ANDROID_LAUNCHER_DIR}/android_re_install.sh" --upgrade "${apk_tool}"
       ;;
     research-doctor)
       shift

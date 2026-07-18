@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # post_update_check.sh — validation after dnf upgrade (read-only)
-# Version: 0.1.3
+# Version: 0.1.4
 #
 # Exit 0 when stable; exit 1 when reboot, btrfs, services, or VirtualBox need review.
 # Missing /dev/vboxdrv with modules loaded and VBoxManage OK is warn-only (recoverable).
@@ -42,7 +42,7 @@ done
 ISSUES=0
 
 theme_report_header "Post-update check" \
-  "Host: $(health_hostname) · Kernel: $(health_kernel)" \
+  "HOST / $(health_hostname) · KERNEL / $(health_kernel)" \
   "Read-only validation after dnf upgrade"
 
 theme_section "Reboot required"
@@ -72,7 +72,7 @@ if readiness_root_is_btrfs; then
     ISSUES=$((ISSUES + 1))
   fi
 else
-  theme_note "Root is not btrfs — skipped"
+  theme_msg_skip "Root is not btrfs"
 fi
 
 theme_section "Failed systemd units"
@@ -109,7 +109,7 @@ if readiness_vbox_is_installed; then
     ISSUES=$((ISSUES + 1))
   fi
 else
-  theme_note "VirtualBox not installed — skipped"
+  theme_msg_skip "VirtualBox not installed"
 fi
 
 theme_section "Package noise"

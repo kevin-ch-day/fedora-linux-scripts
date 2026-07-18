@@ -9,6 +9,7 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Script | Use when |
 |--------|----------|
 | **`./run.sh`** | **Start here** — main menu, updates, install hub, guided rebuild, doctor |
+| **`./inspect.sh`** | Detailed no-sudo host inventory; saves nothing unless `--save` is used |
 | **`./setup.sh`** | **First clone** — executable check, `./validate.sh --quick`, optional smoke |
 | **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `mobsf`, …) |
 | **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate lifecycle) |
@@ -194,9 +195,23 @@ Lane guides: [system/README.md](../system/README.md) · [dev/README.md](../dev/R
 
 ## Android verification tiers
 
+Choose a core shape before installing:
+
+```bash
+./android/android.sh plan minimal    # headless/device host
+./android/android.sh plan standard   # recommended RE workstation
+./android/android.sh plan full       # + optional Node/npm and apk-mitm
+```
+
+The Android landing menu runs common installs directly. Per-tool installs,
+upgrades, custom plans, and optional Node repair are grouped under one
+**Advanced tools and plans** page. See
+[android/README.md](../android/README.md) for component overrides and custom
+SDK locations.
+
 | Tier | Command | Scope |
 |------|---------|--------|
-| Core tools | `sudo ./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy (read-only) |
+| Core tools | `./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy (read-only) |
 | APK RE tools | `./android/verify_all_re_tools.sh` | apktool, jadx, smali, dex2jar |
 | Full doctor | `./android/doctor_android_research.sh` | Core + ADB + all RE tools |
 | MobSF stack | `./mobsf.sh` · `./mobsf.sh --doctor` | Separate Podman lifecycle |

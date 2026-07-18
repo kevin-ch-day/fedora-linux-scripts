@@ -56,8 +56,8 @@ research_doctor_run() {
   theme_init
   theme_set_lane audit
   theme_report_header "Fedora doctor" \
-    "Host: $(hostname) · User: $(real_user)" \
-    "Android: $(( do_android )) · MobSF: $(( do_mobsf ))"
+    "HOST / $(hostname) · USER / $(real_user)" \
+    "ANDROID / $(( do_android )) · MOBSF / $(( do_mobsf ))"
   health_print_runtime_awareness
   echo
   host_context_remediation_notes

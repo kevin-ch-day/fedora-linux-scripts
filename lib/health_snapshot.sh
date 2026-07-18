@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/health_snapshot.sh — lightweight runtime health snapshot + dashboard
-# Version: 0.1.7
+# Version: 0.2.0
 #
 # Quiet startup snapshot for run.sh and explicit System menu actions.
 # Writes:
@@ -49,7 +49,9 @@ health_snapshot_severity_rank() {
   case "$1" in
     BAD) printf '3\n' ;;
     WARN) printf '2\n' ;;
-    NOTE) printf '1\n' ;;
+    # Informational observations belong in detail rows/notes and should not
+    # downgrade the workstation-wide state from OK.
+    NOTE) printf '0\n' ;;
     *) printf '0\n' ;;
   esac
 }
@@ -81,11 +83,14 @@ health_snapshot_fs_status() {
 
 health_snapshot_ram_status() {
   local avail_bytes="$1"
-  local warn=$((8 * 1024 * 1024 * 1024))
-  local bad=$((4 * 1024 * 1024 * 1024))
-  if (( avail_bytes < bad )); then
+  local total_bytes="${2:-0}"
+  local avail_pct=100
+  local warn_bytes=$((4 * 1024 * 1024 * 1024))
+  local bad_bytes=$((2 * 1024 * 1024 * 1024))
+  (( total_bytes > 0 )) && avail_pct=$(( avail_bytes * 100 / total_bytes ))
+  if (( avail_bytes < bad_bytes || avail_pct < 10 )); then
     printf 'BAD\n'
-  elif (( avail_bytes < warn )); then
+  elif (( avail_bytes < warn_bytes || avail_pct < 20 )); then
     printf 'WARN\n'
   else
     printf 'OK\n'
@@ -94,11 +99,14 @@ health_snapshot_ram_status() {
 
 health_snapshot_swap_status() {
   local used_bytes="$1" total_bytes="$2"
+  local kind="${3:-disk}"
   local pct=0
   (( total_bytes > 0 )) && pct=$(( used_bytes * 100 / total_bytes ))
   if (( used_bytes == 0 )); then
     printf 'OK\n'
-  elif (( pct >= 25 )); then
+  elif [[ "${kind}" == "zram" ]] && (( pct >= 75 )); then
+    printf 'WARN\n'
+  elif [[ "${kind}" != "zram" ]] && (( pct >= 50 )); then
     printf 'WARN\n'
   else
     printf 'NOTE\n'
@@ -313,11 +321,21 @@ health_snapshot_uptime_short() {
 
 health_snapshot_identity_line() {
   local host="$1" os="$2" kernel="$3" uptime="$4"
-  printf '%s · %s · kernel %s · up %s\n' \
+  printf 'HOST / %s · OS / %s · KERNEL / %s · UPTIME / %s\n' \
     "${host}" \
     "$(health_snapshot_os_short "${os}")" \
     "$(health_snapshot_kernel_short "${kernel}")" \
     "$(health_snapshot_uptime_short "${uptime}")"
+}
+
+health_snapshot_state_tag() {
+  case "${1:-}" in
+    OK) printf '[OK]' ;;
+    WARN) printf '[WARN]' ;;
+    BAD|FAIL|ERROR) printf '[FAIL]' ;;
+    NOTE|INFO) printf '[INFO]' ;;
+    *) printf '[UNAVAIL]' ;;
+  esac
 }
 
 health_snapshot_needs_refresh() {
@@ -380,21 +398,16 @@ health_snapshot_menu_age_hint() {
 health_snapshot_print_refresh_summary() {
   local status
   theme_init
+  theme_set_lane audit
   status="$(health_snapshot_status_line_from_file 2>/dev/null || true)"
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s◉ Health snapshot refreshed%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '◉ Health snapshot refreshed\n'
-  fi
-  theme_rule '─'
+  theme_lane_banner "Health snapshot refreshed" audit ""
   if [[ -n "${status}" ]]; then
     theme_meta_line "${status}"
   fi
-  theme_meta_line "Updated: just now · saved: runtime/health/latest.txt"
+  theme_meta_line "UPDATED / just now · SAVED / runtime/health/latest.txt"
   theme_rule '─'
-  theme_status_info "View summary: ./system/health_snapshot.sh --show"
-  theme_status_info "Full export:  ./system/health_snapshot.sh --export"
+  theme_status_info "VIEW / ./system/health_snapshot.sh --show"
+  theme_status_info "EXPORT / ./system/health_snapshot.sh --export"
 }
 
 health_snapshot_dnf_cache_size() {
@@ -440,6 +453,9 @@ health_snapshot_status_line_from_file() {
   [[ -f "${path}" ]] || return 1
   line="$(sed -n 's/.*"compact_status":"\([^"]*\)".*/\1/p' "${path}" | head -n 1)"
   [[ -n "${line}" ]] || return 1
+  line="$(sed -E \
+    's|^Health: ([^·]+) · root ([^·]+) · RAM ([^·]+) · /data (.*)$|STATE / \1 · ROOT / \2 · RAM / \3 · DATA / \4|' \
+    <<< "${line}")"
   printf '%s\n' "${line}"
 }
 
@@ -466,7 +482,7 @@ health_snapshot_generate() {
 
   local host os kernel uptime
   local mem_total_h mem_used_h mem_avail_h mem_total_b mem_used_b mem_avail_b
-  local swap_total_h swap_used_h swap_free_h swap_total_b swap_used_b swap_free_b
+  local swap_total_h swap_used_h swap_free_h swap_total_b swap_used_b swap_free_b swap_kind
   local mem_status swap_status overall_status compact_status data_state
   local dnf_cache journal_size
   local root_pct root_avail_h
@@ -488,13 +504,18 @@ health_snapshot_generate() {
   mem_total_h="$(free -h | awk 'NR==2{print $2}')"
   mem_used_h="$(free -h | awk 'NR==2{print $3}')"
   mem_avail_h="$(free -h | awk 'NR==2{print $7}')"
-  mem_status="$(health_snapshot_ram_status "${mem_avail_b}")"
+  mem_status="$(health_snapshot_ram_status "${mem_avail_b}" "${mem_total_b}")"
 
   read -r swap_total_b swap_used_b swap_free_b < <(free -b | awk 'NR==3 {print $2,$3,$4}')
   swap_total_h="$(free -h | awk 'NR==3{print $2}')"
   swap_used_h="$(free -h | awk 'NR==3{print $3}')"
   swap_free_h="$(free -h | awk 'NR==3{print $4}')"
-  swap_status="$(health_snapshot_swap_status "${swap_used_b:-0}" "${swap_total_b:-0}")"
+  swap_kind="disk"
+  if [[ -r /proc/swaps ]] \
+    && awk 'NR > 1 {seen=1; if ($1 !~ /^\/dev\/zram/) non_zram=1} END {exit !(seen && !non_zram)}' /proc/swaps; then
+    swap_kind="zram"
+  fi
+  swap_status="$(health_snapshot_swap_status "${swap_used_b:-0}" "${swap_total_b:-0}" "${swap_kind}")"
 
   while IFS= read -r line; do
     mount="$(awk '{print $7}' <<< "${line}")"
@@ -594,11 +615,12 @@ health_snapshot_generate() {
   done
 
   overall_status="$(health_snapshot_worst_status "${mem_status}" "${swap_status}" "${fs_status[@]}")"
-  compact_status="Health: ${overall_status} · root ${root_pct}% used · RAM ${root_avail_h} available · ${data_state}"
+  data_state="${data_state#/data }"
+  compact_status="STATE / ${overall_status} · ROOT / ${root_pct}% used · RAM / ${root_avail_h} available · DATA / ${data_state}"
 
   case "${mem_status}" in
-    BAD) note_lines+=("RAM available is under 4G") ;;
-    WARN) note_lines+=("RAM available is under 8G") ;;
+    BAD) note_lines+=("Available RAM is critically low for this host") ;;
+    WARN) note_lines+=("Available RAM is low for this host") ;;
   esac
   case "${swap_status}" in
     WARN) note_lines+=("Swap usage is elevated") ;;
@@ -614,27 +636,27 @@ health_snapshot_generate() {
 
   local txt=""
   txt+="══════════════════════════════════════════════════════"$'\n'
-  txt+="◉ Disk and memory summary"$'\n'
+  txt+="AUD / Disk and memory summary"$'\n'
   txt+="──────────────────────────────────────────────────────"$'\n'
   txt+="$(health_snapshot_identity_line "${host}" "${os}" "${kernel}" "${uptime}")"$'\n'
   txt+="${compact_status}"$'\n'
-  txt+="Generated: $(health_snapshot_generated_human)"$'\n'
+  txt+="GENERATED / $(health_snapshot_generated_human)"$'\n'
   txt+="──────────────────────────────────────────────────────"$'\n\n'
   txt+="[Memory]"$'\n'
-  txt+="${mem_status}   RAM   ${mem_total_h} total · ${mem_used_h} used · ${mem_avail_h} available"$'\n'
-  txt+="${swap_status}   Swap  ${swap_total_h} total · ${swap_used_h} used · ${swap_free_h} free"$'\n\n'
+  txt+="$(health_snapshot_state_tag "${mem_status}") RAM   ${mem_total_h} total · ${mem_used_h} used · ${mem_avail_h} available"$'\n'
+  txt+="$(health_snapshot_state_tag "${swap_status}") Swap  ${swap_total_h} total · ${swap_used_h} used · ${swap_free_h} free"$'\n\n'
   txt+="[Filesystems]"$'\n'
   for mount in "${!fs_mounts[@]}"; do
     if (( same_root_home )) && [[ "${fs_mounts[$mount]}" == "/home" ]]; then
       continue
     fi
-    printf -v _fs_row '%-5s %-14s %6s · %6s used · %6s free · %3s%%\n' \
-      "${fs_status[$mount]}" "${fs_mounts[$mount]}" "${fs_size[$mount]}" \
+    printf -v _fs_row '%-7s %-14s %6s · %6s used · %6s free · %3s%%\n' \
+      "$(health_snapshot_state_tag "${fs_status[$mount]}")" "${fs_mounts[$mount]}" "${fs_size[$mount]}" \
       "${fs_used[$mount]}" "${fs_free[$mount]}" "${fs_pct[$mount]}"
     txt+="${_fs_row}"
   done
   if (( same_root_home )); then
-    txt+="OK    /home          same backing store as /"$'\n'
+    txt+="[OK]    /home          same backing store as /"$'\n'
   fi
   txt+=$'\n'
   txt+="[Drives]"$'\n'
@@ -659,8 +681,8 @@ health_snapshot_generate() {
     txt+=$'\n'
   fi
   txt+="[Cleanup targets]"$'\n'
-  txt+="OK   DNF cache    ${dnf_cache}"$'\n'
-  txt+="OK   Journal      ${journal_size}"$'\n\n'
+  txt+="[OK] DNF cache    ${dnf_cache}"$'\n'
+  txt+="[OK] Journal      ${journal_size}"$'\n\n'
   txt+="[Top memory]"$'\n'
   for line in "${top_mem[@]}"; do
     printf -v _mem_row '%-14s %s\n' "$(cut -f1 <<< "${line}")" "$(cut -f2 <<< "${line}")"
@@ -748,10 +770,10 @@ health_snapshot_export_full_report() {
   health_snapshot_refresh export 1 0 >/dev/null 2>&1 || true
   {
     echo "══════════════════════════════════════════════════════"
-    echo "◉ Full health diagnostic report"
+    echo "AUD / Full health diagnostic report"
     echo "──────────────────────────────────────────────────────"
-    echo "Generated: $(health_snapshot_generated_human)"
-    echo "Root: $(fedora_toolkit_root)"
+    echo "GENERATED / $(health_snapshot_generated_human)"
+    echo "ROOT / $(fedora_toolkit_root)"
     echo
     cat "$(health_snapshot_latest_txt)" 2>/dev/null || true
     echo

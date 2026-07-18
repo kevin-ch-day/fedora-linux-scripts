@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lamp_python_setup.sh — Fedora setup for LAMP stack + Python MySQL connectors
-# Version: 0.3.0
+# Version: 0.4.0
 #
 # Run:
 #   sudo ./dev/lamp_python_setup.sh
@@ -23,6 +23,7 @@ INSTALL_APACHE=1
 INSTALL_MARIADB=1
 INSTALL_PHP=1
 INSTALL_PYTHON_CONNECTORS=1
+START_SERVICES=1
 
 run_as_real_user_with_path() {
   local home userbin
@@ -43,6 +44,8 @@ Options:
   --upgrade           Run 'dnf upgrade --refresh' before install (off by default)
   --apache-only       Install/enable Apache only
   --mariadb-only      Install/enable MariaDB only
+  --no-start          Install selected packages without enabling, starting, or
+                      restarting services (recommended before DB migration)
   --php-only          Install PHP + extensions only (restarts httpd if present)
   --python-only       Install Python MySQL connectors only
   --with-info-php     Create /var/www/html/info.php for PHP smoke test
@@ -71,6 +74,7 @@ while [[ $# -gt 0 ]]; do
       INSTALL_PYTHON_CONNECTORS=0
       shift
       ;;
+    --no-start) START_SERVICES=0; shift ;;
     --php-only)
       INSTALL_APACHE=0
       INSTALL_MARIADB=0
@@ -114,10 +118,14 @@ fi
 if (( INSTALL_APACHE )); then
   info "Installing Apache (httpd)..."
   pkg_install_if_missing httpd
-  service_enable_now httpd
-  ok "Apache installed and running on http://127.0.0.1/"
+  if (( START_SERVICES )); then
+    service_enable_now httpd
+    ok "Apache installed and running on http://127.0.0.1/"
+  else
+    ok "Apache package installed; service state unchanged"
+  fi
 
-  if [[ ! -f /var/www/html/index.html ]]; then
+  if (( START_SERVICES )) && [[ ! -f /var/www/html/index.html ]]; then
     cat > /var/www/html/index.html <<'EOF'
 <!DOCTYPE html>
 <html><head><title>LAMP</title></head>
@@ -131,9 +139,14 @@ if (( INSTALL_MARIADB )); then
   info "Installing MySQL (MariaDB)..."
   pkg_install_if_missing mariadb-server
   pkg_install_if_missing mariadb
-  service_enable_now mariadb
-  ok "MySQL/MariaDB installed and running"
-  echo "[NEXT] Run 'sudo mysql_secure_installation' to configure root password."
+  if (( START_SERVICES )); then
+    service_enable_now mariadb
+    ok "MySQL/MariaDB installed and running"
+    echo "[NEXT] Run 'sudo mysql_secure_installation' after the migration design is finalized."
+  else
+    ok "MariaDB packages installed; service state unchanged"
+    info "Migration deferred: no service activation or database initialization command was run."
+  fi
 fi
 
 if (( INSTALL_PHP )); then
@@ -142,8 +155,10 @@ if (( INSTALL_PHP )); then
   for pkg in php-mysqlnd php-cli php-common php-fpm php-gd php-curl php-xml php-mbstring; do
     pkg_install_rpm_if_missing "${pkg}"
   done
-  if rpm -q httpd >/dev/null 2>&1; then
+  if (( START_SERVICES )) && rpm -q httpd >/dev/null 2>&1; then
     service_restart httpd
+  elif (( ! START_SERVICES )); then
+    info "Service restarts disabled by --no-start"
   else
     info "httpd not installed yet — skipping Apache restart"
   fi
@@ -182,10 +197,10 @@ if pkg_binary_path httpd >/dev/null 2>&1 || pkg_present httpd apache; then ok "a
 
 ok "Requested web/database components installed."
 echo
-if (( INSTALL_APACHE || rpm -q httpd >/dev/null 2>&1 )); then
+if (( START_SERVICES )) && { (( INSTALL_APACHE )) || rpm -q httpd >/dev/null 2>&1; }; then
   echo "[NEXT] Visit http://127.0.0.1/ to confirm Apache."
 fi
-if (( INSTALL_MARIADB || rpm -q mariadb-server >/dev/null 2>&1 )); then
+if (( START_SERVICES )) && { (( INSTALL_MARIADB )) || rpm -q mariadb-server >/dev/null 2>&1; }; then
   echo "[NEXT] Use 'mysql -u root -p' to connect to MariaDB."
 fi
 echo "[NEXT] ./dev/web_stack_doctor.sh"

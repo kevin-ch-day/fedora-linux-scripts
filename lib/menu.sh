@@ -6,7 +6,7 @@
 # Set FEDORA_MENU_CLEAR=1 to restore full-screen redraws.
 # Source from launchers (run.sh):
 #   source "${FEDORA_ROOT}/lib/menu.sh"
-#   menu_init "Fedora Toolkit" "${FEDORA_ROOT}"
+#   menu_init "Fedora Workstation Control" "${FEDORA_ROOT}"
 #
 # Dispatch return codes: 0 = handled, 1 = back/exit item, 2+ = invalid choice
 # At any menu prompt: r = repeat last choice (testing loops)
@@ -24,7 +24,7 @@ source "${_MENU_LIB_DIR}/common.sh"
 # shellcheck source=theme.sh
 source "${_MENU_LIB_DIR}/theme.sh"
 
-MENU_APP_NAME="${MENU_APP_NAME:-Fedora Toolkit}"
+MENU_APP_NAME="${MENU_APP_NAME:-Fedora Workstation Control}"
 MENU_ROOT="${MENU_ROOT:-$(fedora_toolkit_root)}"
 MENU_HEADER_FN="menu_header"
 MENU_STACK=()
@@ -56,7 +56,7 @@ menu_set_header_fn() {
 }
 
 menu_init() {
-  local app_name="${1:-Fedora Toolkit}"
+  local app_name="${1:-Fedora Workstation Control}"
   local root="${2:-$(fedora_toolkit_root)}"
   local is_root="${3:-0}"
   MENU_APP_NAME="${app_name}"
@@ -107,10 +107,10 @@ menu_header() {
   menu_clear_screen
   theme_lane_banner "${MENU_APP_NAME}"
   if menu_is_submenu; then
-    theme_meta_line "Path: $(menu_path_text)"
+    theme_meta_line "PATH / $(menu_path_text)"
   else
-    theme_meta_line "Host: $(hostname) · User: $(real_user)"
-    theme_meta_line "Path: ${MENU_ROOT}"
+    theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+    theme_meta_line "ROOT / ${MENU_ROOT}"
   fi
   menu_hr
   theme_page_title "${title}"

@@ -32,9 +32,10 @@ system_menu_header() {
   menu_clear_screen
   theme_lane_banner "System maintenance" system
   if menu_is_submenu; then
-    theme_meta_line "Path: $(menu_path_text)"
+    theme_meta_line "PATH / $(menu_path_text)"
   else
-    theme_meta_line "Host: $(hostname) · User: $(real_user) · logs: $(log_dir)"
+    theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+    theme_meta_line "LOGS / $(log_dir)"
   fi
   menu_hr
   theme_page_title "${title}"
@@ -47,14 +48,9 @@ system_menu_maintenance_header() {
   local title="$1"
   local subtitle="${2:-}"
   menu_clear_screen
-  theme_rule '═'
-  if theme_use_color; then
-    printf '%s⚙ System maintenance%s\n' "${THEME_TITLE}" "${THEME_RESET}"
-  else
-    printf '⚙ System maintenance\n'
-  fi
-  theme_meta_line "inspect and maintain the Fedora host"
-  theme_meta_line "Path: $(menu_path_text)"
+  theme_lane_banner "System maintenance" system \
+    "inspect and maintain the Fedora host"
+  theme_meta_line "PATH / $(menu_path_text)"
   menu_hr
   theme_page_title "${title}"
   if [[ -n "${subtitle}" ]]; then

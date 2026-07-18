@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # lib/packages.sh — shared Fedora package-management helpers
-# Version: 0.2.7
+# Version: 0.2.8
 #
 # Source from task scripts (after or via common.sh):
 #   _dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -90,16 +90,13 @@ dnf_yes() {
 }
 
 dnf_installed() {
-  # Prefer rpm (fast, works when dnf repos are unreadable without sudo).
-  if rpm -q "$1" >/dev/null 2>&1; then
-    return 0
-  fi
-  if command -v timeout >/dev/null 2>&1; then
-    timeout 8 dnf list installed "$1" >/dev/null 2>&1 && return 0
-  else
-    dnf list installed "$1" >/dev/null 2>&1 && return 0
-  fi
-  return 1
+  # Fedora packages are RPMs, so query the local RPM database directly.
+  #
+  # Do not fall back to `dnf list installed "$1"`: DNF5 parses "installed"
+  # as a package spec in that form, may print an available package, and can
+  # return success. Besides producing false positives, a DNF query may refresh
+  # repositories or prompt for a repository signing key during a status check.
+  rpm -q "$1" >/dev/null 2>&1
 }
 
 # True when the RPM is installed or a common binary path exists (sudo PATH-safe).

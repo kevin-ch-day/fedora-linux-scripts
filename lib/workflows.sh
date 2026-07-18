@@ -54,8 +54,8 @@ workflow_daily_sync() {
   theme_init
   theme_set_lane update
   theme_lane_banner "Daily Fedora sync" update
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Steps: update → post-update check"
+  theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+  theme_meta_line "STEPS / update → post-update check"
   theme_rule '─'
   echo
 
@@ -110,8 +110,8 @@ workflow_onboard_fresh_machine() {
   theme_init
   theme_set_lane rebuild
   theme_lane_banner "Fresh machine onboarding" rebuild
-  theme_meta_line "Host: $(hostname) · User: $(real_user)"
-  theme_meta_line "Root: ${root}"
+  theme_meta_line "HOST / $(hostname) · USER / $(real_user)"
+  theme_meta_line "ROOT / ${root}"
   theme_rule '─'
   echo
 
@@ -119,7 +119,7 @@ workflow_onboard_fresh_machine() {
   echo
 
   if (( ! skip_setup )); then
-    theme_report_progress 1 3 "Toolkit setup (validate)"
+    theme_report_progress 1 3 "Repository setup validation"
     bash "${root}/setup.sh" || setup_ec=$?
     echo
     if (( setup_ec != 0 )); then
@@ -130,7 +130,7 @@ workflow_onboard_fresh_machine() {
     fi
   fi
 
-  theme_report_progress 2 3 "Toolkit self-test"
+  theme_report_progress 2 3 "Repository self-test"
   # shellcheck source=check.sh
   source "${root}/lib/check.sh"
   fedora_toolkit_check "${root}" 0 0 || check_ec=$?

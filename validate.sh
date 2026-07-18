@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # validate.sh — Repo health checks (syntax, entry points, optional ShellCheck)
-# Version: 0.1.5
+# Version: 0.1.7
 #
 # Run from repo root:
 #   ./validate.sh
@@ -23,7 +23,7 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Quick repo validation for fedora-linux-scripts.
+Repository validation for Fedora Workstation Control.
 
 Options:
   --quick          Skip ShellCheck (default when shellcheck missing)
@@ -72,8 +72,8 @@ source "${VALIDATE_ROOT}/lib/theme.sh"
 theme_init
 theme_set_lane audit
 
-theme_lane_banner "Fedora toolkit validation" audit
-theme_meta_line "Root: ${VALIDATE_ROOT}"
+theme_lane_banner "Fedora Workstation Control validation" audit
+theme_meta_line "ROOT / ${VALIDATE_ROOT}"
 theme_rule '─'
 echo
 
@@ -113,13 +113,134 @@ else
 fi
 
 theme_report_section "Documentation"
-for doc in docs/README.md docs/GETTING-STARTED.md docs/INSTALL-PROFILES.md docs/AUDIT.md mobsf/GUIDE.md; do
+for doc in docs/README.md docs/GETTING-STARTED.md docs/INSTALL-PROFILES.md docs/AUDIT.md \
+  docs/architecture/ADR-0001-project-identity-and-control-model.md \
+  docs/architecture/INVENTORY-V1.md docs/design/VISUAL-IDENTITY.md \
+  schemas/inventory-v1.schema.json mobsf/GUIDE.md; do
   if [[ -f "${VALIDATE_ROOT}/${doc}" ]]; then
     _validate_ok "${doc}"
   else
     _validate_fail "missing: ${doc}"
   fi
 done
+
+theme_report_section "Visual identity"
+theme_contract_ok=1
+shared_accent="$(theme_lane_accent_code main)"
+for lane in main system dev android mobsf rebuild audit; do
+  marker="$(theme_lane_icon "${lane}")"
+  if [[ "$(theme_lane_accent_code "${lane}")" != "${shared_accent}" ]]; then
+    _validate_fail "lane ${lane} does not use the shared signal accent"
+    theme_contract_ok=0
+  fi
+  if [[ ! "${marker}" =~ ^[A-Z0-9]{3}\ /\ $ ]]; then
+    _validate_fail "lane ${lane} marker is not a three-character ASCII technical marker"
+    theme_contract_ok=0
+  fi
+done
+if [[ "${shared_accent}" == "$(theme_status_code success)" ]] \
+  || [[ "${shared_accent}" == "$(theme_status_code warning)" ]] \
+  || [[ "${shared_accent}" == "$(theme_status_code failure)" ]]; then
+  _validate_fail "signal accent reuses a semantic status token"
+  theme_contract_ok=0
+fi
+for token in THEME_SIGNAL THEME_STATUS_SUCCESS THEME_STATUS_WARNING \
+  THEME_STATUS_FAILURE THEME_STATUS_MUTED; do
+  if ! declare -p "${token}" >/dev/null 2>&1; then
+    _validate_fail "undefined semantic theme token: ${token}"
+    theme_contract_ok=0
+  fi
+done
+for disable_var in NO_COLOR FEDORA_NO_COLOR; do
+  if ! (
+    unset NO_COLOR FEDORA_NO_COLOR
+    printf -v "${disable_var}" '%s' 1
+    theme_init
+    [[ "${THEME_USE_COLOR}" -eq 0 ]]
+    [[ -z "${THEME_SIGNAL}${THEME_STATUS_SUCCESS}${THEME_STATUS_WARNING}${THEME_STATUS_FAILURE}" ]]
+  ); then
+    _validate_fail "${disable_var} does not fully disable semantic color tokens"
+    theme_contract_ok=0
+  fi
+done
+for cols in 120 100 80 60; do
+  resolved="$(COLUMNS="${cols}" theme_resolved_width)"
+  if (( resolved > cols - 4 || resolved < 24 )); then
+    _validate_fail "theme width ${resolved} is invalid at ${cols} columns"
+    theme_contract_ok=0
+  fi
+done
+preview_plain="$(COLUMNS=60 NO_COLOR=1 bash "${VALIDATE_ROOT}/theme_preview.sh")"
+preview_max_width="$(
+  while IFS= read -r line; do
+    printf '%s\n' "${#line}"
+  done <<< "${preview_plain}" | sort -nr | head -1
+)"
+if (( preview_max_width > 56 )); then
+  _validate_fail "plain theme preview exceeds safe width at 60 columns (${preview_max_width})"
+  theme_contract_ok=0
+fi
+for required_label in \
+  "CTL / Fedora Workstation Control" \
+  "STATE / WARN" \
+  "HOST /" \
+  "ACTION / Inspect host" \
+  "ADR / Android research" \
+  "DANGER / Reset configuration" \
+  "[ABSENT] adb is not installed" \
+  "[UNAVAIL] GPU sensor did not report" \
+  "[SKIP] Database check intentionally deferred" \
+  "Progress  2/8" \
+  "25%"; do
+  if ! grep -Fq "${required_label}" <<< "${preview_plain}"; then
+    _validate_fail "plain theme preview missing hierarchy label: ${required_label}"
+    theme_contract_ok=0
+  fi
+done
+if [[ "${preview_plain}" == *$'\r'* ]]; then
+  _validate_fail "plain theme preview contains carriage-return cursor movement"
+  theme_contract_ok=0
+fi
+(( theme_contract_ok == 1 )) \
+  && _validate_ok "accent, states, danger, progress, plain hierarchy, and widths"
+
+theme_report_section "Output identity audit"
+identity_files=(
+  run.sh
+  lib/menu.sh
+  lib/theme.sh
+  lib/health_snapshot.sh
+  dev/lib/menu.sh
+  android/lib/menu.sh
+  system/lib/menu.sh
+  system/system_update.sh
+  system/system_monitor.sh
+  system/health_snapshot.sh
+)
+identity_stale="$(
+  grep -nE 'AND /|⚙|◈|▣|🖥|⚡|◇' \
+    "${identity_files[@]/#/${VALIDATE_ROOT}/}" 2>/dev/null || true
+)"
+if [[ -n "${identity_stale}" ]]; then
+  printf '%s\n' "${identity_stale}" | head -20
+  _validate_fail "active control surfaces contain legacy visual markers"
+else
+  _validate_ok "active control surfaces use technical markers"
+fi
+
+theme_report_section "Host inspector"
+if python3 -c 'import pathlib, sys; p=pathlib.Path(sys.argv[1]); compile(p.read_text(), str(p), "exec")' \
+  "${VALIDATE_ROOT}/libexec/inspect_host.py" 2>/dev/null; then
+  _validate_ok "libexec/inspect_host.py syntax"
+else
+  _validate_fail "libexec/inspect_host.py syntax failed"
+fi
+if python3 -c 'import json, pathlib, sys; json.loads(pathlib.Path(sys.argv[1]).read_text())' \
+  "${VALIDATE_ROOT}/schemas/inventory-v1.schema.json" 2>/dev/null; then
+  _validate_ok "inventory-v1.schema.json valid JSON"
+else
+  _validate_fail "inventory-v1.schema.json is not valid JSON"
+fi
 
 theme_report_section "Install profiles"
 # shellcheck source=lib/profiles.sh
@@ -172,7 +293,7 @@ if (( FAILURES == 0 )); then
   theme_summary_box "Validation summary" \
     "Result: passed" \
     "Issues: 0" \
-    "Next: ./run.sh --check"
+    "Next: ./run.sh --inspect --format text"
   exit 0
 fi
 theme_summary_box "Validation summary" \

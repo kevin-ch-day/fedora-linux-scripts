@@ -245,11 +245,27 @@ EOF
 
 log_session_footer() {
   local rc="${1:-0}"
+  local footer_lines=""
 
   if [[ "${rc}" -eq 0 ]]; then
     log_info "Session finished successfully"
   else
     log_error "Session failed with exit code ${rc}"
+  fi
+
+  if [[ "${FEDORA_LOG_TERMINAL_FOOTER:-1}" == 0 ]]; then
+    footer_lines="$(
+      if [[ "${rc}" -eq 0 ]]; then
+        echo "Status        : SUCCESS"
+      else
+        echo "Status        : FAILED (exit code: ${rc})"
+      fi
+      echo "SESSION END   : $(_log_timestamp)"
+      echo "Session-ID    : ${FEDORA_LOG_SESSION_ID}"
+      echo "Log file      : ${LOG_FILE}"
+    )"
+    [[ -n "${LOG_FILE:-}" ]] && printf '\n%s\n' "${footer_lines}" >> "${LOG_FILE}"
+    return 0
   fi
 
   echo

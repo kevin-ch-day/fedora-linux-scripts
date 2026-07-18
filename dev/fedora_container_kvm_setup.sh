@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # fedora_container_kvm_setup.sh — Fedora baseline infra stack (containers + virtualization + core utils)
-# Version: 0.3.0
+# Version: 0.4.0
 #
 # Installs:
 # - common utilities: git, curl, unzip
@@ -9,7 +9,8 @@
 #
 # Run:
 #   sudo ./dev/fedora_container_kvm_setup.sh
-#   sudo ./dev/fedora_container_kvm_setup.sh --no-docker
+#   sudo ./dev/fedora_container_kvm_setup.sh
+#   sudo ./dev/fedora_container_kvm_setup.sh --with-docker
 
 set -euo pipefail
 
@@ -19,7 +20,9 @@ source "${_SCRIPT_DIR}/../lib/packages.sh"
 # shellcheck source=../lib/services.sh
 source "${_SCRIPT_DIR}/../lib/services.sh"
 
-INSTALL_DOCKER=1
+# Podman is Fedora's native/default engine. Docker is an explicit opt-in so a
+# broad workstation profile cannot silently install and enable both engines.
+INSTALL_DOCKER=0
 INSTALL_PODMAN=1
 INSTALL_KVM=1
 
@@ -46,13 +49,14 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
 
-Installs git/curl/unzip, Podman, Docker, QEMU/KVM, libvirt,
-and virt-manager. Enables docker/libvirtd when the packages exist and adds
-$(real_user) to docker and libvirt groups.
+Installs git/curl/unzip, Podman, QEMU/KVM, libvirt, and virt-manager.
+Docker is optional and never selected by the default mode. Enables libvirtd
+when available and adds $(real_user) to the required groups.
 
 Options:
   --help, -h     Show this help
-  --no-docker    Skip docker package, service, and group
+  --with-docker  Also install/enable Docker and add the user to its group
+  --no-docker    Explicitly keep the Podman-first default
   --podman-only  Install Podman engine only
   --docker-only  Install Docker engine only
   --kvm-only     Install KVM/libvirt only
@@ -64,6 +68,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
+    --with-docker) INSTALL_DOCKER=1; shift ;;
     --no-docker) INSTALL_DOCKER=0; shift ;;
     --podman-only)
       INSTALL_PODMAN=1
@@ -146,5 +151,9 @@ if (( INSTALL_KVM )); then
 fi
 
 ok "Fedora infra stack setup complete!"
-echo "[NOTE] Log out/in if you were added to docker or libvirt groups."
-echo "[CHECK] podman info | docker info | virsh list --all"
+echo "[NOTE] Log out/in if you were added to a container or virtualization group."
+if (( INSTALL_DOCKER )); then
+  echo "[CHECK] podman info | docker info | virsh list --all"
+else
+  echo "[CHECK] podman info | virsh list --all"
+fi

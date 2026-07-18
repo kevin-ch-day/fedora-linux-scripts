@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kevin-ch-day/fedora-workstation-control/schemas/inventory-v1.schema.json",
+  "title": "Fedora Workstation Control Inventory v1",
+  "description": "Observed, non-secret facts from one Fedora workstation inspection.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "generator",
+    "host",
+    "hardware",
+    "session",
+    "storage",
+    "security",
+    "network",
+    "capabilities",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generator": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "const": "fedora-workstation-control"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "host": {
+      "type": "object",
+      "required": ["hostname", "os", "kernel", "architecture"],
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "minLength": 1
+        },
+        "os": {
+          "type": "object",
+          "required": ["id", "version_id", "pretty_name"],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "version_id": {
+              "type": "string"
+            },
+            "pretty_name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "kernel": {
+          "type": "string"
+        },
+        "architecture": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "hardware": {
+      "type": "object",
+      "required": ["cpu_model", "logical_cpus", "memory_total_bytes"],
+      "properties": {
+        "cpu_model": {
+          "type": "string"
+        },
+        "logical_cpus": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "memory_total_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "session": {
+      "type": "object",
+      "required": ["desktop", "type"],
+      "properties": {
+        "desktop": {
+          "type": ["string", "null"]
+        },
+        "type": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "storage": {
+      "type": "object",
+      "required": ["root", "home", "data", "root_encrypted"],
+      "properties": {
+        "root": {
+          "$ref": "#/$defs/mount"
+        },
+        "home": {
+          "$ref": "#/$defs/mount"
+        },
+        "data": {
+          "$ref": "#/$defs/mount"
+        },
+        "root_encrypted": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "required": ["selinux", "secure_boot", "firewalld"],
+      "properties": {
+        "selinux": {
+          "type": "string"
+        },
+        "secure_boot": {
+          "type": "string"
+        },
+        "firewalld": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "network": {
+      "type": "object",
+      "required": ["wifi_radio", "wired_connected", "device_states"],
+      "properties": {
+        "wifi_radio": {
+          "type": "string"
+        },
+        "wired_connected": {
+          "type": "boolean"
+        },
+        "device_states": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "Observed package, command, service, and data-directory facts.",
+      "minProperties": 1,
+      "additionalProperties": true
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "mount": {
+      "type": "object",
+      "required": ["target", "mounted", "source", "fstype", "options"],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "mounted": {
+          "type": "boolean"
+        },
+        "source": {
+          "type": ["string", "null"]
+        },
+        "fstype": {
+          "type": ["string", "null"]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
