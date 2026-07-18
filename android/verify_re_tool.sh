@@ -22,9 +22,7 @@ Tools:
   jadx       Verify jadx / jadx-gui
   smali      Verify smali/baksmali
   dex2jar    Verify d2j-* tools
-  all        Run all four verifiers (same as verify_all_re_tools.sh)
-
-Legacy shims: verify_apktool_install.sh, verify_jadx_install.sh, etc.
+  all        Run all four verifiers
 EOF
 }
 

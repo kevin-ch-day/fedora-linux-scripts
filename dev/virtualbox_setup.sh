@@ -156,7 +156,6 @@ secure_boot_note
 report_virtualbox
 
 echo
-ok "VirtualBox setup complete!"
-echo "[NOTE] Log out/in if you were added to the vboxusers group."
-echo "[NEXT] Launch with: VirtualBox"
-echo "[CHECK] VBoxManage --version"
+theme_result_ready "VirtualBox setup complete"
+theme_note "Log out/in if the vboxusers group was added"
+theme_note "Launch: VirtualBox · verify: VBoxManage --version"

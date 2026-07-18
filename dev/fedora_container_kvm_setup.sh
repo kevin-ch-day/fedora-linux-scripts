@@ -150,10 +150,10 @@ if (( INSTALL_KVM )); then
   echo
 fi
 
-ok "Fedora infra stack setup complete!"
-echo "[NOTE] Log out/in if you were added to a container or virtualization group."
+theme_result_ready "Fedora infrastructure setup complete"
+theme_note "Log out/in if group membership changed"
 if (( INSTALL_DOCKER )); then
-  echo "[CHECK] podman info | docker info | virsh list --all"
+  theme_note "Verify: podman info · docker info · virsh list --all"
 else
-  echo "[CHECK] podman info | virsh list --all"
+  theme_note "Verify: podman info · virsh list --all"
 fi

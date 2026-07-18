@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # android.sh — Android RE tools launcher (standalone menu + CLI shortcuts)
-# Version: 0.2.0
+# Version: 0.3.0
 #
 # Run:
 #   ./android/android.sh
@@ -41,6 +41,7 @@ Commands:
                  Install apktool | jadx | smali | dex2jar | all (default all)
   apk-upgrade [TOOL]
                  Re-download one/all APK tools (default all)
+  repair-shell   Repair only the managed Android SDK PATH block (no sudo)
   repair-node    Repair node/npm + apk-mitm tooling (sudo)
   research-doctor Full Android + MobSF doctor (rebuild finale)
 
@@ -94,6 +95,10 @@ while [[ $# -gt 0 ]]; do
     core-status)
       shift
       exec bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" --status "$@"
+      ;;
+    repair-shell)
+      shift
+      exec bash "${ANDROID_LAUNCHER_DIR}/android_dev_core_setup.sh" --repair-shell "$@"
       ;;
     repair-node)
       shift

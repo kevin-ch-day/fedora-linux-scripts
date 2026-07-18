@@ -98,11 +98,6 @@ host_context_latest_snapshot_path() {
   find "${dir}" -type f -name "context_${slug}_*.txt" 2>/dev/null | sort | tail -n 1
 }
 
-host_context_lookup() {
-  local key="$1"
-  host_context_snapshot | awk -F= -v k="${key}" '$1==k {print substr($0,index($0,"=")+1); exit}'
-}
-
 host_context_compare_snapshots() {
   local prev="$1"
   local key old new
@@ -227,11 +222,6 @@ host_context_snapshot() {
   if [[ -n "${SSH_CONNECTION:-}" ]]; then
     printf 'ssh_from=%s\n' "$(users_ssh_client_address 2>/dev/null || echo unknown)"
   fi
-}
-
-# Legacy alias — snapshot without saving
-host_context_snapshot_live() {
-  host_context_snapshot
 }
 
 host_context_print_banner() {

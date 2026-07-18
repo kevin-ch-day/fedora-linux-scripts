@@ -98,6 +98,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 require_root "Run with sudo: sudo ./dev/lamp_python_setup.sh"
+common_init_colors
+theme_set_lane web
 
 if (( REMOVE_INFO_PHP )); then
   if [[ -f "${INFO_PHP}" ]]; then
@@ -142,7 +144,7 @@ if (( INSTALL_MARIADB )); then
   if (( START_SERVICES )); then
     service_enable_now mariadb
     ok "MySQL/MariaDB installed and running"
-    echo "[NEXT] Run 'sudo mysql_secure_installation' after the migration design is finalized."
+    theme_note "After migration planning: sudo mysql_secure_installation"
   else
     ok "MariaDB packages installed; service state unchanged"
     info "Migration deferred: no service activation or database initialization command was run."
@@ -181,26 +183,50 @@ if (( INSTALL_PYTHON_CONNECTORS )); then
   pkg_install_if_missing python3
   pkg_install_if_missing python3-pip
   ensure_user_bin_on_path
-  run_as_real_user_with_path python3 -m pip install --upgrade --user pip
-  run_as_real_user_with_path python3 -m pip install --user mysql-connector-python
-  run_as_real_user_with_path python3 -m pip install --user SQLAlchemy PyMySQL
+  pkg_run_captured "Failed to upgrade user pip" pip \
+    run_as_real_user_with_path python3 -m pip install --upgrade --user pip
+  pkg_run_captured "Failed to install mysql-connector-python" pip \
+    run_as_real_user_with_path python3 -m pip install --user mysql-connector-python
+  pkg_run_captured "Failed to install SQLAlchemy/PyMySQL" pip \
+    run_as_real_user_with_path python3 -m pip install --user SQLAlchemy PyMySQL
   ok "Python MySQL connectors installed (mysql.connector, SQLAlchemy, PyMySQL)"
 fi
 
-echo "[SETUP] Doctor summary:"
-if pkg_binary_path python3 >/dev/null 2>&1; then ok "python3"; else warn "python3 missing"; fi
-if pkg_binary_path pip3 >/dev/null 2>&1 || pkg_binary_path pip >/dev/null 2>&1; then ok "pip"; else warn "pip missing"; fi
-run_as_real_user_with_path python3 -c "import mysql.connector" 2>/dev/null && ok "mysql.connector (Python)" || warn "mysql.connector missing"
-if pkg_binary_path mysql >/dev/null 2>&1; then ok "mysql (cli)"; else warn "mysql missing"; fi
-if pkg_binary_path php >/dev/null 2>&1; then ok "php"; else warn "php missing"; fi
-if pkg_binary_path httpd >/dev/null 2>&1 || pkg_present httpd apache; then ok "apache httpd"; else warn "httpd missing"; fi
+theme_section "Verification"
+if (( INSTALL_APACHE )); then
+  if pkg_binary_path httpd >/dev/null 2>&1 || pkg_present httpd apache; then
+    theme_status_ok "Apache package available"
+  else
+    theme_status_warn "Apache command missing"
+  fi
+fi
+if (( INSTALL_MARIADB )); then
+  if pkg_binary_path mysql >/dev/null 2>&1; then
+    theme_status_ok "MariaDB client available"
+  else
+    theme_status_warn "MariaDB client missing"
+  fi
+fi
+if (( INSTALL_PHP )); then
+  if pkg_binary_path php >/dev/null 2>&1; then
+    theme_status_ok "PHP CLI available"
+  else
+    theme_status_warn "PHP CLI missing"
+  fi
+fi
+if (( INSTALL_PYTHON_CONNECTORS )); then
+  if run_as_real_user_with_path python3 -c "import mysql.connector" 2>/dev/null; then
+    theme_status_ok "Python MySQL connector available"
+  else
+    theme_status_warn "Python MySQL connector missing"
+  fi
+fi
 
-ok "Requested web/database components installed."
-echo
+theme_result_ready "Requested web/database components resolved"
 if (( START_SERVICES )) && { (( INSTALL_APACHE )) || rpm -q httpd >/dev/null 2>&1; }; then
-  echo "[NEXT] Visit http://127.0.0.1/ to confirm Apache."
+  theme_note "Apache: http://127.0.0.1/"
 fi
 if (( START_SERVICES )) && { (( INSTALL_MARIADB )) || rpm -q mariadb-server >/dev/null 2>&1; }; then
-  echo "[NEXT] Use 'mysql -u root -p' to connect to MariaDB."
+  theme_note "MariaDB client: mysql -u root -p"
 fi
-echo "[NEXT] ./dev/web_stack_doctor.sh"
+theme_note "Detailed status: ./dev/web_stack_doctor.sh"

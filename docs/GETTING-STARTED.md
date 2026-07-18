@@ -203,16 +203,16 @@ Choose a core shape before installing:
 ./android/android.sh plan full       # + optional Node/npm and apk-mitm
 ```
 
-The Android landing menu runs common installs directly. Per-tool installs,
-upgrades, custom plans, and optional Node repair are grouped under one
-**Advanced tools and plans** page. See
+The Android landing menu is a flat operational screen for common installs,
+status, verification, upgrades, PATH repair, ADB, and MobSF routing. Custom
+plans, per-tool operations, and optional Node repair remain direct CLI tasks. See
 [android/README.md](../android/README.md) for component overrides and custom
 SDK locations.
 
 | Tier | Command | Scope |
 |------|---------|--------|
 | Core tools | `./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy (read-only) |
-| APK RE tools | `./android/verify_all_re_tools.sh` | apktool, jadx, smali, dex2jar |
+| APK RE tools | `./android/verify_re_tool.sh all` | apktool, jadx, smali, dex2jar |
 | Full doctor | `./android/doctor_android_research.sh` | Core + ADB + all RE tools |
 | MobSF stack | `./mobsf.sh` · `./mobsf.sh --doctor` | Separate Podman lifecycle |
 
@@ -250,7 +250,7 @@ Log files: `system_update.log`, `fedora_rebuild.log`, `android_dev_core.log`, `m
 | Upgrade one | `./android/android_re_install.sh --upgrade jadx` |
 | Verify all | `./android/verify_re_tool.sh all` |
 
-Legacy shims (`android_re_*_user_install.sh`, `verify_*_install.sh`) still exec the preferred scripts above. Install logic: **`lib/android_re.sh`**.
+Install logic: **`lib/android_re.sh`**. Verification logic: **`lib/android.sh`**.
 
 ---
 

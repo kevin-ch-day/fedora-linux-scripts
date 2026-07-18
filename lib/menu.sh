@@ -141,14 +141,6 @@ menu_item_lane() {
   theme_option_lane "${num}" "${lane}" "${label}" "${hint}"
 }
 
-menu_item_lane_danger() {
-  local num="$1"
-  local lane="$2"
-  local label="$3"
-  local hint="${4:-}"
-  theme_option_lane "${num}" "${lane}" "${label}" "${hint}" danger
-}
-
 menu_item_back() {
   menu_item 0 "Back"
 }

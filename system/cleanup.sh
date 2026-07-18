@@ -92,11 +92,7 @@ fi
 
 if (( DO_DNF )); then
   info "Cleaning DNF caches..."
-  if [[ "${EUID}" -eq 0 ]]; then
-    dnf_clean_all
-  else
-    sudo dnf clean all -y
-  fi
+  _dnf_run "DNF cache cleanup failed" clean all
   ok "DNF caches cleaned"
 fi
 
@@ -130,7 +126,7 @@ if ! (( QUIET )); then
     echo
     info "Journal disk usage (hint):"
     journalctl --disk-usage 2>/dev/null || true
-    echo "[HINT] sudo journalctl --vacuum-time=7d"
+    theme_note "Optional cleanup: sudo journalctl --vacuum-time=7d"
   fi
 fi
 

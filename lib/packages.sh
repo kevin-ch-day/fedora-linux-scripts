@@ -67,17 +67,96 @@ _pkg_fixup_repo_permissions_after_dnf() {
   fi
 }
 
+_pkg_save_transaction_output() {
+  local output_file="$1"
+  local command_text="$2"
+  local tool_label="${3:-dnf}"
+  local log_file="${FEDORA_PACKAGE_LOG:-$(fedora_toolkit_root)/logs/package_transactions.log}"
+  local owner
+
+  [[ -s "${output_file}" ]] || return 0
+  mkdir -p "$(dirname -- "${log_file}")" 2>/dev/null || return 0
+  {
+    printf '\n[%s] %s %s\n' "$(date -Is)" "${tool_label}" "${command_text}"
+    cat "${output_file}"
+  } >> "${log_file}" 2>/dev/null || return 0
+
+  chmod 0644 "${log_file}" 2>/dev/null || true
+  if [[ "${EUID}" -eq 0 ]]; then
+    owner="$(real_user)"
+    chown "${owner}:$(id -gn "${owner}")" "${log_file}" 2>/dev/null || true
+  fi
+  PKG_LAST_TRANSACTION_LOG="${log_file}"
+}
+
 _dnf_run() {
   local ctx="$1"
   shift
+  local output rc=0 command_text
+  PKG_LAST_TRANSACTION_LOG=""
+  output="$(mktemp "${TMPDIR:-/tmp}/fedora-dnf.XXXXXX")"
+  command_text="$(printf '%q ' "$@")"
   errors_dnf_hint
+
   if [[ "${EUID}" -eq 0 ]]; then
-    run_or_die "${ctx}" dnf_yes "$@"
+    dnf -y "$@" > "${output}" 2>&1 || rc=$?
   else
-    run_or_die "${ctx}" sudo dnf -y "$@"
+    sudo dnf -y "$@" > "${output}" 2>&1 || rc=$?
   fi
+
+  _pkg_save_transaction_output "${output}" "${command_text% }" dnf
+  if [[ "${FEDORA_VERBOSE:-0}" == 1 ]]; then
+    sed 's/^/  /' "${output}"
+  fi
+  if (( rc != 0 )); then
+    err "${ctx} (exit ${rc})"
+    if [[ -s "${output}" ]]; then
+      warn "Package manager detail (last 8 lines):"
+      tail -n 8 "${output}" | sed 's/^/  /'
+    fi
+    [[ -n "${PKG_LAST_TRANSACTION_LOG:-}" ]] \
+      && info "Full package output: ${PKG_LAST_TRANSACTION_LOG}"
+    rm -f "${output}"
+    errors_clear_hint
+    exit "${rc}"
+  fi
+
+  rm -f "${output}"
   errors_clear_hint
   _pkg_fixup_repo_permissions_after_dnf
+}
+
+# Run a noisy package/dependency command behind the toolkit output layer.
+# Success detail goes to the package transaction log; failures show only a
+# short tail plus the full log path.
+pkg_run_captured() {
+  local ctx="$1"
+  local tool_label="$2"
+  shift 2
+  local output rc=0 command_text
+
+  PKG_LAST_TRANSACTION_LOG=""
+  output="$(mktemp "${TMPDIR:-/tmp}/fedora-package-command.XXXXXX")"
+  command_text="$(printf '%q ' "$@")"
+  "$@" > "${output}" 2>&1 || rc=$?
+  _pkg_save_transaction_output "${output}" "${command_text% }" "${tool_label}"
+
+  if [[ "${FEDORA_VERBOSE:-0}" == 1 ]]; then
+    sed 's/^/  /' "${output}"
+  fi
+  if (( rc != 0 )); then
+    err "${ctx} (exit ${rc})"
+    if [[ -s "${output}" ]]; then
+      warn "${tool_label} detail (last 8 lines):"
+      tail -n 8 "${output}" | sed 's/^/  /'
+    fi
+    [[ -n "${PKG_LAST_TRANSACTION_LOG:-}" ]] \
+      && info "Full command output: ${PKG_LAST_TRANSACTION_LOG}"
+    rm -f "${output}"
+    exit "${rc}"
+  fi
+
+  rm -f "${output}"
 }
 
 # Public alias for task scripts (group install, etc.).
@@ -216,11 +295,7 @@ pkg_install_batch_if_available() {
 
 dnf_upgrade_refresh() {
   info "Refreshing package metadata and upgrading..."
-  if [[ "${EUID}" -eq 0 ]]; then
-    dnf_yes upgrade --refresh
-  else
-    sudo dnf upgrade --refresh -y
-  fi
+  _dnf_run "Fedora package upgrade failed" upgrade --refresh
   ok "System packages upgraded"
 }
 
@@ -363,33 +438,6 @@ rpm_verify_report() {
   echo
   pkg_emit "Other verification deltas (review):"
   printf '%s\n' "${filtered}" | grep -vE '^\S+\s+c\s+/' | head -n "${max_lines}" || echo "  (none)"
-}
-
-needs_reboot_check() {
-  pkg_emit "Reboot check:"
-
-  local running newest
-  running="$(uname -r)"
-  newest=""
-  if have rpm; then
-    newest="$(rpm -q kernel --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' 2>/dev/null | sort -V | tail -n 1 || true)"
-  fi
-
-  if [[ -n "${newest}" ]] && [[ "${running}" != "${newest}" ]]; then
-    pkg_emit "  Reboot recommended: newest installed kernel is ${newest}, running is ${running}."
-    return 0
-  fi
-
-  if have needs-restarting; then
-    if needs-restarting -r >/dev/null 2>&1; then
-      pkg_emit "  No reboot required."
-    else
-      pkg_emit "  Reboot recommended (per needs-restarting)."
-    fi
-  else
-    pkg_emit "  No reboot required based on kernel check."
-    pkg_emit "  (Install dnf-plugins-core for needs-restarting accuracy on userland updates.)"
-  fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

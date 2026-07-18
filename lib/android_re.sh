@@ -30,10 +30,6 @@ android_re_home() {
   real_home
 }
 
-android_re_bin_dir() {
-  printf '%s/.local/bin\n' "$(android_re_home)"
-}
-
 android_re_opt_dir() {
   local name="$1"
   printf '%s/.local/opt/%s\n' "$(android_re_home)" "${name}"
@@ -131,7 +127,7 @@ android_re_install_apktool() {
   android_re_with_tempdir _android_re_install_apktool_download "${jar_path}" "${wrapper}"
   ok "Installed: ${wrapper}"
   android_re_post_verify android_verify_apktool apktool
-  echo "[NEXT] apktool --version  (source ~/.bashrc if needed)"
+  theme_note "Verify: apktool --version · reload shell if needed"
 }
 
 _android_re_install_apktool_download() {
@@ -179,8 +175,7 @@ android_re_install_jadx() {
   if ! android_re_force_upgrade && [[ -x "${jadx_bin}" ]]; then
     ok "jadx already installed (user scope): ${jadx_bin}"
     android_re_post_verify android_verify_jadx jadx
-    echo "[NEXT] jadx --version"
-    echo "[NEXT] jadx-gui (optional)"
+    theme_note "Verify: jadx --version · optional GUI: jadx-gui"
     return 0
   fi
 
@@ -188,8 +183,7 @@ android_re_install_jadx() {
   android_re_with_tempdir _android_re_install_jadx_download "${opt_dir}" "${jadx_bin}" "${jadx_gui_bin}"
   ok "jadx install complete (user scope)"
   android_re_post_verify android_verify_jadx jadx
-  echo "[NEXT] jadx --version"
-  echo "[NEXT] jadx-gui (optional)"
+  theme_note "Verify: jadx --version · optional GUI: jadx-gui"
 }
 
 _android_re_install_jadx_download() {
@@ -281,8 +275,7 @@ android_re_install_smali() {
 
   ok "smali/baksmali install complete (user scope)"
   android_re_post_verify android_verify_smali "smali/baksmali"
-  echo "[NEXT] source ~/.bashrc (or restart shell)"
-  echo "[CHECK] smali --version && baksmali --version"
+  theme_note "Reload shell if needed · verify: smali --version · baksmali --version"
 }
 
 # ---------- dex2jar ----------
@@ -353,7 +346,7 @@ android_re_install_dex2jar() {
       warn "Existing install detected but could not locate d2j-dex2jar.sh under ${opt_current}"
     fi
     android_re_post_verify android_verify_dex2jar dex2jar
-    echo "[NEXT] d2j-dex2jar -h"
+    theme_note "Verify: d2j-dex2jar -h"
     return 0
   fi
 
@@ -361,8 +354,7 @@ android_re_install_dex2jar() {
   android_re_with_tempdir _android_re_install_dex2jar_download "${opt_base}" "${opt_current}" "${bin_dir}"
   ok "dex2jar (dex-tools) install complete (user scope)"
   android_re_post_verify android_verify_dex2jar dex2jar
-  echo "[NEXT] d2j-dex2jar -h"
-  echo "[NEXT] If command not found in new shells: source ~/.bashrc"
+  theme_note "Verify: d2j-dex2jar -h · reload shell if needed"
 }
 
 _android_re_install_dex2jar_download() {
@@ -419,7 +411,7 @@ android_re_install_all() {
     die_with_hint "Some RE tools failed to install" \
       "Retry individually: ./android/android_re_install.sh <tool>"
   fi
-  echo "[NEXT] ./android/verify_re_tool.sh all"
+  theme_note "Verify all: ./android/verify_re_tool.sh all"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

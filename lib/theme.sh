@@ -633,19 +633,6 @@ theme_note_kv() {
   fi
 }
 
-theme_shortcut() {
-  local key="$1"
-  local value="$2"
-  if theme_use_color; then
-    printf '  %s[%s]%s %s›%s %s%s%s\n' \
-      "${THEME_ACCENT}" "${key}" "${THEME_RESET}" \
-      "${THEME_DIM}" "${THEME_RESET}" \
-      "${THEME_DIM}" "${value}" "${THEME_RESET}"
-  else
-    printf '  [%s] > %s\n' "${key}" "${value}"
-  fi
-}
-
 theme_msg_ok() {
   if theme_use_color; then
     printf '%s[OK]%s   %s%s%s\n' \

@@ -59,8 +59,6 @@ hardening_profile_label() {
 
 hardening_has_login_shell() { users_has_login_shell "$@"; }
 hardening_is_human_home() { users_is_human_home "$@"; }
-hardening_users_sorted_line() { users_sorted_line "$@"; }
-hardening_detect_login_users() { users_detect_login; }
 hardening_detect_wheel_users() { users_detect_wheel; }
 hardening_detect_ssh_allow_users() { users_detect_ssh_allow_candidates; }
 hardening_merge_user_lists() { users_merge_lists "$@"; }
@@ -358,12 +356,9 @@ hardening_firewall_log_dir() {
 }
 
 hardening_firewall_cmd() { network_firewall_cmd "$@"; }
-hardening_firewall_zone_exists() { network_firewall_zone_exists "$@"; }
 hardening_is_research_host() { host_context_is_research_host; }
 hardening_research_profile_label() { host_context_research_label; }
 hardening_firewall_default_zone() { network_firewall_default_zone; }
-hardening_firewall_zone_of_interface() { network_firewall_zone_of_interface "$@"; }
-hardening_firewall_interfaces_in_zone() { network_firewall_interfaces_in_zone "$@"; }
 hardening_firewall_zone_services() { network_firewall_zone_services "$@"; }
 hardening_firewall_zone_ports() { network_firewall_zone_ports "$@"; }
 hardening_firewall_zone_has_wide_ports() { network_firewall_zone_has_wide_ports "$@"; }
@@ -375,7 +370,6 @@ hardening_firewall_print_zone_summary() {
   theme_meta_line "  Zone ${zone}: services=[${svcs:-none}] ports=[${ports:-none}]"
 }
 
-hardening_firewall_primary_interfaces() { network_primary_interfaces; }
 hardening_round2_firewall_is_strict() { network_firewall_zone_is_strict "$@"; }
 
 hardening_round2_firewall_needs_hardening() {
@@ -573,17 +567,6 @@ hardening_round2_service_units() {
     "systemd-homed-activate|systemd homed activation|review" \
     "sssd|System Security Services (domain/LDAP)|review" \
     "sssd-kcm|SSSD Kerberos cache manager|review"
-}
-
-hardening_round2_unit_tier() {
-  local unit="$1"
-  local line tier
-  while IFS='|' read -r u _ tier; do
-    [[ "${u}" == "${unit}" ]] || continue
-    printf '%s\n' "${tier}"
-    return 0
-  done < <(hardening_round2_service_units)
-  printf 'unknown\n'
 }
 
 hardening_unit_exists() {

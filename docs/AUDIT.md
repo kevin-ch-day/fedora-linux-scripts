@@ -146,7 +146,7 @@ Full trees were trimmed here; source of truth is `*/lib/menu.sh`. QA loop:
 ./mobsf.sh --doctor
 ./system/research_doctor.sh --android-only
 ./legacy/update_fedora.sh          # must exit 1
-./android/verify_dex2jar_install.sh
+./android/verify_re_tool.sh dex2jar
 ```
 
 ---

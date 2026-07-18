@@ -340,10 +340,6 @@ system_menu_logs() {
   menu_loop "Logs" "$(log_dir)" _system_logs_items _system_logs_dispatch
 }
 
-system_menu_help() {
-  menu_help_docs_loop "system/README.md" "guides · index · logs"
-}
-
 _system_main_items() {
   theme_section "Updates — start here"
   menu_item_lane 1 update "Update Fedora" "sudo · dnf upgrade · full verify · log saved"

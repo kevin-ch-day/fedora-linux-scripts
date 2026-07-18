@@ -343,22 +343,6 @@ init_script_logging() {
   logging_install_exit_trap
 }
 
-# Attach logging to an existing script without replacing other traps (manual footer).
-log_engine_open() {
-  local log_name="$1"
-  local script_name="${2:-${0##*/}}"
-  local title="${3:-Fedora toolkit script}"
-
-  setup_script_logging "${log_name}" "${script_name}" "${title}"
-}
-
-log_engine_close() {
-  local rc="${1:-0}"
-  FEDORA_LOG_TEE_ACTIVE=0
-  fix_script_log_ownership
-  log_session_footer "${rc}"
-}
-
 # ---------- read / maintenance / archive ----------
 log_file_size_mb() {
   local path="$1"

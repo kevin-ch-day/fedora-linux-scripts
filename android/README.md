@@ -13,7 +13,7 @@ Quick reference for the Android security / reverse-engineering workstation on Fe
 | Tier | Command | Scope |
 |------|---------|--------|
 | **Core tools** | `./android/android_dev_core_setup.sh --status` | adb, java, sdkmanager, frida, objection, mitmproxy, node/npm (read-only) |
-| **APK RE tools** | `./android/verify_all_re_tools.sh` | apktool, jadx, smali, dex2jar |
+| **APK RE tools** | `./android/verify_re_tool.sh all` | apktool, jadx, smali, dex2jar |
 | **Full doctor** | `./android/doctor_android_research.sh` | Core + ADB + all RE tools |
 | **MobSF stack** | `./mobsf.sh` · `./mobsf.sh --doctor` | Podman stack only |
 
@@ -53,12 +53,12 @@ Fedora doctor (entry points · Android RE, no MobSF): `./run.sh --doctor`
 | Install minimal core | `./android/android.sh core minimal` |
 | Install full core | `./android/android.sh core full` |
 | Core status (read-only) | `./android/android_dev_core_setup.sh --status` |
-| Repair SDK shell PATH only | `./android/android_dev_core_setup.sh --repair-shell` |
+| Repair SDK shell PATH only | `./android/android.sh repair-shell` |
 | Install all APK tools | `./android/android.sh apk-install` |
 | Install one APK tool | `./android/android.sh apk-install jadx` |
 | Upgrade / re-fetch | `./android/android.sh apk-upgrade jadx` |
 | Verify one | `./android/verify_re_tool.sh apktool` |
-| Verify all APK RE | `./android/verify_all_re_tools.sh` |
+| Verify all APK RE | `./android/verify_re_tool.sh all` |
 | ADB status | `./android/android.sh` → ADB and device checks |
 
 Install logic: `lib/android_re.sh`  
@@ -114,25 +114,22 @@ with `--cmdline-tools-version`. The current default is `14742923`.
 
 ## Menu design
 
-The landing page contains direct outcomes instead of opening a second “core
-setup” menu:
+The landing page is a single operational screen. Routine work does not open
+another Android submenu:
 
 1. complete standard Android RE workstation;
 2. standard core only;
 3. APK RE tools only;
-4. minimal/headless core;
-5. workstation doctor;
-6. ADB/device checks.
+4. consolidated workstation doctor;
+5. focused ADB/device checks;
+6. the separate MobSF stack;
+7. this command and troubleshooting guide.
 
-Plans, upgrades, individual tools, Node repair, and the combined MobSF brief
-live under one **Advanced tools and plans** page.
-
----
-
-## Legacy shims (still work)
-
-- `android_re_*_user_install.sh` → `android_re_install.sh TOOL`
-- `verify_*_install.sh` → `verify_re_tool.sh TOOL`
+The doctor consolidates core status and APK-tool verification. Minimal and
+full core presets, custom plans, upgrades, repairs, and individual APK-tool
+operations stay available through the direct commands above. These are
+infrequent or advanced operations, so they do not occupy the landing screen
+or create another menu tree.
 
 ---
 

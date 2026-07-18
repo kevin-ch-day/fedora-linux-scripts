@@ -153,6 +153,10 @@ _smoke_run "inspect regression tests" 0 \
   python3 -m unittest "${ROOT}/tests/test_inspect.py"
 _smoke_run "Android core helper regressions" 0 \
   bash "${ROOT}/tests/test_android_core.sh"
+_smoke_run "package output regressions" 0 \
+  bash "${ROOT}/tests/test_packages.sh"
+_smoke_run "MobSF output regressions" 0 \
+  bash "${ROOT}/tests/test_mobsf_output.sh"
 _smoke_run "profile safety regressions" 0 \
   bash "${ROOT}/tests/test_profiles.sh"
 _smoke_run "health snapshot regressions" 0 \
@@ -320,6 +324,10 @@ if [[ "${identity_menu_ec}" -eq 0 ]] \
   && grep -q 'SET / Install workstation' <<< "${identity_menu_out}" \
   && grep -q 'ADR / Android RE tools' <<< "${identity_menu_out}" \
   && grep -q 'UPD / Update Fedora' <<< "${identity_menu_out}" \
+  && grep -q 'Android workstation doctor' <<< "${identity_menu_out}" \
+  && grep -q 'ADB and device checks' <<< "${identity_menu_out}" \
+  && grep -q 'Commands and troubleshooting' <<< "${identity_menu_out}" \
+  && ! grep -q 'Advanced tools and plans' <<< "${identity_menu_out}" \
   && ! grep -qE 'AND /|[⚙◈▣🖥⚡◇]' <<< "${identity_menu_out}"; then
   ok "runtime menus use the shared technical identity"
 else
@@ -327,6 +335,7 @@ else
   FAIL_NAMES+=("runtime menu visual identity")
   warn "runtime menus contain stale lane styling"
 fi
+_smoke_menu "Android flat doctor route" "${ROOT}/android/android.sh" '4\n\n0\n'
 _smoke_menu "Android core broad-install cancellation" "${ROOT}/run.sh" \
   '5\n5\n1\n1\nn\n\n0\n0\n0\n0\n'
 _smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan

@@ -75,7 +75,12 @@ EOF
 
 if (( SKIP_CHECK_UPDATE == 0 )); then
   info "Refreshing package metadata..."
-  dnf check-update -y || warn "dnf check-update returned non-zero (continuing)"
+  check_rc=0
+  dnf -q check-update >/dev/null 2>&1 || check_rc=$?
+  case "${check_rc}" in
+    0|100) ok "Package metadata refreshed" ;;
+    *) warn "Package update check failed (exit ${check_rc}); install will still resolve metadata" ;;
+  esac
 fi
 
 pkg_install_if_missing "${VSCODE_PKG}"

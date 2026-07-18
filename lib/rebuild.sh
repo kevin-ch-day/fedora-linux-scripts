@@ -129,7 +129,7 @@ fedora_rebuild_run() {
     info "Rebuild from run.sh — confirm each step (no mode picker)"
   fi
 
-  echo "[NOTE] system_update.sh always logs to logs/system_update.log on its own."
+  theme_note "System updates always log to logs/system_update.log"
 
   install_engine_run_profile "${root}" "${profile}" "${auto_yes}" "${dry_run}" "${use_log}" "${FEDORA_FROM_MENU:-0}" 0
 }

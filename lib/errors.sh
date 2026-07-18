@@ -235,10 +235,6 @@ errors_issue_add() {
   _errors_issues+=("${section}|${msg}")
 }
 
-errors_issue_count() {
-  printf '%s\n' "${#_errors_issues[@]}"
-}
-
 errors_issue_summary() {
   local title="${1:-Issues found}"
   local entry sec msg
@@ -264,12 +260,6 @@ die_unknown_option() {
 }
 
 # ---------- validation ----------
-assert_nonempty() {
-  local value="${1:-}"
-  local msg="${2:-Value required}"
-  [[ -n "${value}" ]] || die "${msg}"
-}
-
 assert_file() {
   local path="$1"
   local msg="${2:-Missing file: ${path}}"
@@ -280,12 +270,6 @@ assert_dir() {
   local path="$1"
   local msg="${2:-Missing directory: ${path}}"
   [[ -d "${path}" ]] || die "${msg}"
-}
-
-assert_readable() {
-  local path="$1"
-  local msg="${2:-Not readable: ${path}}"
-  [[ -r "${path}" ]] || die "${msg}"
 }
 
 assert_cmds() {
@@ -300,15 +284,6 @@ die_with_hint() {
   local hint="$2"
   err "${msg}"
   [[ -n "${hint}" ]] && err "Hint: ${hint}"
-  exit 1
-}
-
-die_with_usage() {
-  local msg="$1"
-  err "${msg}"
-  if declare -F usage >/dev/null 2>&1; then
-    usage >&2
-  fi
   exit 1
 }
 

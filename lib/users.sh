@@ -29,12 +29,6 @@ users_is_human_home() {
   [[ "${home}" == /home/* ]]
 }
 
-users_is_system_account() {
-  local uid="$1"
-  [[ "${uid}" =~ ^[0-9]+$ ]] || return 0
-  (( uid < 1000 || uid >= 60000 ))
-}
-
 users_add_unique() {
   local -n _arr=$1
   local -n _seen=$2
@@ -119,25 +113,6 @@ users_detect_wheel() {
   users_sorted_line "${names[@]}"
 }
 
-users_detect_sudo_capable() {
-  local -a names=()
-  local seen="" u
-  if users_detect_wheel >/dev/null 2>&1; then
-    while read -r u; do
-      [[ -n "${u}" ]] || continue
-      users_add_unique names seen "${u}"
-    done < <(users_detect_wheel | tr ' ' '\n')
-  fi
-  if getent group sudo >/dev/null 2>&1; then
-    while IFS= read -r u; do
-      [[ -n "${u}" ]] || continue
-      users_add_unique names seen "${u}"
-    done < <(getent group sudo 2>/dev/null | cut -d: -f4 | tr ',' '\n')
-  fi
-  ((${#names[@]} > 0)) || return 1
-  users_sorted_line "${names[@]}"
-}
-
 # auto: wheel if any, else login; always includes invoker.
 users_detect_ssh_allow_candidates() {
   local invoker wheel login
@@ -212,11 +187,6 @@ users_session_label() {
     headless) printf 'headless / no local GUI\n' ;;
     *) printf 'unknown session\n' ;;
   esac
-}
-
-users_ssh_connection_line() {
-  [[ -n "${SSH_CONNECTION:-}" ]] || return 1
-  printf '%s\n' "${SSH_CONNECTION}"
 }
 
 users_ssh_client_address() {

@@ -10,6 +10,42 @@ mobsf_pd() {
   run_as_real_user podman "$@"
 }
 
+mobsf_pc_action() {
+  local context="$1"
+  shift
+  local output log_file owner rc=0
+  output="$(mktemp "${TMPDIR:-/tmp}/fedora-mobsf-compose.XXXXXX")"
+  log_file="${LOG_FILE:-${_FEDORA_ROOT}/logs/mobsf.log}"
+
+  mobsf_pc "$@" > "${output}" 2>&1 || rc=$?
+  mkdir -p "$(dirname -- "${log_file}")" 2>/dev/null || true
+  {
+    printf '\n[%s] podman-compose ' "$(date -Is)"
+    printf '%q ' "$@"
+    printf '\n'
+    cat "${output}"
+  } >> "${log_file}" 2>/dev/null || true
+  chmod 0644 "${log_file}" 2>/dev/null || true
+  if [[ "${EUID}" -eq 0 ]]; then
+    owner="$(real_user)"
+    chown "${owner}:$(id -gn "${owner}")" "${log_file}" 2>/dev/null || true
+  fi
+
+  if [[ "${FEDORA_VERBOSE:-0}" == 1 ]]; then
+    sed 's/^/  /' "${output}"
+  fi
+  if (( rc != 0 )); then
+    warn "${context} failed (exit ${rc})"
+    if [[ -s "${output}" ]]; then
+      warn "Podman detail (last 10 lines):"
+      tail -n 10 "${output}" | sed 's/^/  /'
+    fi
+    info "Full container output: ${log_file}"
+  fi
+  rm -f "${output}"
+  return "${rc}"
+}
+
 mobsf_require_tools() {
   need_cmd podman
   need_cmd podman-compose

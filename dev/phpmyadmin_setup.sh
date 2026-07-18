@@ -91,10 +91,9 @@ if command -v getenforce >/dev/null && [[ "$(getenforce)" == "Enforcing" ]]; the
   ok "SELinux updated for phpMyAdmin"
 fi
 
-ok "phpMyAdmin installation complete!"
-echo
-echo "[NEXT] Access phpMyAdmin at: http://127.0.0.1/phpmyadmin"
+theme_result_ready "phpMyAdmin installation complete"
+theme_note "Open: http://127.0.0.1/phpmyadmin"
 if (( ALLOW_REMOTE )); then
   warn "Remote access enabled — restrict with firewall or revert config backup"
 fi
-echo "[NEXT] ./dev/web_stack_doctor.sh"
+theme_note "Detailed status: ./dev/web_stack_doctor.sh"

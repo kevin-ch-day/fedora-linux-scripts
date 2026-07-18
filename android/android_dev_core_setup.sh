@@ -569,12 +569,15 @@ _write_bashrc_android_sdk_paths() {
   local bashrc="${REAL_HOME}/.bashrc"
   local marker_begin="# >>> ANDROID SDK PATHS (managed) >>>"
   local marker_end="# <<< ANDROID SDK PATHS (managed) <<<"
-  local tmp block_file
-  # The installer runs as root, but the final copy runs as the target user.
-  # Target-user temp files avoid root-only mktemp permissions at that boundary.
-  tmp="$(run_as_real_user mktemp)"
-  block_file="$(run_as_real_user mktemp)"
-  run_as_real_user chmod 0600 "${tmp}" "${block_file}"
+  local tmp_dir tmp block_file owner_group
+  # Build under an effective-user-owned directory. Fedora's protected_regular
+  # policy can reject root redirects to files created by the invoking user in
+  # /tmp, even though the final ~/.bashrc copy correctly runs as that user.
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/fedora-android-shell.XXXXXX")"
+  tmp="${tmp_dir}/bashrc"
+  block_file="${tmp_dir}/android-path-block"
+  touch "${tmp}" "${block_file}"
+  chmod 0600 "${tmp}" "${block_file}"
   android_sdk_managed_block_body > "${block_file}"
 
   run_as_real_user touch "${bashrc}"
@@ -604,9 +607,13 @@ _write_bashrc_android_sdk_paths() {
     cat "${block_file}" >> "${tmp}"
   fi
 
+  owner_group="$(id -gn "$(real_user)")"
+  if [[ "${EUID}" -eq 0 ]]; then
+    chown -R "$(real_user):${owner_group}" "${tmp_dir}"
+  fi
   run_as_real_user cp "${tmp}" "${bashrc}"
   chown "$(id -u "$(real_user)"):$(id -g "$(real_user)")" "${bashrc}" 2>/dev/null || true
-  rm -f "${tmp}" "${block_file}"
+  rm -rf "${tmp_dir}"
 }
 
 ensure_android_paths_in_bashrc() {
@@ -889,9 +896,9 @@ else
   theme_result_issues "Android core setup completed with warnings"
 fi
 if (( WITH_SDK && WITH_SHELL_RC )); then
-  echo "[NEXT] source ~/.bashrc (or restart shell)"
+  theme_note "Reload shell: source ~/.bashrc"
 else
-  echo "[NEXT] review the status above; no shell reload is required by this run"
+  theme_note "No shell reload required by this run"
 fi
 echo
 
@@ -901,13 +908,5 @@ if ((${#MISSING_PKGS[@]} > 0)); then
   echo
 fi
 
-echo "APK reverse-engineering tools are installed separately:"
-echo "  ./android/android_re_install.sh all"
-echo
-echo "Quick checks:"
-echo "  adb version"
-echo "  java -version"
-echo "  sdkmanager --version"
-echo "  frida --version"
-echo "  objection version"
-echo "  mitmproxy --version"
+theme_note "APK tools: ./android/android_re_install.sh all"
+theme_note "Consolidated status: ./android/android_dev_core_setup.sh --status"

@@ -100,31 +100,6 @@ services_status_virtualization_stack() {
   services_status_virtualization
 }
 
-services_status_research_stack() {
-  echo "Research workstation services:"
-  services_status_web_stack
-  echo
-  services_status_containers
-  echo
-  services_status_virtualization
-  echo
-  echo "MobSF (static analysis stack):"
-  services_mobsf_brief
-}
-
-services_mobsf_brief() {
-  local root mobsf_lib
-  root="$(fedora_toolkit_root)"
-  mobsf_lib="${root}/mobsf/lib/mobsf.sh"
-  if [[ ! -f "${mobsf_lib}" ]]; then
-    warn "MobSF: lib not found under ${root}/mobsf/"
-    return 0
-  fi
-  # shellcheck source=../../mobsf/lib/mobsf.sh
-  source "${mobsf_lib}"
-  mobsf_doctor_brief || true
-}
-
 web_stack_http_code() {
   local url="$1"
   curl -sS -o /dev/null -w '%{http_code}' --max-time 3 "${url}" 2>/dev/null || printf '000'

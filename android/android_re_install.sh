@@ -24,8 +24,6 @@ Install user-scope RE tools to ~/.local/:
 Options:
   --upgrade, -U   Re-download even when a user-scope install already exists
   --help, -h      Show this help
-
-Legacy per-tool wrappers: android_re_*_user_install.sh
 EOF
 }
 

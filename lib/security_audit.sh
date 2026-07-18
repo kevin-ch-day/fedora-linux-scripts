@@ -114,15 +114,6 @@ security_audit_finding_has() {
   return 1
 }
 
-security_audit_finding_has_severity() {
-  local want_sev="$1" f sev
-  for f in "${SECURITY_AUDIT_FINDINGS[@]}"; do
-    sev="${f%%|*}"
-    [[ "${sev}" == "${want_sev}" ]] && return 0
-  done
-  return 1
-}
-
 security_audit_finding_severity() {
   local want_id="$1" f id sev
   for f in "${SECURITY_AUDIT_FINDINGS[@]}"; do

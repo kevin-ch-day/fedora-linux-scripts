@@ -247,7 +247,10 @@ install_engine_run_profile() {
   (( dry_run )) && warn "DRY RUN — no scripts will execute"
   (( use_log )) && info "Logging to: $(log_file_path "${FEDORA_LOG_REBUILD}")"
 
-  while IFS=$'\t' read -r title rel sudo_mode args_line; do
+  # Keep the step stream on fd 3. Step confirmations must continue reading the
+  # user's stdin; otherwise confirm() consumes the next profile row and silently
+  # marks the current step as skipped.
+  while IFS=$'\t' read -r title rel sudo_mode args_line <&3; do
     [[ -n "${title}" ]] || continue
     extra=()
     if [[ -n "${args_line}" ]]; then
@@ -255,7 +258,7 @@ install_engine_run_profile() {
       extra=(${args_line})
     fi
     install_engine_run_step "${root}" "${title}" "${rel}" "${sudo_mode}" "${extra[@]}"
-  done < <(profile_iter_steps "${profile}")
+  done 3< <(profile_iter_steps "${profile}")
 
   install_engine_maybe_mobsf "${root}" "${profile}"
   install_engine_maybe_doctor "${root}" "${profile}"

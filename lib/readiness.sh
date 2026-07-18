@@ -139,20 +139,6 @@ readiness_btrfs_scrub_status() {
   [[ -n "${out}" ]] && printf '%s\n' "${out}"
 }
 
-readiness_btrfs_corruption_errs() {
-  local stats line val
-  stats="$(readiness_btrfs_device_stats / 2>/dev/null || true)"
-  [[ -n "${stats}" ]] || return 1
-  val=0
-  while IFS= read -r line; do
-    if [[ "${line}" == *corruption_errs* ]]; then
-      val="$(awk '{print $2}' <<< "${line}")"
-      break
-    fi
-  done <<< "${stats}"
-  printf '%s\n' "${val:-unknown}"
-}
-
 # ---------- LUKS ----------
 readiness_luks_uuid_from_cmdline() {
   local line uuid

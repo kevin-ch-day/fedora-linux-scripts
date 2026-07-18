@@ -5,13 +5,13 @@
 mobsf_stack_down() {
   mobsf_compose_cd || die_with_hint "Compose dir not found" "Run: sudo -E ./mobsf/mobsf_install.sh"
   info "Stopping MobSF stack..."
-  mobsf_pc down --remove-orphans || true
+  mobsf_pc_action "MobSF stack stop" down --remove-orphans || true
 }
 
 mobsf_stack_pull() {
   mobsf_compose_cd || die_with_hint "Compose dir not found" "Run: sudo -E ./mobsf/mobsf_install.sh"
   info "Pulling container images..."
-  require_ok "MobSF image pull failed" mobsf_pc pull
+  require_ok "MobSF image pull failed" mobsf_pc_action "MobSF image pull" pull
 }
 
 mobsf_wait_postgres() {
@@ -65,16 +65,19 @@ mobsf_stack_up_ordered() {
   mobsf_compose_validate "${MOBSF_COMPOSE_FILE}"
 
   info "Starting postgres..."
-  mobsf_pc up -d --force-recreate postgres
+  require_ok "Postgres container start failed" \
+    mobsf_pc_action "Postgres container start" up -d --force-recreate postgres
   mobsf_wait_postgres >/dev/null
 
   info "Starting mobsf + djangoq..."
-  mobsf_pc up -d --force-recreate mobsf djangoq
+  require_ok "MobSF application container start failed" \
+    mobsf_pc_action "MobSF application container start" up -d --force-recreate mobsf djangoq
   mobsf_wait_for_container djangoq 60 >/dev/null || warn "djangoq container slow to appear"
   mobsf_wait_mobsf_internal >/dev/null
 
   info "Starting nginx..."
-  mobsf_pc up -d --force-recreate nginx
+  require_ok "MobSF nginx container start failed" \
+    mobsf_pc_action "MobSF nginx container start" up -d --force-recreate nginx
   mobsf_wait_for_container nginx 60 >/dev/null || die_with_hint \
     "nginx container did not appear" "Run: ./mobsf/mobsf_doctor.sh"
   sleep 2
@@ -143,8 +146,7 @@ mobsf_stack_install() {
   echo
   mobsf_stack_up_ordered
 
-  ok "MobSF install complete"
-  echo "[UI]     ${MOBSF_UI_URL}"
-  echo "[LOGIN]  default user/pass: mobsf / mobsf"
-  echo "[DOCTOR] ./mobsf/mobsf_doctor.sh"
+  theme_result_ready "MobSF install complete"
+  theme_note "UI: ${MOBSF_UI_URL} · default login: mobsf / mobsf"
+  theme_note "Verify: ./mobsf/mobsf_doctor.sh"
 }

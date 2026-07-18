@@ -52,5 +52,6 @@ pkg_install_cmd_if_missing curl curl
 
 mobsf_stack_install
 
-echo "[NEXT] ./mobsf/mobsf_doctor.sh"
-echo "[NEXT] Upload APK at ${MOBSF_UI_URL}"
+theme_result_ready "MobSF stack installed"
+theme_note "Verify: ./mobsf/mobsf_doctor.sh"
+theme_note "Upload APK: ${MOBSF_UI_URL}"

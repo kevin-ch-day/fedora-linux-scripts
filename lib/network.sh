@@ -15,17 +15,6 @@ source "${_NETWORK_LIB_DIR}/common.sh"
 # shellcheck source=health.sh
 source "${_NETWORK_LIB_DIR}/health.sh"
 
-# ---------- privileged read (no changes) ----------
-network_run_readonly() {
-  if [[ "${EUID}" -eq 0 ]]; then
-    "$@" 2>&1 || printf '[exit %s]\n' "$?"
-  elif have sudo; then
-    sudo "$@" 2>&1 || printf '[exit %s]\n' "$?"
-  else
-    "$@" 2>&1 || printf '[exit %s]\n' "$?"
-  fi
-}
-
 network_run_readonly_capture() {
   if [[ "${EUID}" -eq 0 ]]; then
     "$@" 2>/dev/null
@@ -39,10 +28,6 @@ network_run_readonly_capture() {
 # ---------- sockets / listeners ----------
 network_ss_listening() {
   network_run_readonly_capture ss -tulpen
-}
-
-network_ss_established() {
-  network_run_readonly_capture ss -tunap state established
 }
 
 # Non-localhost listeners (0.0.0.0, *, [::])
@@ -68,11 +53,6 @@ network_listener_summary() {
   printf 'public=%s localhost=%s\n' "${pub}" "${loc}"
 }
 
-network_listening_on_port() {
-  local port="$1"
-  network_ss_listening | grep -E ":${port}[[:space:]]|:${port}\$"
-}
-
 network_listening_has_avahi() {
   network_ss_listening | grep -qE ':5353.*avahi|:5353.*5353'
 }
@@ -87,10 +67,6 @@ network_listening_has_cups() {
 
 network_mariadb_listens_public() {
   network_ss_listening | grep -E ':3306' | grep -qE '0\.0\.0\.0:3306|\[::\]:3306|\*:3306'
-}
-
-network_ssh_listens_public() {
-  network_ss_listening | grep -qE '0\.0\.0\.0:22|\[::\]:22|\*:22'
 }
 
 # ---------- nmcli / links ----------
@@ -127,23 +103,6 @@ network_wired_ethernet_connected() {
   network_nmcli_available || return 1
   nmcli -t -f DEVICE,TYPE,STATE device status 2>/dev/null \
     | awk -F: '$2 == "ethernet" && $3 == "connected" { found=1 } END { exit !found }'
-}
-
-network_primary_interfaces() {
-  if network_nmcli_available; then
-    nmcli -t -f DEVICE,STATE device status 2>/dev/null \
-      | awk -F: '$2 ~ /connected/ {print $1}' | grep -v '^lo$' || true
-    return 0
-  fi
-  ip -o link show up 2>/dev/null | awk -F': ' '{print $2}' | awk '{print $1}' | grep -v '^lo$' || true
-}
-
-network_default_route_iface() {
-  ip route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}' || true
-}
-
-network_ipv4_summary() {
-  ip -br -4 addr 2>/dev/null || true
 }
 
 # ---------- firewalld ----------
@@ -236,11 +195,6 @@ network_firewall_zone_exists() {
   network_firewall_cmd --get-zones 2>/dev/null | tr ' ' '\n' | grep -qx "${zone}"
 }
 
-network_firewall_zone_of_interface() {
-  local iface="$1"
-  network_firewall_cmd --get-zone-of-interface="${iface}" | head -n 1 | tr -d '[:space:]'
-}
-
 network_firewall_interfaces_in_zone() {
   local zone="$1"
   network_firewall_cmd --info-zone="${zone}" 2>/dev/null \
@@ -278,14 +232,6 @@ network_firewall_zone_is_strict() {
     return 1
   done <<< "${svcs}"
   grep -qx ssh <<< "${svcs}"
-}
-
-network_firewall_print_zone() {
-  local zone="$1"
-  local svcs ports
-  svcs="$(network_firewall_zone_services "${zone}" | tr '\n' ' ' | sed 's/ $//')"
-  ports="$(network_firewall_zone_ports "${zone}" | tr '\n' ' ' | sed 's/ $//')"
-  printf 'zone=%s services=[%s] ports=[%s]\n' "${zone}" "${svcs:-none}" "${ports:-none}"
 }
 
 network_firewall_active_wired_connections() {

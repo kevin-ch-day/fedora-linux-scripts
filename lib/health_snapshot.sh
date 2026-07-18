@@ -252,15 +252,6 @@ health_snapshot_format_drive_line() {
   fi
 }
 
-health_snapshot_drive_display_name() {
-  local disk="$1" name=""
-  [[ -n "${disk}" ]] || return 1
-  name="$(health_snapshot_physical_disk_name "${disk}" 2>/dev/null || true)"
-  [[ -n "${name}" ]] || name="$(health_snapshot_resolve_disk_node "${disk}" 2>/dev/null || true)"
-  [[ -n "${name}" ]] || name="${disk}"
-  printf '%s\n' "${name}"
-}
-
 health_snapshot_compact_dir_lines() {
   local base="$1" limit="$2"
   local timeout_sec="${3:-${FEDORA_HEALTH_DU_TIMEOUT:-12}}"

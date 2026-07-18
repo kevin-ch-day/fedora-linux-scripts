@@ -74,10 +74,6 @@ sys.exit(1)
 PY
 }
 
-android_user_mktemp_dir() {
-  run_as_real_user mktemp -d
-}
-
 android_user_download() {
   local url="$1"
   local dest="$2"
@@ -96,16 +92,6 @@ android_verify_as_user() {
   userbin="${home}/.local/bin"
   run_as_real_user env "HOME=${home}" "PATH=${userbin}:${PATH}" \
     bash -c "source '${_AND_LIB_DIR}/android.sh' && ${fn}"
-}
-
-android_verify_script_usage() {
-  local label="$1"
-  local script="${2:-verify_${label}_install.sh}"
-  cat <<EOF
-Usage: ${script} [--help]
-
-Verifies user-scope ${label} under ~/.local/ (install via android_re_*_user_install.sh).
-EOF
 }
 
 # ---------- RE tool verification ----------

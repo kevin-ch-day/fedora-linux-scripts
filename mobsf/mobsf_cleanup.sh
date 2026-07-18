@@ -31,4 +31,5 @@ done
 
 mobsf_require_tools
 mobsf_cleanup_orphans
-echo "[NEXT] sudo -E ./mobsf/mobsf_install.sh  OR  ./mobsf/mobsf_start.sh"
+theme_result_ready "MobSF orphan cleanup complete"
+theme_note "Next: sudo -E ./mobsf/mobsf_install.sh · or ./mobsf/mobsf_start.sh"

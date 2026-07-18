@@ -6,6 +6,8 @@ set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=../lib/profiles.sh
 source "${ROOT}/lib/profiles.sh"
+# shellcheck source=../lib/install_engine.sh
+source "${ROOT}/lib/install_engine.sh"
 TESTS=0
 
 pass() {
@@ -55,5 +57,31 @@ pass "web-stack dry-run remains non-mutating and available"
 grep -q '^INSTALL_DOCKER=0$' "${ROOT}/dev/fedora_container_kvm_setup.sh" ||
   fail "combined infrastructure installer does not default to Podman"
 pass "combined infrastructure installer defaults to Podman"
+
+(
+  sandbox="$(mktemp -d)"
+  trap 'rm -rf "${sandbox}"' EXIT
+  marker="${sandbox}/ran"
+  printf '#!/usr/bin/env bash\nprintf "first\\n" >> %q\n' "${marker}" > "${sandbox}/first.sh"
+  printf '#!/usr/bin/env bash\nprintf "second\\n" >> %q\n' "${marker}" > "${sandbox}/second.sh"
+
+  profile_is_valid() { return 0; }
+  profile_description() { printf 'test profile\n'; }
+  profile_risk_level() { printf 'controlled\n'; }
+  profile_impact_summary() { printf 'test only\n'; }
+  profile_step_count() { printf '2\n'; }
+  profile_wants_mobsf() { return 1; }
+  profile_wants_doctor() { return 1; }
+  profile_next_action() { printf 'none\n'; }
+  install_engine_validate_profile() { return 0; }
+  profile_iter_steps() {
+    printf 'First step\tfirst.sh\tnone\t\n'
+    printf 'Second step\tsecond.sh\tnone\t\n'
+  }
+
+  printf 'y\nn\n' | install_engine_run_profile "${sandbox}" test 0 0 0 0 0 >/dev/null
+  [[ "$(cat "${marker}")" == first ]]
+) || fail "profile confirmations consumed the internal step stream instead of user input"
+pass "profile confirmations read user input without consuming profile steps"
 
 printf '[OK]   Profile safety regressions passed (%s)\n' "${TESTS}"

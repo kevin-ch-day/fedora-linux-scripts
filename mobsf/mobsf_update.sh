@@ -36,11 +36,13 @@ mobsf_stack_pull
 info "Stopping stack for migration..."
 mobsf_stack_down
 info "Starting postgres for migration..."
-mobsf_pc up -d postgres
+require_ok "Postgres container start failed" \
+  mobsf_pc_action "Postgres container start" up -d postgres
 mobsf_wait_postgres >/dev/null
 info "Running database migrations..."
 require_ok "MobSF migrate failed — try: sudo -E ./mobsf/mobsf_reset.sh --keep" \
-  mobsf_pc run --rm --no-deps mobsf /home/mobsf/Mobile-Security-Framework-MobSF/scripts/migrate.sh
+  mobsf_pc_action "MobSF database migration" run --rm --no-deps mobsf \
+    /home/mobsf/Mobile-Security-Framework-MobSF/scripts/migrate.sh
 
 info "Restarting stack..."
 mobsf_stack_up_ordered

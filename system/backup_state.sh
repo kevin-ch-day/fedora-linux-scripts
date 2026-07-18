@@ -99,5 +99,5 @@ fi
 info "Running system info snapshot..."
 bash "${_SCRIPT_DIR}/system_info.sh" > "${OUT_DIR}/system_info.txt" 2>&1 || true
 
-ok "Backup complete: ${OUT_DIR}"
-echo "[NEXT] Copy ${OUT_DIR} to external storage before reinstall."
+theme_result_ready "Backup complete: ${OUT_DIR}"
+theme_note "Copy this export to approved external storage before reinstalling"
