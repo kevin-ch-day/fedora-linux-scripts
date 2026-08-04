@@ -116,7 +116,7 @@ Consolidation (RE engine, lane launchers, MobSF split, secrets, autostart, dynam
 
 MobSF is a separate entry: `./mobsf.sh`
 
-CLI shortcuts exit to shell (by design): `./run.sh 1`–`3`, `--system`, `--dev`, `--android`, `--doctor`, `--rebuild*`
+CLI shortcuts exit to shell (by design): `./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`, `--rebuild*`
 
 ### MobSF menu (`./mobsf.sh`)
 

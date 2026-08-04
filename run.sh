@@ -4,26 +4,35 @@
 #
 # Run: ./run.sh [--help|--check|--daily|--rebuild|--install|--onboard|…]
 #
-# Legacy redirects (same behavior): ./fedora.sh  ·  ./fedora_rebuild.sh
-# MobSF is separate: ./mobsf.sh
+# MobSF is the one separate module entry: ./mobsf.sh
 
 set -euo pipefail
 
 FEDORA_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-# --no-color before lib load (also respects NO_COLOR via theme_init)
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --no-color) FEDORA_NO_COLOR=1; shift ;;
-    *) break ;;
+# Normalize the global display flag before any dispatch. This keeps it out of
+# nested command parsers and permits either `--no-color --check` or
+# `--check --no-color`.
+_fedora_args=()
+for _fedora_arg in "$@"; do
+  case "${_fedora_arg}" in
+    --no-color) FEDORA_NO_COLOR=1 ;;
+    *) _fedora_args+=("${_fedora_arg}") ;;
   esac
 done
+set -- "${_fedora_args[@]}"
+unset _fedora_args _fedora_arg
 
 # Inspect dispatch is intentionally before library and menu initialization.
 # This preserves the no-write/no-sudo inspection contract.
 if [[ "${1:-}" == "--inspect" ]]; then
   shift
-  exec bash "${FEDORA_ROOT}/inspect.sh" "$@"
+  INSPECT_PYTHON="${PYTHON:-python3}"
+  if ! command -v "${INSPECT_PYTHON}" >/dev/null 2>&1; then
+    printf 'error: %s is required for host inspection\n' "${INSPECT_PYTHON}" >&2
+    exit 127
+  fi
+  exec "${INSPECT_PYTHON}" "${FEDORA_ROOT}/libexec/inspect_host.py" "$@"
 fi
 
 # shellcheck source=lib/menu.sh
@@ -151,14 +160,15 @@ fi
 
 fedora_usage() {
   cat <<EOF
-Fedora Workstation Toolkit — you only need ./run.sh
+Fedora Workstation Toolkit — daily control starts with ./run.sh
 
 Quick start:
+  ./setup.sh                 First clone: validate, then choose a setup profile
   ./run.sh                   Interactive main menu
   ./run.sh --daily           Update + post-update check (recommended daily)
   ./run.sh --check           Validate toolkit readiness
   ./run.sh --rebuild         Full research workstation setup
-  ./install.sh workstation --plan   Daily dev box (update + VS Code + KVM)
+  ./run.sh --workstation --plan     Daily dev box (update + VS Code + KVM)
   ./run.sh --list-profiles          Profile catalog
 
 More shortcuts:
@@ -178,9 +188,7 @@ More shortcuts:
   ./run.sh --rebuild-check
   ./run.sh --rebuild
   ./run.sh --smoke          Dynamic CLI/menu tests
-  ./setup.sh                Repo readiness (validate · optional smoke)
-
-Compatibility: ./fedora.sh and ./fedora_rebuild.sh redirect here (legacy names only).
+  ./run.sh --check          Repo readiness (validate · smoke · rebuild check)
 
 MobSF stack (separate lifecycle):
   ./mobsf.sh
@@ -206,14 +214,13 @@ Options:
   --daily            Update then post-update check (same as menu [2])
   --daily --quick    Daily sync with quick update step
   --install          Install workstation hub (dev · desktop · Android · profiles)
-  --profile NAME     Run install profile (passes through to ./install.sh)
-  --list-profiles    Print install profile catalog (./install.sh list)
+  --profile NAME     Run setup profile (passes through to ./setup.sh)
+  --list-profiles    Print setup profile catalog (./setup.sh list)
   --workstation      Run workstation profile (update + dev tools; add --yes)
   --onboard          Fresh machine wizard (setup → check → rebuild)
-  --onboard --skip-setup  Onboard from check step (after ./setup.sh)
+  --onboard --skip-setup  Onboard from check step (after --check)
   FEDORA_THEME       dark (default) or light — console color palette
   FEDORA_THEME_DENSITY  normal (default) or compact — menu spacing
-  ./theme_preview.sh Preview all theme elements
   --check            Validate + smoke + rebuild readiness (add --full or --fix-repos)
   --smoke          Run ./smoke_test.sh --quick (append --full for full doctors)
   --fix-repos        Fix DNF .repo permissions (sudo — common rebuild-check fix)
@@ -235,20 +242,16 @@ Options:
   --dev              Open Developer tools
   --android          Open Android RE tools
 
-Area launchers:
-  ./system/system.sh       Host · updates · logs · cleanup
-  ./dev/dev.sh --developer-tools
-  ./dev/dev.sh --desktop-environments
-  ./dev/dev.sh --virtualization
-  ./dev/dev.sh --web-stack
-  ./android/android.sh     Android RE tools · verify · ADB (MobSF: ./mobsf.sh)
+Area routes:
+  ./run.sh --system        Host · updates · logs · cleanup
+  ./run.sh --dev           Developer tools · desktop · virtualization · web
+  ./run.sh --android       Android RE tools · verify · ADB
 
 Fresh install flow:
   ./setup.sh
-  ./run.sh --onboard              # guided: setup → check → rebuild
-  ./run.sh --check
-  ./install.sh research --yes     # or ./run.sh --rebuild --yes
-  ./install.sh list               # other profiles (android-re, dev-stack, mobsf, …)
+  ./run.sh --onboard              # guided: check → rebuild
+  ./run.sh --profile research --yes  # or ./run.sh --rebuild --yes
+  ./run.sh --list-profiles           # android-re, dev-stack, mobsf, …
   ./run.sh --profile research --plan
 
 Legacy scripts in ./legacy/ are disabled reference only.
@@ -264,7 +267,6 @@ while [[ $# -gt 0 ]]; do
       echo "fedora-linux-scripts run.sh 1.8.0"
       exit 0
       ;;
-    --no-color) shift ;;
     --check)
       shift
       _fedora_run_check "$@"
@@ -322,15 +324,15 @@ while [[ $# -gt 0 ]]; do
     --profile)
       shift
       [[ -n "${1:-}" ]] || die "--profile requires a name (try: ./run.sh --list-profiles)"
-      exec bash "${FEDORA_ROOT}/install.sh" "$@"
+      exec bash "${FEDORA_ROOT}/setup.sh" "$@"
       ;;
     --list-profiles)
       shift
-      exec bash "${FEDORA_ROOT}/install.sh" list "$@"
+      exec bash "${FEDORA_ROOT}/setup.sh" list "$@"
       ;;
     --workstation)
       shift
-      exec bash "${FEDORA_ROOT}/install.sh" workstation "$@"
+      exec bash "${FEDORA_ROOT}/setup.sh" workstation "$@"
       ;;
     --rebuild) shift; _fedora_run_rebuild "$@"; exit $? ;;
     --rebuild-yes) shift; _fedora_run_rebuild --yes "$@"; exit $? ;;
@@ -346,7 +348,13 @@ while [[ $# -gt 0 ]]; do
     --host-context) shift; exec bash "${FEDORA_ROOT}/system/host_context.sh" "$@" ;;
     --rebuild-check) shift; exec bash "${FEDORA_ROOT}/system/rebuild_readiness_check.sh" "$@" ;;
     --system) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/system/system.sh" "$@" ;;
-    --dev) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" --developer-tools "$@" ;;
+    --dev)
+      shift
+      if (( $# == 0 )); then
+        FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" --developer-tools
+      fi
+      FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/dev/dev.sh" "$@"
+      ;;
     --android) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/android/android.sh" "$@" ;;
     *) die "Unknown option: $1 (try --help)" ;;
   esac
@@ -401,9 +409,9 @@ _fedora_install_dispatch() {
     3) _fedora_inline_menu dev_menu_virtualization_header dev dev_menu_infrastructure; return 0 ;;
     4) _fedora_inline_menu dev_menu_web_header dev dev_menu_web_stack; return 0 ;;
     5) _fedora_inline_menu android_menu_main_header android android_main_menu; return 0 ;;
-    6) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/install.sh" workstation || true; menu_pause; return 0 ;;
-    7) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/install.sh" research || true; menu_pause; return 0 ;;
-    8) bash "${FEDORA_ROOT}/install.sh" || true; menu_pause; return 0 ;;
+    6) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/setup.sh" workstation || true; menu_pause; return 0 ;;
+    7) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/setup.sh" research || true; menu_pause; return 0 ;;
+    8) bash "${FEDORA_ROOT}/setup.sh" list || true; menu_pause; return 0 ;;
     9)
       warn "Broad guided setup: review each step and skip anything not intended for this host."
       FEDORA_FROM_MENU=1 _fedora_run_rebuild || true

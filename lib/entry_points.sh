@@ -27,21 +27,13 @@ fedora_entry_points_check() {
     theme_section "Entry points"
   fi
 
-  for path in run.sh inspect.sh setup.sh install.sh mobsf.sh validate.sh smoke_test.sh; do
+  for path in run.sh setup.sh mobsf.sh validate.sh smoke_test.sh; do
     if [[ -x "${fedora_root}/${path}" ]]; then
       ok "./${path}"
     else
       warn "Missing or not executable: ./${path}"
       rc=1
       n=$((n + 1))
-    fi
-  done
-
-  for path in fedora.sh fedora_rebuild.sh; do
-    if [[ -x "${fedora_root}/${path}" ]]; then
-      ok "./${path} (legacy redirect → run.sh)"
-    else
-      warn "Legacy redirect missing: ./${path} (optional — use ./run.sh)"
     fi
   done
 

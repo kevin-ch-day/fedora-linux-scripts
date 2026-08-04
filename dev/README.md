@@ -2,7 +2,7 @@
 
 Git, VS Code, containers/KVM, VirtualBox, and optional LAMP/phpMyAdmin stack.
 
-**Menu:** `./dev/dev.sh` · **From main entry:** `./run.sh` → `[2]` or `./run.sh --dev`
+**Access:** `./run.sh` → Install workstation → Developer tools, or `./run.sh --dev`
 
 ---
 

@@ -20,7 +20,7 @@ jobs:
         run: ./validate.sh --shellcheck --install-audit
 
       - name: Install profile validation
-        run: ./install.sh research --validate && ./install.sh workstation --validate
+        run: ./setup.sh research --validate && ./setup.sh workstation --validate
 
       - name: Smoke tests (CI mode)
         run: ./smoke_test.sh --ci

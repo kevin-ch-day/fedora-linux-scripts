@@ -21,7 +21,7 @@ usage() {
   cat <<EOF
 Developer workstation areas — developer tools, desktop environments, virtualization, and web/database services.
 
-From main entry: ./run.sh → [4] Developer tools  or  ./run.sh --dev
+From main entry: ./run.sh → [5] → [1], or ./run.sh --dev
 
 Usage: $(basename "$0") [command|option]
 

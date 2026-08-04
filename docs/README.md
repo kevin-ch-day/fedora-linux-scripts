@@ -5,7 +5,7 @@ Guides for **fedora-linux-scripts**.
 | Doc | Audience | Purpose |
 |-----|----------|---------|
 | **[GETTING-STARTED.md](GETTING-STARTED.md)** | Everyone | Onboarding, doctors, shims, rebuild sequence |
-| **[INSTALL-PROFILES.md](INSTALL-PROFILES.md)** | Everyone | One-command install profiles (`./install.sh`) |
+| **[INSTALL-PROFILES.md](INSTALL-PROFILES.md)** | Everyone | One-command setup profiles (`./setup.sh`) |
 | **[../README.md](../README.md)** | Everyone | Script index |
 | **[AUDIT.md](AUDIT.md)** | Maintainers | Security matrix, open items, menu QA |
 | **[architecture/ADR-0001](architecture/ADR-0001-project-identity-and-control-model.md)** | Maintainers | Accepted project identity, boundaries, command contracts, and control model |

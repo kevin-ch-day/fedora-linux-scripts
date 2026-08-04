@@ -2,7 +2,7 @@
 
 Quick reference for the Android security / reverse-engineering workstation on Fedora.
 
-**Menu:** `./android/android.sh` · **From main entry:** `./run.sh --android`
+**Access:** `./run.sh --android`
 
 **MobSF** (separate lifecycle): `./mobsf.sh` — not part of this lane.
 
@@ -25,7 +25,7 @@ The menu’s first option runs the complete `android-re` profile: standard core,
 all APK reverse-engineering tools, then verification.
 
 ```bash
-./install.sh android-re
+./setup.sh android-re
 ```
 
 The equivalent direct sequence is:

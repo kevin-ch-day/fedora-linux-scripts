@@ -2,7 +2,7 @@
 
 Host maintenance, workstation readiness, updates, logs, and cleanup for Fedora research workstations.
 
-**Menu:** `./system/system.sh` · **From main entry:** `./run.sh` → `[6]` or `./run.sh --system`
+**Access:** `./run.sh` → `[6]` or `./run.sh --system`
 
 ---
 
@@ -33,7 +33,7 @@ Recovery playbook: [docs/RECOVERY.md](../docs/RECOVERY.md) · Phase 2 validation
 ## Menu structure
 
 ```text
-system/system.sh  (also ./run.sh → [6])
+./run.sh --system
 ├── [Updates — start here]
 │   ├── [1] Update Fedora
 │   ├── [2] Update + post-update check   ← daily workflow
@@ -58,7 +58,7 @@ CLI shortcuts: `./system/system.sh daily-driver|post-update-check|btrfs-health|l
 
 ## Logs
 
-Preferred: **`./system/log_engine.sh`** — full CLI and log file list in [logs/README.md](../logs/README.md).
+Use **`./run.sh --system logs`** for the logs menu. Full implementation details are in [logs/README.md](../logs/README.md).
 
 ---
 

@@ -8,38 +8,34 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 
 | Script | Use when |
 |--------|----------|
-| **`./run.sh`** | **Start here** — main menu, updates, install hub, guided rebuild, doctor |
-| **`./inspect.sh`** | Detailed no-sudo host inventory; saves nothing unless `--save` is used |
-| **`./setup.sh`** | **First clone** — executable check, `./validate.sh --quick`, optional smoke |
-| **`./install.sh`** | **Install profiles** — one-command stacks (`research`, `android-re`, `mobsf`, …) |
+| **`./setup.sh`** | **Start here after cloning** — validates the checkout, then offers setup profiles |
+| **`./run.sh`** | Day-to-day control — main menu, updates, install hub, guided rebuild, doctor |
 | **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate lifecycle) |
-
-`./fedora.sh` and `./fedora_rebuild.sh` are legacy names that redirect to `./run.sh` (old bookmarks still work).
 
 | Goal | Command |
 |------|---------|
-| **Daily driver check** | `./run.sh --daily-driver-check` or `./system/system.sh daily-driver` |
-| Disk/memory summary | `./run.sh --disk-summary` or `./system/health_snapshot.sh --show` |
-| Btrfs / LUKS / VirtualBox readiness | `./system/system.sh btrfs-health` · `luks-readiness` · `virtualbox-readiness` |
-| Package update noise | `./system/system.sh package-noise` |
+| **Daily driver check** | `./run.sh --daily-driver-check` |
+| Disk/memory summary | `./run.sh --disk-summary` |
+| Btrfs / LUKS / VirtualBox readiness | `./run.sh --system btrfs-health` · `luks-readiness` · `virtualbox-readiness` |
+| Package update noise | `./run.sh --system package-noise` |
 | **Update Fedora** | `./run.sh --update` or main menu **[1]** |
 | **Daily sync (update + verify)** | `./run.sh --daily` or main menu **[2]** |
 | After `dnf upgrade` only | `./run.sh --post-update-check` or main menu **[3]** |
 | **All-in-one toolkit check** | `./run.sh --check` |
 | Fix DNF repos then re-check | `./run.sh --check --fix-repos` (sudo) |
 | Full check (+ doctor smoke) | `./run.sh --check --full` |
-| System maintenance | `./system/system.sh` or `./run.sh --system` |
-| Developer tools | `./dev/dev.sh --developer-tools` or `./run.sh --dev` |
-| Desktop environments | `./dev/dev.sh --desktop-environments` |
-| Virtualization & containers | `./dev/dev.sh --virtualization` |
-| Web/database stack | `./dev/dev.sh --web-stack` |
-| Android RE tools | `./android/android.sh` or `./run.sh --android` |
+| System maintenance | `./run.sh --system` |
+| Developer tools | `./run.sh --dev` |
+| Desktop environments | `./run.sh --dev --desktop-environments` |
+| Virtualization & containers | `./run.sh --dev --virtualization` |
+| Web/database stack | `./run.sh --dev --web-stack` |
+| Android RE tools | `./run.sh --android` |
 | Fedora doctor | `./run.sh --doctor` |
 | Fresh install report | `./run.sh --baseline` |
 | Rebuild readiness | `./run.sh --rebuild-check` |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
 | Install workstation | `./run.sh --install` or main menu **[5]** |
-| Install profiles | `./install.sh list` · `./install.sh workstation --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
+| Setup profiles | `./setup.sh list` · `./setup.sh workstation --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
 | Fresh machine wizard | `./run.sh --onboard` · `./setup.sh --guided` |
 | System readiness menu | `./run.sh --system` → **[1] Update** · **[2] Daily sync** |
 | Logs CLI | `./system/log_engine.sh` or System maintenance → **[9] View logs** |
@@ -47,6 +43,7 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Dynamic smoke tests | `./smoke_test.sh` or `./validate.sh --smoke --quick` |
 
 ```text
+./setup.sh               First clone: validate, then choose a setup profile
 ./run.sh                 Main menu (Fedora Workstation Toolkit)
                               [1] Update Fedora
                               [2] Update + post-update check  ← daily workflow
@@ -59,8 +56,8 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 ./run.sh --install       Install hub (profiles [6–8] · dev · Android · rebuild)
 ./run.sh --list-profiles Profile catalog
 ./run.sh --workstation   Daily dev profile (update + VS Code + KVM)
-./install.sh list        Profile catalog (research · android-re · dev-stack · …)
-./run.sh --onboard       Fresh machine wizard (setup → check → rebuild)
+./setup.sh list          Profile catalog (research · android-re · dev-stack · …)
+./run.sh --onboard       Fresh machine wizard (check → rebuild)
 ./run.sh --rebuild       Guided sequence (research profile)
 ./mobsf.sh               MobSF stack (separate entry — own menu)
 ```
@@ -68,14 +65,15 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 Shortcuts:
 
 ```bash
+./setup.sh                  # first clone — validation then setup profile picker
 ./run.sh                    # interactive main menu — [1] Update Fedora first
 ./run.sh --update           # full Fedora update (sudo)
 ./run.sh --daily            # update + post-update check (recommended)
 ./run.sh --daily --quick    # faster daily sync
 ./run.sh --install          # install workstation hub
 ./run.sh --onboard          # fresh machine: setup → check → rebuild
-./install.sh list           # profile catalog
-./install.sh research --yes # full research workstation (non-interactive)
+./setup.sh list             # profile catalog
+./setup.sh research --yes   # full research workstation (non-interactive)
 ./run.sh --check            # validate + smoke + rebuild readiness (start here)
 ./run.sh --check --fix-repos   # same, but fixes DNF .repo permissions first (sudo)
 ./run.sh --check --full     # includes full smoke + Fedora doctor
@@ -101,7 +99,7 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 
 ## First time on a new machine
 
-1. Clone this repo:
+1. Clone this repo, then run the bootstrap:
    ```bash
    git clone https://github.com/kevin-ch-day/fedora-linux-scripts.git
    cd fedora-linux-scripts
@@ -109,7 +107,7 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 2. **Validate before major setup** (read-only; installs nothing):
    ```bash
    ./setup.sh
-   # or guided path:
+   # or guided path after a successful bootstrap check:
    ./setup.sh --guided
    # or full wizard:
    ./run.sh --onboard
@@ -137,7 +135,7 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
    ```bash
    ./run.sh --rebuild
    # or non-interactive:
-   ./install.sh research --yes
+   ./setup.sh research --yes
    ```
    Pick a mode (interactive or auto-yes), confirm each major step. If a step fails, the rebuild continues and reports a failure count at the end.
 4. Log out/in (or reboot) after desktop/KVM group changes; `source ~/.bashrc` for PATH.
@@ -160,11 +158,11 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
 ./run.sh --disk-summary        # disk/memory snapshot (auto-refresh if stale)
 ./run.sh --post-update-check   # after dnf upgrade
 ./run.sh          # main menu — exit a lane to return here
-./run.sh 6        # jump straight into Android RE tools (then exit to shell)
+./run.sh --android # jump straight into Android RE tools (then exit to shell)
 ./mobsf.sh           # MobSF stack menu (separate from run.sh)
 ```
 
-After `sudo ./system/system_update.sh`: run `./run.sh --post-update-check` (the update script prints this and may offer to run it).
+After a manual Fedora update: run `./run.sh --post-update-check`.
 
 Recovery playbook (btrfs · LUKS · boot · VirtualBox): [RECOVERY.md](RECOVERY.md).
 
@@ -172,19 +170,19 @@ Readiness checks are **read-only by default**. Destructive actions (`--scrub`, `
 
 **Menu tips:** At any prompt, `[r]` repeats your last choice. `[0]` exits the lane picker or goes back one level in submenus. Menu reference: [AUDIT.md](AUDIT.md#menu-ux-reference).
 
-**CLI shortcuts** (`./run.sh 1`–`6`, `--system`, `--dev`, `--android`, `--doctor`, `--baseline`, `--rebuild-check`, `--rebuild`) run the target script and **exit to your shell** — they do not return to the lane picker. Use `./run.sh` with no args for the interactive menu loop.
+**CLI shortcuts** (`./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`, `--baseline`, `--rebuild-check`, `--rebuild`) run the target action and **exit to your shell** — they do not return to the lane picker. Use `./run.sh` with no args for the interactive menu loop.
 
 | Item | Key / launcher | Typical tasks |
 |------|----------------|---------------|
-| System maintenance | `1` / `./run.sh --system` | `dnf` update, logs, host snapshot |
-| Developer tools | `2` / `./run.sh --dev` | git identity, VS Code, tool verification |
-| Desktop environments | `3` / `./run.sh 3` | Cinnamon baseline, KDE, MATE, LXQt |
-| Virtualization & containers | `4` / `./run.sh 4` | Podman, Docker, KVM, VirtualBox |
-| Web/database stack | `5` / `./run.sh 5` | Apache, MariaDB, PHP, phpMyAdmin |
-| Android RE tools | `6` / `./run.sh --android` | SDK, RE tools, verify, ADB (MobSF: `./mobsf.sh`) |
-| Guided rebuild | `7` / `./run.sh --rebuild` | full workstation setup |
-| System health check | `8` / `./run.sh --doctor` | entry points · Android RE workstation |
-| Toolkit self-test | `9` / `./run.sh --check` | validate, smoke, rebuild readiness |
+| System maintenance | `[6]` / `./run.sh --system` | `dnf` update, logs, host snapshot |
+| Developer tools | `[5] → [1]` / `./run.sh --dev` | git identity, VS Code, tool verification |
+| Desktop environments | `[5] → [2]` / `./run.sh --dev --desktop-environments` | Cinnamon baseline, KDE, MATE, LXQt |
+| Virtualization & containers | `[5] → [3]` / `./run.sh --dev --virtualization` | Podman, Docker, KVM, VirtualBox |
+| Web/database stack | `[5] → [4]` / `./run.sh --dev --web-stack` | Apache, MariaDB, PHP, phpMyAdmin |
+| Android RE tools | `[5] → [5]` / `./run.sh --android` | SDK, RE tools, verify, ADB (MobSF: `./mobsf.sh`) |
+| Guided rebuild | `[4]` / `./run.sh --rebuild` | full workstation setup |
+| System health check | `[7]` / `./run.sh --doctor` | entry points · Android RE workstation |
+| Toolkit self-test | `8` / `./run.sh --check` | validate, smoke, rebuild readiness |
 | MobSF *(separate)* | `./mobsf.sh` · `./mobsf.sh --doctor` | stack install/start · MobSF health |
 
 From inside a submenu opened via `./run.sh`, choose **[0] Back** to return to the previous menu.

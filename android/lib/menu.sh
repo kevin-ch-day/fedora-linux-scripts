@@ -82,7 +82,7 @@ _android_main_dispatch() {
   case "$1" in
     0) menu_lane_handle_main_exit ;;
     1)
-      FEDORA_FROM_MENU=1 menu_run_script_scroll install.sh android-re
+      FEDORA_FROM_MENU=1 menu_run_script_scroll setup.sh android-re
       menu_pause
       return 0
       ;;

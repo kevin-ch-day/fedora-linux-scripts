@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INSPECT = ROOT / "inspect.sh"
+RUN = ROOT / "run.sh"
 SCHEMA = ROOT / "schemas" / "inventory-v1.schema.json"
 
 
@@ -29,7 +29,7 @@ class InspectTests(unittest.TestCase):
         env["XDG_CACHE_HOME"] = str(sandbox / "cache")
         env["XDG_DATA_HOME"] = str(sandbox / "data")
         return subprocess.run(
-            ["bash", str(INSPECT), *args],
+            ["bash", str(RUN), "--inspect", *args],
             cwd=ROOT,
             env=env,
             stdin=subprocess.DEVNULL,

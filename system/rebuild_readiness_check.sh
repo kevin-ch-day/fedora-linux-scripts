@@ -81,23 +81,16 @@ if [[ -x "${FEDORA_ROOT}/run.sh" ]]; then
   ok "run.sh: primary entry (executable)"
   PASSES=$((PASSES + 1))
 else
-  warn "run.sh: FAILED (not executable — run ./setup.sh)"
+  warn "run.sh: FAILED (not executable — run chmod +x ./run.sh)"
   ISSUES=$((ISSUES + 1))
 fi
 
-if [[ -x "${FEDORA_ROOT}/install.sh" ]]; then
-  ok "install.sh: profile launcher executable"
+if [[ -x "${FEDORA_ROOT}/setup.sh" ]]; then
+  ok "setup.sh: bootstrap/profile launcher executable"
   PASSES=$((PASSES + 1))
 else
-  warn "install.sh: FAILED (not executable)"
+  warn "setup.sh: FAILED (not executable)"
   ISSUES=$((ISSUES + 1))
-fi
-
-if [[ -x "${FEDORA_ROOT}/fedora.sh" ]]; then
-  ok "fedora.sh: legacy redirect present"
-  PASSES=$((PASSES + 1))
-else
-  theme_note "fedora.sh: optional legacy redirect (use ./run.sh)"
 fi
 
 if baseline_ping_ok 1.1.1.1 1; then

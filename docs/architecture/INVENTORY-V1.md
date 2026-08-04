@@ -1,16 +1,15 @@
 # Inventory schema v1
 
-`inspect.sh` is the first implementation of the workstation control model in
+`./run.sh --inspect` is the first implementation of the workstation control model in
 [ADR-0001](ADR-0001-project-identity-and-control-model.md).
 
 ## Contract
 
 ```bash
-./inspect.sh
-./inspect.sh --format text
-./inspect.sh --save
-./inspect.sh --save ~/inventory.json
 ./run.sh --inspect
+./run.sh --inspect --format text
+./run.sh --inspect --save
+./run.sh --inspect --save ~/inventory.json
 ```
 
 Default behavior:

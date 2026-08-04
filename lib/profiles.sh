@@ -2,7 +2,7 @@
 # lib/profiles.sh — named install / rebuild profiles (step lists)
 # Version: 0.4.0
 #
-# Profiles are consumed by lib/install_engine.sh, install.sh, lib/rebuild.sh.
+# Profiles are consumed by lib/install_engine.sh, setup.sh, lib/rebuild.sh.
 # Do not execute directly.
 
 if [[ -n "${FEDORA_PROFILES_SH_LOADED:-}" ]]; then
@@ -234,8 +234,8 @@ profile_print_catalog() {
     risk="$(profile_risk_level "${p}")"
     theme_note_kv "${p}" "[${risk}] ${desc}"
   done
-  theme_note "Run: ./install.sh <profile> [--yes] [--dry-run] [--plan]"
-  theme_note "Plan: ./install.sh <profile> --plan   ·   ./run.sh --profile <name> --dry-run"
+  theme_note "Run: ./setup.sh <profile> [--yes] [--dry-run] [--plan]"
+  theme_note "Plan: ./setup.sh <profile> --plan   ·   ./run.sh --profile <name> --dry-run"
 }
 
 # profile_validate_steps ROOT — returns 0 if all step scripts exist

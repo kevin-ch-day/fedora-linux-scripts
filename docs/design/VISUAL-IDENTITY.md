@@ -256,7 +256,6 @@ pass establishes:
 - status-only success, warning, and failure colors;
 - dark, light, 256-color, 16-color, and no-color behavior.
 
-Run `./theme_preview.sh` in an interactive terminal to inspect the component
 system. Visual changes should be made centrally rather than with one-off ANSI
 sequences in feature scripts.
 

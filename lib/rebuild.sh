@@ -3,7 +3,7 @@
 # Version: 0.1.0
 #
 # Source after lib/common.sh, lib/menu.sh, lib/install_engine.sh.
-# Invoked by: ./run.sh --rebuild  ·  ./install.sh research
+# Invoked by: ./run.sh --rebuild  ·  ./setup.sh research
 
 if [[ -n "${FEDORA_REBUILD_SH_LOADED:-}" ]]; then
   return 0 2>/dev/null || exit 0
@@ -29,7 +29,7 @@ Usage: ./run.sh --rebuild [options]
 Guided rebuild using the research install profile (system update → KVM →
 Android → RE tools → optional MobSF → research doctor).
 
-Equivalent: ./install.sh research [options]
+Equivalent: ./setup.sh research [options]
 
 Not included (run from Dev lane after rebuild): git, VS Code, Cinnamon desktop,
 LAMP/phpMyAdmin — see docs/GETTING-STARTED.md § After rebuild.
@@ -45,11 +45,11 @@ Options:
   --plan                 Print profile step plan (no execution)
   --help, -h             Show this help
 
-Profiles: ./install.sh list
+Profiles: ./setup.sh list
 
 With --yes: auto-installs MobSF when compose is missing; runs research doctor at end.
 
-Entry: ./run.sh --rebuild   (preferred — ./fedora_rebuild.sh redirects here)
+Entry: ./run.sh --rebuild
 See: docs/GETTING-STARTED.md
 EOF
 }
@@ -85,7 +85,7 @@ _fedora_rebuild_mode_menu() {
   }
 
   menu_loop "Choose rebuild mode" \
-    "profile: ${profile} · ./install.sh list for others" \
+    "profile: ${profile} · ./setup.sh list for others" \
     _rebuild_mode_items _rebuild_mode_dispatch
 }
 
@@ -114,7 +114,7 @@ fedora_rebuild_run() {
     esac
   done
 
-  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./install.sh list)"
+  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./setup.sh list)"
 
   if (( plan_only )); then
     install_engine_run_profile "${root}" "${profile}" 0 0 0 0 1

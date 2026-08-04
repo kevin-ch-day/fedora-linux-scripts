@@ -43,12 +43,12 @@ if profile_requires_service_ack mariadb-no-start; then
 fi
 pass "service-start acknowledgement is scoped to web-stack"
 
-if bash "${ROOT}/install.sh" web-stack --yes >/dev/null 2>&1; then
+if bash "${ROOT}/setup.sh" web-stack --yes >/dev/null 2>&1; then
   fail "web-stack --yes bypassed service-start acknowledgement"
 fi
 pass "web-stack auto mode requires explicit service-start acknowledgement"
 
-dry_output="$(bash "${ROOT}/install.sh" web-stack --yes --dry-run)" ||
+dry_output="$(bash "${ROOT}/setup.sh" web-stack --yes --dry-run)" ||
   fail "web-stack dry-run was incorrectly blocked"
 grep -q 'Changes:.*none' <<< "${dry_output}" ||
   fail "profile dry-run is presented as a completed installation"

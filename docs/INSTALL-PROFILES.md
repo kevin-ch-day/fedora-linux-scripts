@@ -1,18 +1,18 @@
 # Install profiles
 
-One-command workstation setup via **`./install.sh`** and the shared profile engine in **`lib/profiles.sh`** / **`lib/install_engine.sh`**.
+One-command workstation setup via **`./setup.sh`** and the shared profile engine in **`lib/profiles.sh`** / **`lib/install_engine.sh`**.
 
 ---
 
 ## Quick reference
 
 ```bash
-./install.sh list                      # catalog
-./install.sh research --plan           # numbered step plan (no sudo)
-./install.sh research --validate       # verify scripts exist
-./install.sh research --dry-run --yes  # show what would run
-./install.sh research --yes            # broad research workstation (review plan first)
-./run.sh --profile dev-full --yes      # same as install.sh
+./setup.sh list                        # catalog
+./setup.sh research --plan             # numbered step plan (no sudo)
+./setup.sh research --validate         # verify scripts exist
+./setup.sh research --dry-run --yes    # show what would run
+./setup.sh research --yes              # broad research workstation (review plan first)
+./run.sh --profile dev-full --yes      # same profile engine
 ./run.sh --rebuild --plan              # research plan (compat)
 ```
 
@@ -54,7 +54,7 @@ One-command workstation setup via **`./install.sh`** and the shared profile engi
 ```bash
 ./setup.sh --guided          # validate → onboard wizard (check → rebuild)
 ./run.sh --onboard           # setup → check → optional rebuild
-./install.sh research --yes  # skip wizard, run full stack
+./setup.sh research --yes    # skip wizard, run full stack
 ```
 
 See [GETTING-STARTED.md](GETTING-STARTED.md) for doctor matrix and post-rebuild optional steps (desktop, git interactive, etc.).
@@ -67,7 +67,7 @@ See [GETTING-STARTED.md](GETTING-STARTED.md) for doctor matrix and post-rebuild 
 2. Implement `profile_description`, `profile_iter_steps` rows (TSV: title, script, sudo mode, args)
 3. Optionally wire `profile_wants_mobsf` / `profile_wants_doctor`
 4. Run `./validate.sh --quick` (profile step script check)
-5. Run `./install.sh <profile> --plan` to review
+5. Run `./setup.sh <profile> --plan` to review
 
 ---
 

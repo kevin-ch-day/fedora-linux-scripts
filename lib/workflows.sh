@@ -94,10 +94,10 @@ workflow_fresh_machine_hint() {
   theme_section "Fresh machine path"
   theme_note_kv "1" "./setup.sh  or  ./run.sh --onboard"
   theme_note_kv "2" "./run.sh --check"
-  theme_note_kv "3" "./install.sh research --yes   (or ./run.sh --rebuild --yes)"
+  theme_note_kv "3" "./setup.sh research --yes   (or ./run.sh --rebuild --yes)"
   theme_note_kv "4" "./run.sh --doctor"
   theme_note_kv "Daily" "./run.sh --daily   (update + post-update)"
-  theme_note_kv "Profiles" "./install.sh list"
+  theme_note_kv "Profiles" "./setup.sh list"
 }
 
 # workflow_onboard_fresh_machine ROOT [SKIP_SETUP]
@@ -120,7 +120,7 @@ workflow_onboard_fresh_machine() {
 
   if (( ! skip_setup )); then
     theme_report_progress 1 3 "Repository setup validation"
-    bash "${root}/setup.sh" || setup_ec=$?
+    bash "${root}/setup.sh" --check || setup_ec=$?
     echo
     if (( setup_ec != 0 )); then
       theme_summary_box "Onboarding paused" \
@@ -155,7 +155,7 @@ workflow_onboard_fresh_machine() {
       rebuild_state="failed"
     }
   else
-    theme_note "Skipped rebuild — run: ./install.sh research --yes"
+    theme_note "Skipped rebuild — run: ./setup.sh research --yes"
   fi
   echo
 

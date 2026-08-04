@@ -122,7 +122,7 @@ fedora_toolkit_check() {
         "Validate:   passed" \
         "Smoke:      passed" \
         "Rebuild:    ready" \
-        "Next:       ./run.sh --daily  ·  ./install.sh workstation --plan"
+        "Next:       ./run.sh --daily  ·  ./setup.sh workstation --plan"
     fi
     return 0
   fi

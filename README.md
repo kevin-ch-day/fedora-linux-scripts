@@ -6,17 +6,13 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 
 | Entry | Use |
 |-------|-----|
-| **`./run.sh`** | **Start here** — main menu, updates, install, rebuild, doctor |
-| **`./inspect.sh`** | Non-mutating host inventory — JSON to stdout, explicit `--save` |
-| **`./setup.sh`** | First-run repo check (validate · optional smoke) |
-| **`./install.sh`** | Install profiles — one-command stacks (`research`, `android-re`, `mobsf`, …) |
+| **`./setup.sh`** | **Start here after cloning** — validates the checkout, then offers setup profiles |
+| **`./run.sh`** | Day-to-day workstation control — menu, updates, rebuild, doctor |
 | **`./mobsf.sh`** | MobSF stack only — install/start/**doctor** |
 
-Legacy names `./fedora.sh` and `./fedora_rebuild.sh` redirect to `./run.sh` (old bookmarks still work).
-
 ```bash
-./setup.sh            # first-run repo check (no sudo · no installs)
-./run.sh              # interactive menu
+./setup.sh            # first clone: validate, then choose a setup profile
+./run.sh              # day-to-day interactive menu
 ./run.sh --check      # validate + smoke + rebuild readiness (start here)
 ./run.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
 ./run.sh --check --full        # + full smoke + Fedora doctor
@@ -26,8 +22,6 @@ Legacy names `./fedora.sh` and `./fedora_rebuild.sh` redirect to `./run.sh` (old
 ./run.sh --baseline   # fresh-install host baseline → logs/
 ./run.sh --rebuild-check   # pre-rebuild readiness only
 ./run.sh --rebuild    # guided full setup (research profile)
-./install.sh list     # all install profiles
-./install.sh research --plan
 ./run.sh --workstation   # daily dev profile
 ./run.sh --list-profiles # profile catalog
 ./run.sh --smoke      # dynamic CLI/menu tests
@@ -44,8 +38,8 @@ Legacy names `./fedora.sh` and `./fedora_rebuild.sh` redirect to `./run.sh` (old
 ```text
 fedora-linux-scripts/
 ├── README.md · docs/ · validate.sh
-├── run.sh · setup.sh · install.sh · mobsf.sh    ← use ./run.sh
-├── fedora.sh · fedora_rebuild.sh                ← legacy redirects → run.sh
+├── run.sh                                      ← workstation entry
+├── mobsf.sh                                    ← separate MobSF module entry
 ├── lib/                 ← shared libraries
 ├── system/ · dev/ · android/
 ├── mobsf/               ← Podman stack (see mobsf/GUIDE.md)
@@ -82,7 +76,7 @@ Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Dail
 
 ## Install (summary)
 
-Full path: **`./run.sh --rebuild`** or **`./install.sh research --yes`**. Profile catalog: [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md). Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Full path: **`./run.sh --rebuild`** or **`./run.sh --profile research --yes`**. Profile catalog: [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md). Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
@@ -95,11 +89,8 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 | Script | Purpose |
 |--------|---------|
 | `run.sh` | **Primary entry** — menu, CLI, rebuild |
-| `inspect.sh` | Non-mutating inventory v1 — JSON/text stdout, explicit XDG-state save |
-| `setup.sh` | Lightweight repo readiness helper |
-| `install.sh` | Install profile launcher |
+| `setup.sh` | Bootstrap validation + setup-profile launcher |
 | `mobsf.sh` | MobSF wrapper → `mobsf/mobsf.sh` |
-| `fedora.sh` · `fedora_rebuild.sh` | Legacy redirects → `run.sh` |
 | `system/system.sh` · `dev/dev.sh` · `android/android.sh` | Lane menus + CLI |
 | `validate.sh` | Syntax, entry points, ShellCheck; `--smoke` runs smoke_test |
 | `smoke_test.sh` | Dynamic CLI/menu smoke tests (read-only) |

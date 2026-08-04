@@ -92,8 +92,6 @@ system_state_log_root [subdir]
 | `FEDORA_THEME_WIDTH` | Rule/box width in columns (default `54`) |
 | `FEDORA_THEME_DENSITY` | `normal` (default) or `compact` — tighter menus/sections |
 
-Preview all elements: `./theme_preview.sh`
-
 Lane picker items use `menu_item_lane` (accent `[n]` + lane icon). Round 2 / destructive
 system menu entries use `menu_item_danger`. Tool/version rows use `theme_tool_row`.
 Summary panels auto-color pass/fail via `theme_summary_box` (`Key: value` lines).

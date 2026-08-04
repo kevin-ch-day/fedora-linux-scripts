@@ -146,7 +146,6 @@ echo
 
 theme_report_section "Help and CLI dispatch"
 _smoke_run "run.sh --help" 0 bash "${ROOT}/run.sh" --help
-_smoke_run "inspect.sh --schema-version" 0 bash "${ROOT}/inspect.sh" --schema-version
 _smoke_run "run.sh --inspect --format text" 0 \
   bash "${ROOT}/run.sh" --inspect --format text
 _smoke_run "inspect regression tests" 0 \
@@ -161,19 +160,20 @@ _smoke_run "profile safety regressions" 0 \
   bash "${ROOT}/tests/test_profiles.sh"
 _smoke_run "health snapshot regressions" 0 \
   bash "${ROOT}/tests/test_health_snapshot.sh"
-_smoke_run "install.sh --help" 0 bash "${ROOT}/install.sh" --help
-_smoke_run "install.sh list" 0 bash "${ROOT}/install.sh" list
-_smoke_run "install.sh research --plan" 0 bash "${ROOT}/install.sh" research --plan
-_smoke_run "install.sh research --validate" 0 bash "${ROOT}/install.sh" research --validate
-_smoke_run "install.sh workstation --plan" 0 bash "${ROOT}/install.sh" workstation --plan
-_smoke_run "install.sh research --dry-run --yes" 0 bash "${ROOT}/install.sh" research --dry-run --yes
-_smoke_run "install.sh not-a-profile" 1 bash "${ROOT}/install.sh" not-a-profile --validate
+_smoke_run "setup.sh --help" 0 bash "${ROOT}/setup.sh" --help
+_smoke_run "setup.sh list" 0 bash "${ROOT}/setup.sh" list
+_smoke_run "setup.sh research --plan" 0 bash "${ROOT}/setup.sh" research --plan
+_smoke_run "setup.sh research --validate" 0 bash "${ROOT}/setup.sh" research --validate
+_smoke_run "setup.sh workstation --plan" 0 bash "${ROOT}/setup.sh" workstation --plan
+_smoke_run "setup.sh research --dry-run --yes" 0 bash "${ROOT}/setup.sh" research --dry-run --yes
+_smoke_run "setup.sh not-a-profile" 1 bash "${ROOT}/setup.sh" not-a-profile --validate
+_smoke_run "setup.sh rejects check/profile ambiguity" 1 bash "${ROOT}/setup.sh" --check research
+_smoke_run "setup.sh rejects conflicting profile modes" 1 bash "${ROOT}/setup.sh" research --plan --validate
+_smoke_run "setup.sh rejects smoke outside bootstrap" 1 bash "${ROOT}/setup.sh" list --smoke
 _smoke_run "run.sh --version" 0 bash "${ROOT}/run.sh" --version
 _smoke_run "run.sh --list-profiles" 0 bash "${ROOT}/run.sh" --list-profiles
 _smoke_run "run.sh --workstation --plan" 0 bash "${ROOT}/run.sh" --workstation --plan
 _smoke_run "fedora_rebuild --plan (via run.sh)" 0 bash "${ROOT}/run.sh" --rebuild --plan
-_smoke_run "fedora.sh --help (legacy redirect)" 0 bash "${ROOT}/fedora.sh" --help
-_smoke_run "fedora_rebuild.sh --plan (legacy redirect)" 0 bash "${ROOT}/fedora_rebuild.sh" --plan
 _smoke_run "run.sh --check bad option" 1 bash "${ROOT}/run.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
 _smoke_run_summary "android core status completes without sudo" "SDK/PATH" \
@@ -219,6 +219,8 @@ fi
 theme_report_section "CLI arg passthrough and errors"
 _smoke_run "system.sh update --help" 0 bash "${ROOT}/system/system.sh" update --help
 _smoke_run "dev.sh git --help" 0 bash "${ROOT}/dev/dev.sh" git --help
+_smoke_run "run.sh dev passthrough" 0 bash "${ROOT}/run.sh" --dev git --help
+_smoke_run "run.sh system passthrough" 0 bash "${ROOT}/run.sh" --system btrfs-health --help
 _smoke_run "dev.sh git non-interactive" 1 bash "${ROOT}/dev/dev.sh" git </dev/null
 _smoke_run "android verify missing tool" 1 bash "${ROOT}/android/android.sh" verify
 _smoke_run "log_engine unknown command" 2 bash "${ROOT}/system/log_engine.sh" bogus
@@ -278,7 +280,6 @@ _smoke_run "run.sh --daily-driver-check" 0 bash "${ROOT}/run.sh" --daily-driver-
 _smoke_run_summary "run.sh --post-update-check" "Post-update summary" \
   bash "${ROOT}/run.sh" --post-update-check
 _smoke_run "run.sh --disk-summary" 0 bash "${ROOT}/run.sh" --disk-summary
-_smoke_run "fedora.sh --daily-driver-check (legacy redirect)" 0 bash "${ROOT}/fedora.sh" --daily-driver-check
 _smoke_run_summary "luks-readiness" "LUKS summary" bash "${ROOT}/system/system.sh" luks-readiness
 _smoke_run_summary "post-update-check" "Post-update summary" \
   bash "${ROOT}/system/system.sh" post-update-check
@@ -339,6 +340,8 @@ _smoke_menu "Android flat doctor route" "${ROOT}/android/android.sh" '4\n\n0\n'
 _smoke_menu "Android core broad-install cancellation" "${ROOT}/run.sh" \
   '5\n5\n1\n1\nn\n\n0\n0\n0\n0\n'
 _smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan
+_smoke_run "run.sh global no-color passthrough" 0 \
+  bash "${ROOT}/run.sh" --profile research --plan --no-color
 _smoke_menu "run.sh install all profiles submenu" "${ROOT}/run.sh" '5\n8\n0\n0\n0\n'
 _smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '6\n8\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1

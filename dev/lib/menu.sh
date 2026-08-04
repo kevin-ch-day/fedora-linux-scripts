@@ -2,8 +2,7 @@
 # dev/lib/menu.sh — Developer workstation area menus (uses lib/menu.sh theme)
 # Version: 0.3.3
 #
-# Standalone:  ./dev/dev.sh
-# From main:   ./run.sh → [4] Developer tools or ./run.sh --dev
+# Internal dispatcher. From main: ./run.sh → [5] → [1], or ./run.sh --dev
 #
 # Do not execute directly.
 

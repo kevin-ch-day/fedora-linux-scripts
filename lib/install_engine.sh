@@ -125,7 +125,7 @@ install_engine_plan_profile() {
   local n=0 title rel sudo_mode args_line extra
   local core_steps optional=0
 
-  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./install.sh list)"
+  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./setup.sh list)"
 
   theme_init
   theme_set_lane rebuild
@@ -166,7 +166,7 @@ install_engine_plan_profile() {
   fi
 
   echo
-  theme_note "Run: ./install.sh ${profile} [--yes] [--dry-run]"
+  theme_note "Run: ./setup.sh ${profile} [--yes] [--dry-run]"
   if profile_requires_service_ack "${profile}"; then
     theme_note "Auto mode: add --allow-service-start with --yes to acknowledge service activation"
   fi
@@ -194,7 +194,7 @@ install_engine_run_profile() {
   local row title rel sudo_mode extra args_line
   local core_steps=0
 
-  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./install.sh list)"
+  profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./setup.sh list)"
 
   if (( plan_only )); then
     install_engine_plan_profile "${root}" "${profile}"
@@ -202,7 +202,7 @@ install_engine_run_profile() {
   fi
 
   if ! install_engine_validate_profile "${root}" "${profile}"; then
-    die "Profile '${profile}' references missing scripts (fix repo or run: ./install.sh ${profile} --plan)"
+    die "Profile '${profile}' references missing scripts (fix repo or run: ./setup.sh ${profile} --plan)"
   fi
   if (( auto_yes && ! dry_run )) \
     && profile_requires_service_ack "${profile}" \
