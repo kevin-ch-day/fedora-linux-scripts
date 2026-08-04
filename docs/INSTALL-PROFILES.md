@@ -12,8 +12,6 @@ One-command workstation setup via **`./setup.sh`** and the shared profile engine
 ./setup.sh research --validate         # verify scripts exist
 ./setup.sh research --dry-run --yes    # show what would run
 ./setup.sh research --yes              # broad research workstation (review plan first)
-./run.sh --profile dev-full --yes      # same profile engine
-./run.sh --rebuild --plan              # research plan (compat)
 ```
 
 ---
@@ -22,18 +20,14 @@ One-command workstation setup via **`./setup.sh`** and the shared profile engine
 
 | Profile | Steps | Optional tail |
 |---------|-------|----------------|
-| **research** | Quick update → post-update → Podman/KVM → standard Android core → RE install → verify | MobSF install · research doctor |
+| **research** | Quick update → post-update → Podman/KVM → standard Android core → RE install → verify | Android research doctor |
 | **android-re** | Standard Android core → RE install → verify | Android RE doctor |
 | **dev-stack** | VS Code → Podman/KVM (Docker opt-in) | — |
 | **dev-full** | Git (skip if configured) → VS Code → Podman/KVM (Docker opt-in) | — |
 | **web-stack** | LAMP → phpMyAdmin | Web stack doctor |
 | **mariadb-no-start** | MariaDB packages only; no service activation or explicit initialization | — |
-| **mobsf** | MobSF Podman install | MobSF doctor |
-| **daily-sync** | Full update → post-update check | — |
-| **update-only** | Full Fedora update | — |
-| **workstation** | Daily sync + dev-full (update → git → VS Code → KVM) | — |
 
-**research** is the same sequence as **`./run.sh --rebuild`** (default profile).
+**research** is the broad guided workstation sequence.
 
 ---
 
@@ -42,7 +36,7 @@ One-command workstation setup via **`./setup.sh`** and the shared profile engine
 | Step | Non-interactive behavior |
 |------|--------------------------|
 | **Git** (`dev-full`) | Uses `--skip-if-configured`; set `GIT_NAME` / `GIT_EMAIL` to force configure |
-| **MobSF** (`research`) | With `--yes`, installs only when compose is missing |
+| **MobSF** | Kept separate: provision and operate it through `./mobsf.sh` |
 | **Doctors** | With `--yes`, runs automatically at end when profile includes one |
 | **web-stack auto mode** | Requires `--yes --allow-service-start`; the plan identifies service and SELinux effects |
 | **Docker** | Never selected by a broad profile; use the explicit Docker menu/flag |
@@ -52,8 +46,7 @@ One-command workstation setup via **`./setup.sh`** and the shared profile engine
 ## Fresh machine flows
 
 ```bash
-./setup.sh --guided          # validate → onboard wizard (check → rebuild)
-./run.sh --onboard           # setup → check → optional rebuild
+./setup.sh --guided          # validate → onboard wizard (check → research setup)
 ./setup.sh research --yes    # skip wizard, run full stack
 ```
 
@@ -65,7 +58,7 @@ See [GETTING-STARTED.md](GETTING-STARTED.md) for doctor matrix and post-rebuild 
 
 1. Add id to `profile_list_names()` in `lib/profiles.sh`
 2. Implement `profile_description`, `profile_iter_steps` rows (TSV: title, script, sudo mode, args)
-3. Optionally wire `profile_wants_mobsf` / `profile_wants_doctor`
+3. Optionally wire `profile_wants_doctor`
 4. Run `./validate.sh --quick` (profile step script check)
 5. Run `./setup.sh <profile> --plan` to review
 

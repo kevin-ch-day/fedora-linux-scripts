@@ -451,7 +451,7 @@ health_snapshot_status_line_from_file() {
 }
 
 health_snapshot_write_files() {
-  local root="$1" stamp="$2" write_history="$3" txt="$4" json="$5"
+  local stamp="$1" write_history="$2" txt="$3" json="$4"
   local latest_txt latest_json hist_txt hist_json
   latest_txt="$(health_snapshot_latest_txt)"
   latest_json="$(health_snapshot_latest_json)"
@@ -472,8 +472,8 @@ health_snapshot_generate() {
   local verbose="${4:-0}"
 
   local host os kernel uptime
-  local mem_total_h mem_used_h mem_avail_h mem_total_b mem_used_b mem_avail_b
-  local swap_total_h swap_used_h swap_free_h swap_total_b swap_used_b swap_free_b swap_kind
+  local mem_total_h mem_used_h mem_avail_h mem_total_b mem_avail_b
+  local swap_total_h swap_used_h swap_free_h swap_total_b swap_used_b swap_kind
   local mem_status swap_status overall_status compact_status data_state
   local dnf_cache journal_size
   local root_pct root_avail_h
@@ -491,13 +491,13 @@ health_snapshot_generate() {
   kernel="$(health_kernel)"
   uptime="$(health_uptime | sed 's/^up //')"
 
-  read -r mem_total_b mem_used_b _ _ _ mem_avail_b < <(free -b | awk 'NR==2 {print $2,$3,$4,$5,$6,$7}')
+  read -r mem_total_b _ _ _ _ mem_avail_b < <(free -b | awk 'NR==2 {print $2,$3,$4,$5,$6,$7}')
   mem_total_h="$(free -h | awk 'NR==2{print $2}')"
   mem_used_h="$(free -h | awk 'NR==2{print $3}')"
   mem_avail_h="$(free -h | awk 'NR==2{print $7}')"
   mem_status="$(health_snapshot_ram_status "${mem_avail_b}" "${mem_total_b}")"
 
-  read -r swap_total_b swap_used_b swap_free_b < <(free -b | awk 'NR==3 {print $2,$3,$4}')
+  read -r swap_total_b swap_used_b _ < <(free -b | awk 'NR==3 {print $2,$3,$4}')
   swap_total_h="$(free -h | awk 'NR==3{print $2}')"
   swap_used_h="$(free -h | awk 'NR==3{print $3}')"
   swap_free_h="$(free -h | awk 'NR==3{print $4}')"
@@ -735,7 +735,7 @@ health_snapshot_generate() {
   json+="\"summary\":[${summary_json}]"
   json+="}"
 
-  health_snapshot_write_files "$(fedora_toolkit_root)" "${stamp}" "${write_history}" "${txt}" "${json}"
+  health_snapshot_write_files "${stamp}" "${write_history}" "${txt}" "${json}"
   if (( verbose )); then
     info "Health snapshot updated: $(health_snapshot_latest_txt)"
   fi

@@ -168,8 +168,12 @@ if (( INSTALL_PHP )); then
 fi
 
 if (( WITH_INFO_PHP )); then
-  (( INSTALL_PHP || rpm -q php >/dev/null 2>&1 )) || die "--with-info-php requires PHP to be installed"
-  (( INSTALL_APACHE || rpm -q httpd >/dev/null 2>&1 )) || die "--with-info-php requires Apache to be installed"
+  if (( ! INSTALL_PHP )) && ! rpm -q php >/dev/null 2>&1; then
+    die "--with-info-php requires PHP to be installed"
+  fi
+  if (( ! INSTALL_APACHE )) && ! rpm -q httpd >/dev/null 2>&1; then
+    die "--with-info-php requires Apache to be installed"
+  fi
   echo "<?php phpinfo(); ?>" > "${INFO_PHP}"
   chmod 644 "${INFO_PHP}"
   ok "Test file created at http://127.0.0.1/info.php"

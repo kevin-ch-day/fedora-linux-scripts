@@ -28,7 +28,7 @@ source "${_LOG_LIB_DIR}/common.sh"
 # ---------- registry (stable log filenames; consumed by task scripts) ----------
 FEDORA_LOG_SYSTEM_UPDATE="system_update.log"
 # shellcheck disable=SC2034
-FEDORA_LOG_REBUILD="fedora_rebuild.log"
+FEDORA_LOG_SETUP_PROFILE="setup_profile.log"
 # shellcheck disable=SC2034
 FEDORA_LOG_ANDROID_CORE="android_dev_core.log"
 # shellcheck disable=SC2034
@@ -529,61 +529,6 @@ log_tail_file() {
   else
     tail -n "${lines}" "${path}"
   fi
-}
-
-# Legacy view_logs.sh flag mapping → log_engine.sh (deprecated entry point)
-logging_view_logs_legacy() {
-  local engine="${1:?log_engine path required}"
-  shift
-
-  local lines=50
-  local log_name="${FEDORA_LOG_SYSTEM_UPDATE}"
-  local mode='tail'
-  local follow=0
-
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      --list|-l) mode='list'; shift ;;
-      --tail|-n)
-        mode='tail'
-        if [[ -n "${2:-}" && "${2}" =~ ^[0-9]+$ ]]; then
-          lines="$2"
-          shift 2
-        else
-          shift
-        fi
-        ;;
-      --file|-f)
-        log_name="${2:?missing filename}"
-        shift 2
-        ;;
-      --sessions|-s) mode='sessions'; shift ;;
-      --summary) mode='summary'; shift ;;
-      --errors|--issues) mode='issues'; shift ;;
-      --follow|-F) follow=1; mode='tail'; shift ;;
-      --help|-h)
-        exec bash "${engine}" help
-        ;;
-      *)
-        err "Unknown option: $1 (try: ./system/log_engine.sh help)"
-        return 2
-        ;;
-    esac
-  done
-
-  case "${mode}" in
-    list) exec bash "${engine}" list ;;
-    sessions) exec bash "${engine}" sessions --file "${log_name}" ;;
-    summary) exec bash "${engine}" summary --file "${log_name}" ;;
-    issues) exec bash "${engine}" issues --file "${log_name}" --lines "${lines}" ;;
-    tail)
-      if [[ "${follow}" -eq 1 ]]; then
-        exec bash "${engine}" follow --file "${log_name}" --lines "${lines}"
-      else
-        exec bash "${engine}" tail --file "${log_name}" --lines "${lines}"
-      fi
-      ;;
-  esac
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

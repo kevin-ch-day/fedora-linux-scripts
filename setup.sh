@@ -27,6 +27,7 @@ ALLOW_SERVICE_START=0
 RUN_SMOKE=0
 GUIDED=0
 CHECK_ONLY=0
+INSTALL_BOOTSTRAP_TOOLS=0
 
 usage() {
   cat <<EOF
@@ -36,34 +37,32 @@ Bootstrap a freshly cloned Fedora workstation checkout, then choose or run a
 named setup profile. Run without arguments for the interactive first-run flow.
 
 Profiles:
-  research      Full research workstation (same as ./run.sh --rebuild)
+  research      Full research workstation
   android-re    Android RE tools only
   dev-stack     VS Code + containers/KVM
   dev-full      Git (if needed) + VS Code + containers/KVM
   web-stack     Apache · MariaDB · PHP · phpMyAdmin
   mariadb-no-start  MariaDB packages only; service remains untouched
-  mobsf         MobSF Podman stack install + doctor
-  workstation   Daily sync + dev-full
-  daily-sync    Full update + post-update check
-  update-only   Fedora update only
 
 Options:
   list           Print profile catalog and exit
   --check         Validate this checkout only; no installs
+  --install-tools Install bootstrap validation tools (currently: ShellCheck)
   --smoke         Include dynamic smoke tests in the bootstrap check
   --guided        Validate, then enter the guided onboard workflow
   --yes, -y       Auto-run all selected profile steps (no prompts)
   --dry-run       Show selected profile steps only
   --plan          Print a selected profile's numbered plan only
   --validate      Verify selected profile scripts exist, then exit
-  --log           Tee selected profile output to logs/fedora_rebuild.log
+  --log           Tee selected profile output to logs/setup_profile.log
   --allow-service-start
                  Required with --yes for service-enabling profiles
   --help, -h      Show this help
 
 Examples:
-  ./setup.sh                         # first clone: check, then choose a profile
+  ./setup.sh                         # first clone: choose a setup action
   ./setup.sh --check                 # repository readiness only
+  ./setup.sh --install-tools         # install ShellCheck for repository validation
   ./setup.sh research --plan         # review the full setup before mutation
   ./setup.sh research --yes          # run full research setup
   ./setup.sh dev-full --dry-run --yes
@@ -73,11 +72,27 @@ MobSF remains separate: ./mobsf.sh
 EOF
 }
 
+setup_install_shellcheck() {
+  if have shellcheck; then
+    ok "ShellCheck: already installed"
+    return 0
+  fi
+  have dnf || die "ShellCheck requires DNF; install it with your distribution package manager"
+
+  theme_section "Bootstrap validation tools"
+  theme_note "Installing ShellCheck enables full static validation for this repository."
+  sudo dnf install -y ShellCheck
+  have shellcheck || die "ShellCheck installation did not provide the shellcheck command"
+  ok "ShellCheck: installed"
+}
+
 setup_profile_menu() {
   menu_init "Fedora Workstation Setup" "${FEDORA_ROOT}"
 
   _setup_profile_items() {
-    local n=1 p desc
+    local n=2 p desc
+    theme_section "Bootstrap tools"
+    menu_item 1 "Install validation tools" "ShellCheck · sudo · full static checks"
     theme_section "Setup profiles"
     for p in $(profile_list_names); do
       desc="$(profile_description "${p}")"
@@ -88,8 +103,13 @@ setup_profile_menu() {
   }
 
   _setup_profile_dispatch() {
-    local choice="$1" n=1 p
+    local choice="$1" n=2 p
     (( choice == 0 )) && return 1
+    if (( choice == 1 )); then
+      setup_install_shellcheck
+      menu_pause
+      return 0
+    fi
     for p in $(profile_list_names); do
       if (( choice == n )); then
         PROFILE="${p}"
@@ -111,6 +131,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --help|-h) usage; exit 0 ;;
     --check) CHECK_ONLY=1; shift ;;
+    --install-tools) INSTALL_BOOTSTRAP_TOOLS=1; shift ;;
     --smoke) RUN_SMOKE=1; shift ;;
     --guided) GUIDED=1; shift ;;
     list) LIST_ONLY=1; shift ;;
@@ -120,12 +141,14 @@ while [[ $# -gt 0 ]]; do
     --validate) VALIDATE_ONLY=1; shift ;;
     --log) USE_LOG=1; shift ;;
     --allow-service-start) ALLOW_SERVICE_START=1; shift ;;
-    research|android-re|dev-stack|dev-full|web-stack|mariadb-no-start|mobsf|workstation|daily-sync|update-only)
+    research|android-re|dev-stack|dev-full|web-stack|mariadb-no-start)
       PROFILE="$1"; shift ;;
     *) die "Unknown argument: $1 (try: ./setup.sh --help)" ;;
   esac
 done
 
+# Sourced install_engine.sh reads this profile-execution guard.
+# shellcheck disable=SC2034
 INSTALL_ENGINE_ALLOW_SERVICE_START="${ALLOW_SERVICE_START}"
 
 if (( PLAN_ONLY && VALIDATE_ONLY )); then
@@ -134,13 +157,13 @@ fi
 if (( RUN_SMOKE && ( LIST_ONLY || PLAN_ONLY || VALIDATE_ONLY ) )); then
   die "--smoke is only available for a bootstrap check, guided setup, or profile run"
 fi
-if (( CHECK_ONLY && ( LIST_ONLY || PLAN_ONLY || VALIDATE_ONLY || GUIDED || ${#PROFILE} > 0 ) )); then
+if (( CHECK_ONLY && ( LIST_ONLY || PLAN_ONLY || VALIDATE_ONLY || GUIDED || INSTALL_BOOTSTRAP_TOOLS || ${#PROFILE} > 0 ) )); then
   die "--check is a repository-only mode; remove the profile or other mode"
 fi
 if (( GUIDED && ( LIST_ONLY || PLAN_ONLY || VALIDATE_ONLY || ${#PROFILE} > 0 ) )); then
   die "--guided cannot be combined with a profile, list, --plan, or --validate"
 fi
-if (( LIST_ONLY && ( PLAN_ONLY || VALIDATE_ONLY || ${#PROFILE} > 0 || AUTO_YES || DRY_RUN || USE_LOG || ALLOW_SERVICE_START ) )); then
+if (( LIST_ONLY && ( PLAN_ONLY || VALIDATE_ONLY || INSTALL_BOOTSTRAP_TOOLS || ${#PROFILE} > 0 || AUTO_YES || DRY_RUN || USE_LOG || ALLOW_SERVICE_START ) )); then
   die "list cannot be combined with a profile or profile-execution option"
 fi
 
@@ -163,11 +186,49 @@ if (( PLAN_ONLY || VALIDATE_ONLY )); then
   exit 0
 fi
 
+# Setup owns provisioning. A normal invocation goes directly to install choices;
+# repository auditing is explicit through --check, --smoke, or ./validate.sh.
+if (( CHECK_ONLY == 0 && RUN_SMOKE == 0 && GUIDED == 0 )); then
+  theme_init
+  theme_set_lane setup
+  theme_lane_banner "Fedora Workstation Setup" setup
+  theme_meta_line "ROOT / ${FEDORA_ROOT}"
+  theme_meta_line "Provisioning / tools · components · workstation profiles"
+  theme_rule '─'
+  echo
+
+  if (( INSTALL_BOOTSTRAP_TOOLS )); then
+    setup_install_shellcheck
+  fi
+
+  if [[ -n "${PROFILE}" ]]; then
+    install_engine_run_profile "${FEDORA_ROOT}" "${PROFILE}" \
+      "${AUTO_YES}" "${DRY_RUN}" "${USE_LOG}" "${FEDORA_FROM_MENU:-0}" 0
+    exit $?
+  fi
+
+  if [[ -t 0 && -t 1 ]]; then
+    setup_profile_menu
+    exit 0
+  fi
+
+  theme_summary_box "Setup ready" \
+    "Tools:      $(have shellcheck && printf 'ShellCheck ready' || printf 'ShellCheck optional')" \
+    "Next:       ./setup.sh list" \
+    "            ./setup.sh research --plan"
+  exit 0
+fi
+
 theme_init
 theme_set_lane audit
 theme_lane_banner "Fedora Workstation Setup" audit
 theme_meta_line "ROOT / ${FEDORA_ROOT}"
-theme_meta_line "Bootstrap check · no sudo · no package installs"
+theme_meta_line "Bootstrap validation · tool installs only by confirmation or --install-tools"
+if have shellcheck; then
+  theme_meta_line "VALIDATION / ShellCheck present · full static analysis enabled"
+else
+  theme_meta_line "VALIDATION / ShellCheck optional · install for full static analysis"
+fi
 theme_rule '─'
 echo
 
@@ -187,7 +248,11 @@ for script in run.sh setup.sh mobsf.sh validate.sh smoke_test.sh; do
 done
 
 theme_section "Repository validation"
-if bash "${FEDORA_ROOT}/validate.sh" --quick; then
+validation_args=(--quick)
+if have shellcheck; then
+  validation_args=(--shellcheck)
+fi
+if bash "${FEDORA_ROOT}/validate.sh" "${validation_args[@]}"; then
   validation_ec=0
 else
   validation_ec=$?
@@ -212,6 +277,19 @@ if (( validation_ec != 0 || smoke_ec != 0 )); then
     "Next:       fix validation issues above" \
     "            then rerun ./setup.sh --check"
   exit 1
+fi
+
+if (( INSTALL_BOOTSTRAP_TOOLS )); then
+  setup_install_shellcheck
+  echo
+  theme_section "Full static validation"
+  if ! bash "${FEDORA_ROOT}/validate.sh" --shellcheck; then
+    theme_summary_box "Setup check" \
+      "Result:     REVIEW" \
+      "Next:       fix validation issues above" \
+      "            then rerun ./setup.sh --check"
+    exit 1
+  fi
 fi
 
 if (( GUIDED )); then

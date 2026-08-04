@@ -2,7 +2,7 @@
 
 Git, VS Code, containers/KVM, VirtualBox, and optional LAMP/phpMyAdmin stack.
 
-**Access:** `./run.sh` → Install workstation → Developer tools, or `./run.sh --dev`
+**Access:** `./setup.sh` for profile provisioning, or `./run.sh --dev` for direct developer operations.
 
 ---
 
@@ -25,7 +25,7 @@ sudo ./dev/phpmyadmin_setup.sh
 ./dev/web_stack_doctor.sh
 ```
 
-Rebuild sequence runs KVM setup early: `./run.sh --rebuild`
+The research setup profile runs KVM setup early: `./setup.sh research`
 
 ---
 

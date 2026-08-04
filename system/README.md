@@ -2,7 +2,7 @@
 
 Host maintenance, workstation readiness, updates, logs, and cleanup for Fedora research workstations.
 
-**Access:** `./run.sh` → `[6]` or `./run.sh --system`
+**Access:** `./run.sh` → `[4]` or `./run.sh --system`
 
 ---
 
@@ -18,7 +18,7 @@ Host maintenance, workstation readiness, updates, logs, and cleanup for Fedora r
 | LUKS readiness | System menu `[8]` → More readiness → `[2]` |
 | VirtualBox readiness | System menu `[8]` → More readiness → `[3]` |
 | Package / update noise | System menu `[8]` → More readiness → `[4]` |
-| Rebuild readiness | `./run.sh --rebuild-check` or System menu `[6]` |
+| Research setup readiness | System menu → readiness checks |
 
 Recovery playbook: [docs/RECOVERY.md](../docs/RECOVERY.md) · Phase 2 validation: [docs/PHASE2-VALIDATION.md](../docs/PHASE2-VALIDATION.md)
 
@@ -69,8 +69,8 @@ Doctor matrix: [docs/GETTING-STARTED.md](../docs/GETTING-STARTED.md#doctor-matri
 | Check | Command |
 |-------|---------|
 | Daily driver (stabilization) | `./run.sh --daily-driver-check` (System menu `[5]`) |
-| Fedora doctor (toolkit) | `./run.sh --doctor` or main menu `[7]` |
-| Full research (Android + MobSF) | `./system/system.sh research-doctor` (rebuild finale) |
+| Fedora doctor (toolkit) | `./run.sh --doctor` or main menu `[5]` |
+| Full research (Android + MobSF) | `./system/system.sh research-doctor` (on demand) |
 | MobSF stack only | `./mobsf.sh --doctor` |
 
 ---

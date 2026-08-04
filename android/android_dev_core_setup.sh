@@ -332,7 +332,9 @@ pkg_available_exact() {
 append_if_available() {
   local array_name="$1"
   local pkg="$2"
-  local -n arr_ref="${array_name}"
+  # The nameref is assigned the caller-provided target array name.
+  # shellcheck disable=SC2178
+  local -n -a arr_ref="${array_name}"
   pkg_available_exact "${pkg}" && arr_ref+=("${pkg}")
 }
 
@@ -340,7 +342,9 @@ append_if_present_or_available() {
   local array_name="$1"
   local pkg="$2"
   local bin="${3:-${pkg}}"
-  local -n arr_ref="${array_name}"
+  # The nameref is assigned the caller-provided target array name.
+  # shellcheck disable=SC2178
+  local -n -a arr_ref="${array_name}"
   if pkg_present "${pkg}" "${bin}" || pkg_available_exact "${pkg}"; then
     arr_ref+=("${pkg}")
   fi

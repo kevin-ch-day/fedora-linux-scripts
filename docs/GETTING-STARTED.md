@@ -8,8 +8,8 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 
 | Script | Use when |
 |--------|----------|
-| **`./setup.sh`** | **Start here after cloning** — validates the checkout, then offers setup profiles |
-| **`./run.sh`** | Day-to-day control — main menu, updates, install hub, guided rebuild, doctor |
+| **`./setup.sh`** | **Start here after cloning** — provisions tools and offers setup profiles |
+| **`./run.sh`** | Day-to-day control — main menu, updates, install hub, doctor |
 | **`./mobsf.sh`** | **MobSF stack only** — install/start/reset/**doctor** (separate lifecycle) |
 
 | Goal | Command |
@@ -32,10 +32,10 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
 | Android RE tools | `./run.sh --android` |
 | Fedora doctor | `./run.sh --doctor` |
 | Fresh install report | `./run.sh --baseline` |
-| Rebuild readiness | `./run.sh --rebuild-check` |
+| Research setup readiness | System maintenance → readiness checks |
 | MobSF stack doctor | `./mobsf.sh --doctor` |
-| Install workstation | `./run.sh --install` or main menu **[5]** |
-| Setup profiles | `./setup.sh list` · `./setup.sh workstation --yes` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
+| Workstation provisioning | `./setup.sh` · [INSTALL-PROFILES.md](INSTALL-PROFILES.md) |
+| Setup profiles | `./setup.sh list` · `./setup.sh dev-full --yes` |
 | Fresh machine wizard | `./run.sh --onboard` · `./setup.sh --guided` |
 | System readiness menu | `./run.sh --system` → **[1] Update** · **[2] Daily sync** |
 | Logs CLI | `./system/log_engine.sh` or System maintenance → **[9] View logs** |
@@ -48,30 +48,23 @@ Quick map for **neptune** and other Fedora research workstations. This repo is *
                               [1] Update Fedora
                               [2] Update + post-update check  ← daily workflow
                               [3] Post-update check only
-                              [4] Guided rebuild
-                              [5] Install workstation hub
-                              [6] System maintenance · [7] Doctor · [8] Self-test
+                              [4] System maintenance · [5] Doctor · [6] Self-test
 
 ./run.sh --daily         Update then post-update check (recommended)
-./run.sh --install       Install hub (profiles [6–8] · dev · Android · rebuild)
-./run.sh --list-profiles Profile catalog
-./run.sh --workstation   Daily dev profile (update + VS Code + KVM)
 ./setup.sh list          Profile catalog (research · android-re · dev-stack · …)
-./run.sh --onboard       Fresh machine wizard (check → rebuild)
-./run.sh --rebuild       Guided sequence (research profile)
+./run.sh --onboard       Fresh machine wizard (check → research setup)
 ./mobsf.sh               MobSF stack (separate entry — own menu)
 ```
 
 Shortcuts:
 
 ```bash
-./setup.sh                  # first clone — validation then setup profile picker
+./setup.sh                  # first clone — tools and setup profile picker
 ./run.sh                    # interactive main menu — [1] Update Fedora first
 ./run.sh --update           # full Fedora update (sudo)
 ./run.sh --daily            # update + post-update check (recommended)
 ./run.sh --daily --quick    # faster daily sync
-./run.sh --install          # install workstation hub
-./run.sh --onboard          # fresh machine: setup → check → rebuild
+./run.sh --onboard          # fresh machine: setup → check → research setup
 ./setup.sh list             # profile catalog
 ./setup.sh research --yes   # full research workstation (non-interactive)
 ./run.sh --check            # validate + smoke + rebuild readiness (start here)
@@ -82,9 +75,6 @@ Shortcuts:
 ./run.sh --post-update-check   # after dnf upgrade
 ./run.sh --doctor           # Fedora doctor (repo · lanes · workstation health)
 ./run.sh --baseline         # host baseline report → logs/
-./run.sh --rebuild-check    # pre-rebuild readiness
-./run.sh --rebuild          # guided rebuild (preferred)
-./run.sh --rebuild --yes    # rebuild without step prompts
 ./run.sh --system           # open System maintenance directly
 ./run.sh --dev              # open Developer tools directly
 ./run.sh --android          # open Android RE tools directly
@@ -104,18 +94,18 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
    git clone https://github.com/kevin-ch-day/fedora-linux-scripts.git
    cd fedora-linux-scripts
    ```
-2. **Validate before major setup** (read-only; installs nothing):
+2. **Provision the workstation**:
    ```bash
    ./setup.sh
-   # or guided path after a successful bootstrap check:
-   ./setup.sh --guided
-   # or full wizard:
-   ./run.sh --onboard
    ```
-   Manual check:
+   Choose **Install validation tools** to add ShellCheck, then select the
+   workstation profile you want to provision. Repository auditing is explicit:
    ```bash
-   ./run.sh --check
+   ./setup.sh --check
+   # or: ./validate.sh --shellcheck
    ```
+   `./setup.sh --install-tools` installs ShellCheck directly for unattended
+   provisioning.
    If rebuild readiness fails on **dnf repo permissions** (common on fresh installs):
    ```bash
    sudo ./run.sh --fix-repos
@@ -128,16 +118,14 @@ Set `NO_COLOR=1` or pass `--no-color` on `./run.sh` for plain terminal output.
    ./smoke_test.sh --quick
    ./run.sh --doctor
    ./run.sh --baseline
-   ./run.sh --rebuild-check
+   # System maintenance → readiness checks (optional)
    ```
    `--baseline` saves a timestamped host report under `logs/fresh_install_check_*.log`.
-3. Run the full rebuild:
+3. Run the research setup profile:
    ```bash
-   ./run.sh --rebuild
-   # or non-interactive:
    ./setup.sh research --yes
    ```
-   Pick a mode (interactive or auto-yes), confirm each major step. If a step fails, the rebuild continues and reports a failure count at the end.
+   Omit `--yes` to confirm each step. If a step fails, setup continues and reports a failure count at the end.
 4. Log out/in (or reboot) after desktop/KVM group changes; `source ~/.bashrc` for PATH.
 5. Verify:
    ```bash
@@ -170,7 +158,7 @@ Readiness checks are **read-only by default**. Destructive actions (`--scrub`, `
 
 **Menu tips:** At any prompt, `[r]` repeats your last choice. `[0]` exits the lane picker or goes back one level in submenus. Menu reference: [AUDIT.md](AUDIT.md#menu-ux-reference).
 
-**CLI shortcuts** (`./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`, `--baseline`, `--rebuild-check`, `--rebuild`) run the target action and **exit to your shell** — they do not return to the lane picker. Use `./run.sh` with no args for the interactive menu loop.
+**CLI shortcuts** (`./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`, `--baseline`) run the target action and **exit to your shell** — they do not return to the lane picker. Use `./run.sh` with no args for the interactive menu loop.
 
 | Item | Key / launcher | Typical tasks |
 |------|----------------|---------------|
@@ -180,8 +168,8 @@ Readiness checks are **read-only by default**. Destructive actions (`--scrub`, `
 | Virtualization & containers | `[5] → [3]` / `./run.sh --dev --virtualization` | Podman, Docker, KVM, VirtualBox |
 | Web/database stack | `[5] → [4]` / `./run.sh --dev --web-stack` | Apache, MariaDB, PHP, phpMyAdmin |
 | Android RE tools | `[5] → [5]` / `./run.sh --android` | SDK, RE tools, verify, ADB (MobSF: `./mobsf.sh`) |
-| Guided rebuild | `[4]` / `./run.sh --rebuild` | full workstation setup |
-| System health check | `[7]` / `./run.sh --doctor` | entry points · Android RE workstation |
+| Research setup | `./setup.sh research` | full workstation setup |
+| System health check | `[5]` / `./run.sh --doctor` | entry points · Android RE workstation |
 | Toolkit self-test | `8` / `./run.sh --check` | validate, smoke, rebuild readiness |
 | MobSF *(separate)* | `./mobsf.sh` · `./mobsf.sh --doctor` | stack install/start · MobSF health |
 
@@ -232,11 +220,9 @@ SDK locations.
 
 ## Logs
 
-| Preferred | Deprecated |
-|-----------|------------|
-| `./system/log_engine.sh tail --file NAME --lines N` | `./system/view_logs.sh` (legacy flag shim) |
+Use `./system/log_engine.sh tail --file NAME --lines N` to inspect logs.
 
-Log files: `system_update.log`, `fedora_rebuild.log`, `android_dev_core.log`, `mobsf.log` — see [logs/README.md](../logs/README.md).
+Log files: `system_update.log`, `setup_profile.log`, `android_dev_core.log`, `mobsf.log` — see [logs/README.md](../logs/README.md).
 
 ---
 
@@ -259,14 +245,13 @@ Install logic: **`lib/android_re.sh`**. Verification logic: **`lib/android.sh`**
 3. Android core  
 4. RE tools install (`android_re_install.sh all`)  
 5. Verify all RE tools  
-6. *(optional)* MobSF install  
-7. **Research doctor** (Android + MobSF)
+6. **Android research doctor**
 
-Skip doctor: `./run.sh --rebuild --skip-doctor`
+MobSF is a separate module: set it up later with `./mobsf.sh` when needed.
 
-### After rebuild (optional — not in guided sequence)
+### After research setup (optional — not in the profile)
 
-Rebuild covers system update, KVM, Android core, RE tools, optional MobSF, and research doctor. Run these separately when needed:
+Research setup covers system update, KVM, Android core, RE tools, and the Android research doctor. Run these separately when needed:
 
 | Task | Command |
 |------|---------|
@@ -278,12 +263,6 @@ Rebuild covers system update, KVM, Android core, RE tools, optional MobSF, and r
 | LAMP / phpMyAdmin | `sudo ./dev/lamp_python_setup.sh` · `sudo ./dev/phpmyadmin_setup.sh` |
 
 Desktop details: [dev/README.md](../dev/README.md#desktop-environments-cinnamon)
-
----
-
-## Legacy folder
-
-`legacy/` scripts are **disabled** (reference only). Use current lane scripts — see [legacy/README.md](../legacy/README.md).
 
 ---
 

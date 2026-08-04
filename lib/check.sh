@@ -115,14 +115,14 @@ fedora_toolkit_check() {
         "Smoke:      passed" \
         "Doctor:     passed" \
         "Rebuild:    ready" \
-        "Next:       ./run.sh --daily  ·  ./run.sh --rebuild"
+        "Next:       ./run.sh --daily  ·  ./setup.sh research"
     else
       theme_summary_box "Check complete" \
         "Result:     READY" \
         "Validate:   passed" \
         "Smoke:      passed" \
         "Rebuild:    ready" \
-        "Next:       ./run.sh --daily  ·  ./setup.sh workstation --plan"
+        "Next:       ./run.sh --daily  ·  ./setup.sh dev-full --plan"
     fi
     return 0
   fi

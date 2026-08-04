@@ -42,7 +42,6 @@ Typical flow on a new machine:
   ./setup.sh
   ./run.sh --check
   ./run.sh --doctor
-  ./run.sh --rebuild
 EOF
 }
 
@@ -164,16 +163,14 @@ _smoke_run "setup.sh --help" 0 bash "${ROOT}/setup.sh" --help
 _smoke_run "setup.sh list" 0 bash "${ROOT}/setup.sh" list
 _smoke_run "setup.sh research --plan" 0 bash "${ROOT}/setup.sh" research --plan
 _smoke_run "setup.sh research --validate" 0 bash "${ROOT}/setup.sh" research --validate
-_smoke_run "setup.sh workstation --plan" 0 bash "${ROOT}/setup.sh" workstation --plan
+_smoke_run "setup.sh dev-full --plan" 0 bash "${ROOT}/setup.sh" dev-full --plan
 _smoke_run "setup.sh research --dry-run --yes" 0 bash "${ROOT}/setup.sh" research --dry-run --yes
 _smoke_run "setup.sh not-a-profile" 1 bash "${ROOT}/setup.sh" not-a-profile --validate
 _smoke_run "setup.sh rejects check/profile ambiguity" 1 bash "${ROOT}/setup.sh" --check research
 _smoke_run "setup.sh rejects conflicting profile modes" 1 bash "${ROOT}/setup.sh" research --plan --validate
 _smoke_run "setup.sh rejects smoke outside bootstrap" 1 bash "${ROOT}/setup.sh" list --smoke
+_smoke_run "setup.sh rejects tools install with list" 1 bash "${ROOT}/setup.sh" list --install-tools
 _smoke_run "run.sh --version" 0 bash "${ROOT}/run.sh" --version
-_smoke_run "run.sh --list-profiles" 0 bash "${ROOT}/run.sh" --list-profiles
-_smoke_run "run.sh --workstation --plan" 0 bash "${ROOT}/run.sh" --workstation --plan
-_smoke_run "fedora_rebuild --plan (via run.sh)" 0 bash "${ROOT}/run.sh" --rebuild --plan
 _smoke_run "run.sh --check bad option" 1 bash "${ROOT}/run.sh" --check --not-a-flag
 _smoke_run "system.sh --help" 0 bash "${ROOT}/system/system.sh" --help
 _smoke_run_summary "android core status completes without sudo" "SDK/PATH" \
@@ -197,7 +194,8 @@ fi
 
 if (( CI == 0 && QUICK == 0 )) && [[ -z "${FEDORA_SKIP_CHECK_SMOKE:-}" ]]; then
   theme_report_section "Readiness checks"
-  _smoke_run_summary "run.sh --rebuild-check" "Next step:" bash "${ROOT}/run.sh" --rebuild-check
+  _smoke_run_summary "research setup readiness" "Next step:" \
+    bash "${ROOT}/system/rebuild_readiness_check.sh"
   _smoke_run_summary "run.sh --check" "Check complete" bash "${ROOT}/run.sh" --check
 elif (( CI == 0 )); then
   theme_report_section "Readiness checks skipped (--quick)"
@@ -316,32 +314,11 @@ fi
 
 theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
-_smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '6\n0\n0\n'
-_smoke_menu "run.sh install hub back path" "${ROOT}/run.sh" '5\n0\n0\n'
-RUNS=$((RUNS + 1))
-identity_menu_out="$(printf '5\n5\n0\n0\n0\n' | NO_COLOR=1 bash "${ROOT}/run.sh" 2>&1)" || identity_menu_ec=$?
-identity_menu_ec="${identity_menu_ec:-0}"
-if [[ "${identity_menu_ec}" -eq 0 ]] \
-  && grep -q 'SET / Install workstation' <<< "${identity_menu_out}" \
-  && grep -q 'ADR / Android RE tools' <<< "${identity_menu_out}" \
-  && grep -q 'UPD / Update Fedora' <<< "${identity_menu_out}" \
-  && grep -q 'Android workstation doctor' <<< "${identity_menu_out}" \
-  && grep -q 'ADB and device checks' <<< "${identity_menu_out}" \
-  && grep -q 'Commands and troubleshooting' <<< "${identity_menu_out}" \
-  && ! grep -q 'Advanced tools and plans' <<< "${identity_menu_out}" \
-  && ! grep -qE 'AND /|[⚙◈▣🖥⚡◇]' <<< "${identity_menu_out}"; then
-  ok "runtime menus use the shared technical identity"
-else
-  FAILS=$((FAILS + 1))
-  FAIL_NAMES+=("runtime menu visual identity")
-  warn "runtime menus contain stale lane styling"
-fi
+_smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '4\n0\n0\n'
+_smoke_menu "setup.sh provisioning menu back path" "${ROOT}/setup.sh" '0\n'
 _smoke_menu "Android flat doctor route" "${ROOT}/android/android.sh" '4\n\n0\n'
 _smoke_menu "Android core broad-install cancellation" "${ROOT}/run.sh" \
   '5\n5\n1\n1\nn\n\n0\n0\n0\n0\n'
-_smoke_run "run.sh --profile research --plan" 0 bash "${ROOT}/run.sh" --profile research --plan
-_smoke_run "run.sh global no-color passthrough" 0 \
-  bash "${ROOT}/run.sh" --profile research --plan --no-color
 _smoke_menu "run.sh install all profiles submenu" "${ROOT}/run.sh" '5\n8\n0\n0\n0\n'
 _smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '6\n8\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1

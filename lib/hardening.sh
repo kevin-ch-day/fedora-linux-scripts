@@ -170,7 +170,7 @@ hardening_sysctl_hardened() {
 }
 
 hardening_journald_persistent() {
-  local path dropin_ok storage
+  local path storage
   path="$(hardening_journald_dropin)"
   if hardening_dropin_is_ours "${path}"; then
     return 0
@@ -601,7 +601,7 @@ hardening_round2_services_for_run() {
 }
 
 hardening_print_round2_status() {
-  local zone strict_ok
+  local zone
   theme_section "Round 2 status on $(health_hostname)"
   if have firewall-cmd; then
     zone="$(hardening_firewall_default_zone)"
@@ -936,7 +936,6 @@ hardening_disable_cups() {
 }
 
 hardening_print_listening_audit() {
-  local line
   theme_section "Listening port audit"
   hardening_print_listening_services
   echo

@@ -31,7 +31,6 @@ MENU_STACK=()
 MENU_LAST_CHOICE=""
 declare -a MENU_LAST_CHOICE_STACK=()
 MENU_SCROLL_MODE=0
-MENU_IS_ROOT=0
 MENU_PARENT_CONTEXT="${MENU_PARENT_CONTEXT:-}"
 
 menu_is_submenu() {
@@ -58,10 +57,8 @@ menu_set_header_fn() {
 menu_init() {
   local app_name="${1:-Fedora Workstation Control}"
   local root="${2:-$(fedora_toolkit_root)}"
-  local is_root="${3:-0}"
   MENU_APP_NAME="${app_name}"
   MENU_ROOT="${root}"
-  MENU_IS_ROOT="${is_root}"
   MENU_STACK=()
   MENU_LAST_CHOICE=""
   MENU_LAST_CHOICE_STACK=()

@@ -101,6 +101,8 @@ _dnf_run() {
   if [[ "${EUID}" -eq 0 ]]; then
     dnf -y "$@" > "${output}" 2>&1 || rc=$?
   else
+    # The caller owns this mktemp output file; sudo is only for dnf itself.
+    # shellcheck disable=SC2024
     sudo dnf -y "$@" > "${output}" 2>&1 || rc=$?
   fi
 

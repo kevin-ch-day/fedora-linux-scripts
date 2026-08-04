@@ -65,7 +65,7 @@ if [[ -n "${invoker}" && "${invoker}" != root ]]; then
     ok "dnf check: OK (as ${invoker})"
     theme_summary_box "Summary" \
       "Result:  FIXED" \
-      "Next:    ./run.sh --rebuild-check"
+      "Next:    System maintenance → readiness checks"
     exit 0
   fi
   warn "dnf check still fails (as ${invoker})"

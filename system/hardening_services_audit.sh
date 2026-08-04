@@ -137,12 +137,13 @@ if [[ -n "${existing}" ]]; then
 fi
 echo
 theme_meta_line "Login accounts (/home/*):"
+wheel_mark=""
 while IFS=: read -r u _ uid _ _ home shell; do
   [[ "${uid}" =~ ^[0-9]+$ ]] || continue
   (( uid >= 1000 && uid < 60000 )) || continue
   hardening_is_human_home "${home}" || continue
   hardening_has_login_shell "${shell}" || continue
-  local wheel_mark=""
+  wheel_mark=""
   getent group wheel 2>/dev/null | grep -qF "${u}" && wheel_mark=" · wheel"
   theme_meta_line "  ${u} (uid ${uid})${wheel_mark} · ${home}"
 done < <(getent passwd 2>/dev/null || true)

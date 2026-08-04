@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./system/rebuild_readiness_check.sh
-#   ./run.sh --rebuild-check
+#   ./system/rebuild_readiness_check.sh
 
 set -uo pipefail
 
@@ -21,16 +21,16 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [--help]
 
-Lightweight checks before ./run.sh --rebuild.
+Lightweight checks before running the research setup profile.
 Does not install packages or modify the system.
 
-Also: ./run.sh --rebuild-check
+Also: System maintenance → readiness checks
 
 Recommended flow on a new machine:
   ./run.sh --doctor
   ./run.sh --baseline
-  ./run.sh --rebuild-check
-  ./run.sh --rebuild
+  ./system/rebuild_readiness_check.sh
+  ./setup.sh research
 
 Toolkit root: ${FEDORA_ROOT}
 EOF
@@ -172,7 +172,7 @@ if (( ISSUES == 0 )); then
     "Result:     READY" \
     "Passed:     ${PASSES} check(s)" \
     "Failed:     0" \
-    "Next step:  ./run.sh --rebuild"
+    "Next step:  ./setup.sh research"
   exit 0
 fi
 
@@ -180,6 +180,6 @@ theme_summary_box "Summary" \
   "Result:     NOT READY" \
   "Passed:     ${PASSES} check(s)" \
   "Failed:     ${ISSUES} check(s)" \
-  "Next step:  fix issues above, then ./run.sh --rebuild-check" \
-  "            when ready: ./run.sh --rebuild"
+  "Next step:  fix issues above, then rerun this check" \
+  "            when ready: ./setup.sh research"
 exit 1

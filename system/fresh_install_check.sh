@@ -66,6 +66,6 @@ theme_summary_box "Summary" \
   "Host:       $(health_hostname)" \
   "Fedora:     $(baseline_fedora_release_line)" \
   "Core tools: $(( 7 - MISSING_CORE ))/7 common commands present" \
-  "Next step:  ./run.sh --rebuild-check" \
-  "            then ./run.sh --rebuild when ready"
+  "Next step:  System maintenance → readiness checks" \
+  "            then ./setup.sh research when ready"
 exit 0

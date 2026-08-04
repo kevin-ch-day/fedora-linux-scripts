@@ -49,7 +49,8 @@ Deploys compose + `.env`, SELinux labels, ordered startup, session log. **Use `s
 | Broken, keep scans | `sudo -E ./mobsf/mobsf_reset.sh --keep` |
 | Clean slate | `sudo -E ./mobsf/mobsf_reset.sh` |
 
-During `./run.sh --rebuild`, optional MobSF step runs install or reset `--keep`.
+MobSF is intentionally separate from workstation provisioning. Install and
+operate it only through `./mobsf.sh` or the scripts in this module.
 
 ---
 

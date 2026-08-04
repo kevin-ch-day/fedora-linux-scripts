@@ -48,8 +48,9 @@ in the repository.
    communicates grouping, state, focus, or progress.
 2. **Black carries the composition.** Dark space is the base material, not an
    area to fill.
-3. **Red is a signal.** Use it for identity, current focus, and active
-   operations. Do not wash entire screens in it.
+3. **Red is the control signal.** Use it for the main control surface,
+   current focus, and active operations. Do not wash entire screens in it.
+   Navigation lanes may use cool blue, cyan, or violet hues to aid scanning.
 4. **Status colors retain meaning.** Green means success, amber means caution,
    and error red is always paired with a label or symbol.
 5. **Precision before grit.** Texture may appear in brand imagery at very low
@@ -99,8 +100,9 @@ Sixteen-color terminals fall back to standard red for the signal and preserve
 green, yellow, and red for semantic status. `NO_COLOR` removes color without
 removing hierarchy or labels.
 
-The shared signal and failure colors must remain separate tokens even on
-terminals whose limited palette renders them similarly. Labels and symbols
+The signal and failure colors must remain separate tokens even on terminals
+whose limited palette renders them similarly. Navigation uses blue, cyan, and
+violet where available; green and amber remain status-only. Labels and symbols
 must always disambiguate navigation from failure.
 
 ## Typography
@@ -159,8 +161,11 @@ PRF / Install profile
 CLN / Cleanup
 ```
 
-All lanes share the signal accent. Their written marker and title—not a
-rainbow—carry identity.
+The main control lane uses signal red. System/update lanes use cyan or teal,
+developer lanes use blue, Android/MobSF/build lanes use violet, and audit
+lanes use cobalt. These colors support navigation only; their written marker
+and title remain the source of identity, while green and amber stay reserved
+for status.
 
 ### Status
 
@@ -251,7 +256,7 @@ The interface voice is terse, calm, and accountable:
 `lib/theme.sh` is the canonical terminal implementation. The first identity
 pass establishes:
 
-- a monochrome hierarchy with one shared signal-red lane accent;
+- a dark neutral hierarchy with restrained lane-navigation colors;
 - compact technical lane markers;
 - status-only success, warning, and failure colors;
 - dark, light, 256-color, 16-color, and no-color behavior.

@@ -67,43 +67,10 @@ install_engine_run_step() {
   fi
 }
 
-install_engine_maybe_mobsf() {
-  local root="$1"
-  local profile="$2"
-  (( ${FEDORA_SKIP_MOBSF:-0} )) && return 0
-  profile_wants_mobsf "${profile}" || return 0
-
-  # shellcheck source=mobsf.sh
-  source "${root}/lib/mobsf.sh"
-
-  if (( INSTALL_ENGINE_DRY_RUN || INSTALL_ENGINE_PLAN_ONLY )); then
-    info "(dry-run) would offer: MobSF install/reset"
-    return 0
-  fi
-
-  if (( INSTALL_ENGINE_AUTO_YES )); then
-    if mobsf_compose_installed; then
-      info "MobSF compose present — skipping auto install"
-      return 0
-    fi
-    install_engine_run_step "${root}" "MobSF install" "mobsf/mobsf_install.sh" "sudo-E"
-    return 0
-  fi
-
-  if confirm "Run MobSF install/reset? (install if first time; reset if stack exists)"; then
-    if mobsf_compose_installed; then
-      install_engine_run_step "${root}" "MobSF reset (keep data)" "mobsf/mobsf_reset.sh" "sudo-E" --keep
-    else
-      install_engine_run_step "${root}" "MobSF install" "mobsf/mobsf_install.sh" "sudo-E"
-    fi
-  fi
-}
-
 install_engine_maybe_doctor() {
   local root="$1"
   local profile="$2"
   local doc=""
-  (( ${FEDORA_SKIP_DOCTOR:-0} )) && return 0
   profile_wants_doctor "${profile}" || return 0
   doc="$(profile_doctor_script "${profile}")" || return 0
 
@@ -154,10 +121,6 @@ install_engine_plan_profile() {
     fi
   done < <(profile_iter_steps "${profile}")
 
-  if profile_wants_mobsf "${profile}"; then
-    optional=$((optional + 1))
-    theme_note_kv "$((n + optional))" "(optional) MobSF install/reset — mobsf/mobsf_install.sh"
-  fi
   if profile_wants_doctor "${profile}"; then
     optional=$((optional + 1))
     local doc=""
@@ -188,10 +151,9 @@ install_engine_run_profile() {
   local auto_yes="${3:-0}"
   local dry_run="${4:-0}"
   local use_log="${5:-0}"
-  local from_menu="${6:-0}"
   local plan_only="${7:-0}"
 
-  local row title rel sudo_mode extra args_line
+  local title rel sudo_mode extra args_line
   local core_steps=0
 
   profile_is_valid "${profile}" || die "Unknown profile: ${profile} (try: ./setup.sh list)"
@@ -219,9 +181,6 @@ install_engine_run_profile() {
 
   core_steps="$(profile_step_count "${profile}")"
   INSTALL_ENGINE_TOTAL="${core_steps}"
-  if profile_wants_mobsf "${profile}"; then
-    INSTALL_ENGINE_TOTAL=$(( INSTALL_ENGINE_TOTAL + 1 ))
-  fi
   if profile_wants_doctor "${profile}"; then
     INSTALL_ENGINE_TOTAL=$(( INSTALL_ENGINE_TOTAL + 1 ))
   fi
@@ -239,13 +198,13 @@ install_engine_run_profile() {
   echo
 
   if (( use_log )); then
-    init_script_logging "${FEDORA_LOG_REBUILD}" "install_profile_${profile}" "Profile: ${profile}"
+    init_script_logging "${FEDORA_LOG_SETUP_PROFILE}" "install_profile_${profile}" "Profile: ${profile}"
     (( dry_run )) && log_warn "DRY RUN — no scripts will execute"
   fi
 
   info "Profile: ${profile} (${core_steps} core steps)"
   (( dry_run )) && warn "DRY RUN — no scripts will execute"
-  (( use_log )) && info "Logging to: $(log_file_path "${FEDORA_LOG_REBUILD}")"
+  (( use_log )) && info "Logging to: $(log_file_path "${FEDORA_LOG_SETUP_PROFILE}")"
 
   # Keep the step stream on fd 3. Step confirmations must continue reading the
   # user's stdin; otherwise confirm() consumes the next profile row and silently
@@ -260,7 +219,6 @@ install_engine_run_profile() {
     install_engine_run_step "${root}" "${title}" "${rel}" "${sudo_mode}" "${extra[@]}"
   done 3< <(profile_iter_steps "${profile}")
 
-  install_engine_maybe_mobsf "${root}" "${profile}"
   install_engine_maybe_doctor "${root}" "${profile}"
 
   echo

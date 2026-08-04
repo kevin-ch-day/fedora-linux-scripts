@@ -19,6 +19,8 @@ fail() {
 
 (
   set --
+  # The sourced setup script reads this guard.
+  # shellcheck disable=SC2034
   FEDORA_ANDROID_CORE_LIB_ONLY=1
   # shellcheck disable=SC1090
   source "${SCRIPT}"
@@ -26,6 +28,8 @@ fail() {
   sandbox="$(mktemp -d)"
   trap 'rm -rf "${sandbox}"' EXIT
   REAL_HOME="${sandbox}/home"
+  # The sourced setup script uses the overridable SDK location.
+  # shellcheck disable=SC2034
   ANDROID_SDK_DIR="${REAL_HOME}/Android/Sdk"
   mkdir -p "${REAL_HOME}"
   printf '# existing shell configuration\n' > "${REAL_HOME}/.bashrc"
@@ -39,6 +43,8 @@ pass "managed Android shell block is copyable by its owner"
 
 (
   set --
+  # The sourced setup script reads this guard.
+  # shellcheck disable=SC2034
   FEDORA_ANDROID_CORE_LIB_ONLY=1
   # shellcheck disable=SC1090
   source "${SCRIPT}"

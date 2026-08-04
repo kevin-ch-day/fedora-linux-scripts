@@ -2,7 +2,7 @@
 # run.sh — Fedora workstation control plane (primary entry point)
 # Version: 1.8.0
 #
-# Run: ./run.sh [--help|--check|--daily|--rebuild|--install|--onboard|…]
+# Run: ./run.sh [--help|--check|--daily|--onboard|…]
 #
 # MobSF is the one separate module entry: ./mobsf.sh
 
@@ -16,7 +16,11 @@ FEDORA_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 _fedora_args=()
 for _fedora_arg in "$@"; do
   case "${_fedora_arg}" in
-    --no-color) FEDORA_NO_COLOR=1 ;;
+    --no-color)
+      # Sourced common/theme libraries read this global display override.
+      # shellcheck disable=SC2034
+      FEDORA_NO_COLOR=1
+      ;;
     *) _fedora_args+=("${_fedora_arg}") ;;
   esac
 done
@@ -41,21 +45,9 @@ source "${FEDORA_ROOT}/lib/menu.sh"
 source "${FEDORA_ROOT}/lib/health_snapshot.sh"
 # shellcheck source=system/lib/menu.sh
 source "${FEDORA_ROOT}/system/lib/menu.sh"
-# shellcheck source=dev/lib/menu.sh
-source "${FEDORA_ROOT}/dev/lib/menu.sh"
-# shellcheck source=android/lib/menu.sh
-source "${FEDORA_ROOT}/android/lib/menu.sh"
-
 # shellcheck source=lib/workflows.sh
 source "${FEDORA_ROOT}/lib/workflows.sh"
-# shellcheck source=lib/rebuild.sh
-source "${FEDORA_ROOT}/lib/rebuild.sh"
-
 menu_init "Fedora Workstation Control" "${FEDORA_ROOT}" 1
-
-_fedora_run_rebuild() {
-  fedora_rebuild_run "${FEDORA_ROOT}" "$@"
-}
 
 _fedora_run_check() {
   # shellcheck source=lib/check.sh
@@ -69,23 +61,6 @@ _fedora_run_check() {
     esac
   done
   fedora_toolkit_check "${FEDORA_ROOT}" "${full}" "${fix_repos}"
-}
-
-_fedora_inline_menu() {
-  local header_fn="$1"
-  local lane="$2"
-  local menu_fn="$3"
-  local prev_header="${MENU_HEADER_FN}"
-  local prev_lane="${THEME_LANE:-main}"
-  local prev_parent="${MENU_PARENT_CONTEXT:-}"
-
-  menu_set_header_fn "${header_fn}"
-  theme_set_lane "${lane}"
-  MENU_PARENT_CONTEXT="main-menu"
-  "${menu_fn}"
-  menu_set_header_fn "${prev_header}"
-  theme_set_lane "${prev_lane}"
-  MENU_PARENT_CONTEXT="${prev_parent}"
 }
 
 _fedora_run_update() {
@@ -128,23 +103,10 @@ _fedora_open_lane() {
     1) _fedora_run_update 0 || ec=$? ;;
     2) _fedora_run_daily_sync 0 || ec=$? ;;
     3) bash "${FEDORA_ROOT}/system/post_update_check.sh" || ec=$? ;;
-    4) _fedora_run_rebuild || ec=$? ;;
-    5)
-      if [[ -t 0 && -t 1 ]]; then
-        menu_set_header_fn fedora_main_header
-        theme_set_lane main
-        MENU_PARENT_CONTEXT="main-menu"
-        fedora_install_menu
-      else
-        info "Install workstation — interactive: ./run.sh --install"
-        info "  Developer: ./run.sh --dev · Android: ./run.sh --android"
-        info "  Full setup: ./run.sh --rebuild"
-      fi
-      ;;
-    6) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh" || ec=$? ;;
-    7) bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only || ec=$? ;;
-    8) _fedora_run_check || ec=$? ;;
-    *) die "Invalid menu item: ${lane} (use 1–8)" ;;
+    4) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh" || ec=$? ;;
+    5) bash "${FEDORA_ROOT}/system/research_doctor.sh" --android-only || ec=$? ;;
+    6) _fedora_run_check || ec=$? ;;
+    *) die "Invalid menu item: ${lane} (use 1–6)" ;;
   esac
   if (( ec != 0 )); then
     warn "Menu item exited with status ${ec}"
@@ -153,7 +115,7 @@ _fedora_open_lane() {
 }
 
 # Non-interactive menu shortcut (must run before option parsing consumes args)
-if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-8]$ ]]; then
+if [[ $# -eq 1 ]] && [[ "$1" =~ ^[1-6]$ ]]; then
   _fedora_open_lane "$1"
   exit $?
 fi
@@ -163,13 +125,12 @@ fedora_usage() {
 Fedora Workstation Toolkit — daily control starts with ./run.sh
 
 Quick start:
-  ./setup.sh                 First clone: validate, then choose a setup profile
+  ./setup.sh                 First clone: provision tools and workstation components
   ./run.sh                   Interactive main menu
   ./run.sh --daily           Update + post-update check (recommended daily)
   ./run.sh --check           Validate toolkit readiness
-  ./run.sh --rebuild         Full research workstation setup
-  ./run.sh --workstation --plan     Daily dev box (update + VS Code + KVM)
-  ./run.sh --list-profiles          Profile catalog
+  ./setup.sh research --plan  Review the research workstation profile
+  ./setup.sh list             Profile catalog
 
 More shortcuts:
   ./run.sh 1                 Update Fedora (non-interactive)
@@ -185,8 +146,6 @@ More shortcuts:
   ./run.sh --disk-summary
   ./run.sh --doctor
   ./run.sh --baseline
-  ./run.sh --rebuild-check
-  ./run.sh --rebuild
   ./run.sh --smoke          Dynamic CLI/menu tests
   ./run.sh --check          Repo readiness (validate · smoke · rebuild check)
 
@@ -200,11 +159,9 @@ Menu item (non-interactive):
   1                  Update Fedora (full)
   2                  Update + post-update check (daily sync)
   3                  Post-update check only
-  4                  Guided rebuild
-  5                  Install workstation hub
-  6                  System maintenance menu
-  7                  System health check (doctor)
-  8                  Toolkit self-test
+  4                  System maintenance menu
+  5                  System health check (doctor)
+  6                  Toolkit self-test
 
 Options:
   --help, -h         Show this help
@@ -213,11 +170,7 @@ Options:
   --update --quick   Faster update (skip rpm -Va verify)
   --daily            Update then post-update check (same as menu [2])
   --daily --quick    Daily sync with quick update step
-  --install          Install workstation hub (dev · desktop · Android · profiles)
-  --profile NAME     Run setup profile (passes through to ./setup.sh)
-  --list-profiles    Print setup profile catalog (./setup.sh list)
-  --workstation      Run workstation profile (update + dev tools; add --yes)
-  --onboard          Fresh machine wizard (setup → check → rebuild)
+  --onboard          Fresh machine wizard (setup → check → research setup)
   --onboard --skip-setup  Onboard from check step (after --check)
   FEDORA_THEME       dark (default) or light — console color palette
   FEDORA_THEME_DENSITY  normal (default) or compact — menu spacing
@@ -234,10 +187,6 @@ Options:
   --audit-summary    Fast live findings only (no full report)
   --audit-plan       Ordered remediation plan from live findings
   --host-context     Live host snapshot (users · network · posture)
-  --rebuild-check    Pre-rebuild readiness (no installs)
-  --rebuild [opts]   Guided rebuild (passes options to rebuild engine)
-  --rebuild-yes      Rebuild with --yes
-  --dry-run          Rebuild dry-run
   --system           Open System maintenance menu
   --dev              Open Developer tools
   --android          Open Android RE tools
@@ -249,12 +198,11 @@ Area routes:
 
 Fresh install flow:
   ./setup.sh
-  ./run.sh --onboard              # guided: check → rebuild
-  ./run.sh --profile research --yes  # or ./run.sh --rebuild --yes
-  ./run.sh --list-profiles           # android-re, dev-stack, mobsf, …
-  ./run.sh --profile research --plan
+  ./setup.sh --guided               # guided: check → research setup
+  ./setup.sh research --yes
+  ./setup.sh list                    # android-re, dev-stack, web-stack, …
+  ./setup.sh research --plan
 
-Legacy scripts in ./legacy/ are disabled reference only.
 See: docs/GETTING-STARTED.md
 Root: ${FEDORA_ROOT}
 EOF
@@ -308,35 +256,11 @@ while [[ $# -gt 0 ]]; do
       _fedora_run_daily_sync "${quick}"
       exit $?
       ;;
-    --install)
-      shift
-      menu_set_header_fn fedora_main_header
-      theme_set_lane main
-      MENU_PARENT_CONTEXT="main-menu"
-      fedora_install_menu
-      exit 0
-      ;;
     --onboard)
       shift
       _fedora_run_onboard "$@"
       exit $?
       ;;
-    --profile)
-      shift
-      [[ -n "${1:-}" ]] || die "--profile requires a name (try: ./run.sh --list-profiles)"
-      exec bash "${FEDORA_ROOT}/setup.sh" "$@"
-      ;;
-    --list-profiles)
-      shift
-      exec bash "${FEDORA_ROOT}/setup.sh" list "$@"
-      ;;
-    --workstation)
-      shift
-      exec bash "${FEDORA_ROOT}/setup.sh" workstation "$@"
-      ;;
-    --rebuild) shift; _fedora_run_rebuild "$@"; exit $? ;;
-    --rebuild-yes) shift; _fedora_run_rebuild --yes "$@"; exit $? ;;
-    --dry-run) shift; _fedora_run_rebuild --dry-run "$@"; exit $? ;;
     --daily-driver-check) shift; exec bash "${FEDORA_ROOT}/system/daily_driver_check.sh" "$@" ;;
     --post-update-check) shift; exec bash "${FEDORA_ROOT}/system/post_update_check.sh" "$@" ;;
     --disk-summary) shift; exec bash "${FEDORA_ROOT}/system/health_snapshot.sh" --show "$@" ;;
@@ -346,7 +270,6 @@ while [[ $# -gt 0 ]]; do
     --audit-summary) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" --summary "$@" ;;
     --audit-plan) shift; exec bash "${FEDORA_ROOT}/system/security_audit.sh" --plan "$@" ;;
     --host-context) shift; exec bash "${FEDORA_ROOT}/system/host_context.sh" "$@" ;;
-    --rebuild-check) shift; exec bash "${FEDORA_ROOT}/system/rebuild_readiness_check.sh" "$@" ;;
     --system) shift; FEDORA_FROM_PICKER=1 exec bash "${FEDORA_ROOT}/system/system.sh" "$@" ;;
     --dev)
       shift
@@ -374,76 +297,15 @@ fedora_main_header() {
   theme_meta_line "[1] update · [2] daily sync · ./run.sh --help for CLI"
 }
 
-_fedora_install_header() {
-  menu_clear_screen
-  theme_lane_banner "Install workstation" install \
-    "developer tools · desktop · containers · web · Android RE"
-  theme_meta_line "PATH / $(menu_path_text)"
-  menu_hr
-  theme_page_title "Install workstation"
-  theme_meta_line "pick an area — profiles [6–8] · rebuild [9]"
-}
-
-_fedora_install_items() {
-  theme_section "Core workstation"
-  menu_item_lane 1 dev "Developer tools" "git · vscode · shell helpers"
-  menu_item_lane 2 desktop "Desktop environments" "cinnamon · kde · mate · lxqt"
-  menu_item_lane 3 virt "Virtualization & containers" "podman · docker · kvm · virtualbox"
-  menu_item_lane 4 web "Web/database stack" "apache · mariadb · php · phpmyadmin"
-  theme_section "Security research"
-  menu_item_lane 5 android "Android RE tools" "sdk · adb · jadx · apktool"
-  theme_section "One-command profiles"
-  menu_item_lane 6 profile "Workstation profile" "update · git · VS Code · KVM"
-  menu_item_lane 7 profile "Research profile" "update · Android RE · optional MobSF"
-  menu_item_lane 8 profile "All install profiles" "full catalog · mobsf · web-stack · …"
-  theme_section "All-in-one"
-  menu_item_lane 9 rebuild "Broad guided setup" "research profile · review and confirm each step"
-  menu_item_back
-}
-
-_fedora_install_dispatch() {
-  case "$1" in
-    0) return 1 ;;
-    1) _fedora_inline_menu dev_menu_developer_header dev dev_menu_developer_tools; return 0 ;;
-    2) _fedora_inline_menu dev_menu_desktop_header dev dev_menu_desktop_environments; return 0 ;;
-    3) _fedora_inline_menu dev_menu_virtualization_header dev dev_menu_infrastructure; return 0 ;;
-    4) _fedora_inline_menu dev_menu_web_header dev dev_menu_web_stack; return 0 ;;
-    5) _fedora_inline_menu android_menu_main_header android android_main_menu; return 0 ;;
-    6) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/setup.sh" workstation || true; menu_pause; return 0 ;;
-    7) FEDORA_FROM_MENU=1 bash "${FEDORA_ROOT}/setup.sh" research || true; menu_pause; return 0 ;;
-    8) bash "${FEDORA_ROOT}/setup.sh" list || true; menu_pause; return 0 ;;
-    9)
-      warn "Broad guided setup: review each step and skip anything not intended for this host."
-      FEDORA_FROM_MENU=1 _fedora_run_rebuild || true
-      menu_pause
-      return 0
-      ;;
-    *) return 2 ;;
-  esac
-}
-
-fedora_install_menu() {
-  local prev_header="${MENU_HEADER_FN}"
-  menu_set_header_fn _fedora_install_header
-  theme_set_lane dev
-  menu_loop "Install workstation" "components · guided rebuild" \
-    _fedora_install_items _fedora_install_dispatch
-  menu_set_header_fn "${prev_header}"
-  theme_set_lane main
-}
-
 _fedora_main_items() {
   theme_section "Everyday — start here"
   menu_item_lane 1 update "Update Fedora" "sudo · dnf upgrade · full verify · log saved"
   menu_item_lane 2 postupdate "Update + post-update check" "recommended daily workflow"
   menu_item_lane 3 postupdate "Post-update check only" "after manual dnf upgrade"
-  theme_section "Fresh machine / full setup"
-  menu_item_lane 4 rebuild "Broad guided setup" "review plan · confirm update → KVM → Android → RE"
-  menu_item_lane 5 dev "Install workstation components" "dev · desktop · virt · web · Android"
   theme_section "Maintenance and health"
-  menu_item_lane 6 system "System maintenance" "logs · cleanup · disk · hardening"
-  menu_item_lane 7 audit "System health check" "Fedora doctor · repos · lane entry points"
-  menu_item_lane 8 check "Repository self-test" "validate · smoke · rebuild readiness"
+  menu_item_lane 4 system "System maintenance" "logs · cleanup · disk · hardening"
+  menu_item_lane 5 audit "System health check" "Fedora doctor · repos · lane entry points"
+  menu_item_lane 6 check "Repository self-test" "validate · smoke · readiness"
   echo
   menu_item_exit
 }
@@ -454,23 +316,13 @@ _fedora_main_dispatch() {
     1) system_menu_run_update 0; menu_pause; return 0 ;;
     2) system_menu_run_daily_sync 0; menu_pause; return 0 ;;
     3) menu_run_script_scroll system/post_update_check.sh; menu_pause; return 0 ;;
-    4)
-      warn "Broad guided setup: review each step and skip anything not intended for this host."
-      FEDORA_FROM_MENU=1 _fedora_run_rebuild || true
-      menu_pause
-      return 0
-      ;;
+    4) FEDORA_FROM_PICKER=1 bash "${FEDORA_ROOT}/system/system.sh"; return 0 ;;
     5)
-      fedora_install_menu
-      return 0
-      ;;
-    6) _fedora_inline_menu system_menu_header system system_main_menu; return 0 ;;
-    7)
       menu_run_script_scroll system/research_doctor.sh --android-only
       menu_pause
       return 0
       ;;
-    8)
+    6)
       local prev="${MENU_SCROLL_MODE}"
       MENU_SCROLL_MODE=1
       _fedora_run_check || true

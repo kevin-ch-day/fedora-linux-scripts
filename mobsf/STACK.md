@@ -166,7 +166,6 @@ source "${MOBSF_DIR}/lib/mobsf.sh"
 | `systemd.sh` | User systemd unit for login autostart |
 | `menu.sh` | MobSF menus (sources repo `lib/menu.sh`) |
 
-Top-level `lib/mobsf.sh` is a backward-compat shim → `mobsf/lib/mobsf.sh`.
 
 ---
 

@@ -8,7 +8,7 @@ Operational logs for the Fedora rebuild kit. Implementation: **`lib/logging.sh`*
 logs/
 ├── README.md              # this file
 ├── system_update.log      # system/system_update.sh (always)
-├── fedora_rebuild.log     # run.sh --rebuild --log
+├── setup_profile.log      # setup.sh <profile> --log
 ├── fresh_install_check_YYYYMMDD_HHMMSS.log  # ./run.sh --baseline (timestamped)
 ├── mobsf.log              # mobsf install/reset/update (was mobsf_reset.log)
 ├── android_dev_core.log   # android/android_dev_core_setup.sh (always)
@@ -21,7 +21,6 @@ logs/
 ```text
 lib/logging.sh          ← core engine (write + read + maintenance)
 system/log_engine.sh    ← CLI to inspect/manage logs
-system/view_logs.sh     ← deprecated shim (legacy flags → lib/logging.sh)
 ```
 
 ### Write path (scripts)
@@ -97,7 +96,7 @@ Each run writes a session banner, Session-ID, structured lines, and footer (see 
 | Script | Log file | When |
 |--------|----------|------|
 | `system/system_update.sh` | `system_update.log` | Always |
-| `run.sh --rebuild --log` | `fedora_rebuild.log` | when `--log` passed |
+| `setup.sh <profile> --log` | `setup_profile.log` | when `--log` passed |
 | `mobsf/mobsf_install.sh` | `mobsf.log` | Always (install/reset/update) |
 | `android/android_dev_core_setup.sh` | `android_dev_core.log` | Always |
 

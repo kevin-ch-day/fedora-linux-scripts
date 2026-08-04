@@ -6,12 +6,12 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 
 | Entry | Use |
 |-------|-----|
-| **`./setup.sh`** | **Start here after cloning** — validates the checkout, then offers setup profiles |
-| **`./run.sh`** | Day-to-day workstation control — menu, updates, rebuild, doctor |
+| **`./setup.sh`** | **Start here after cloning** — provisions tools and workstation profiles |
+| **`./run.sh`** | Day-to-day workstation control — menu, updates, doctor |
 | **`./mobsf.sh`** | MobSF stack only — install/start/**doctor** |
 
 ```bash
-./setup.sh            # first clone: validate, then choose a setup profile
+./setup.sh            # first clone: choose tools or a setup profile
 ./run.sh              # day-to-day interactive menu
 ./run.sh --check      # validate + smoke + rebuild readiness (start here)
 ./run.sh --check --fix-repos   # fix DNF repos (sudo) then re-check
@@ -20,10 +20,6 @@ Also known as the **Fedora Rebuild Kit** for guided install flows.
 ./run.sh --inspect             # no-sudo host inventory; saves nothing by default
 ./run.sh --doctor     # Fedora doctor (repo · lanes · workstation health)
 ./run.sh --baseline   # fresh-install host baseline → logs/
-./run.sh --rebuild-check   # pre-rebuild readiness only
-./run.sh --rebuild    # guided full setup (research profile)
-./run.sh --workstation   # daily dev profile
-./run.sh --list-profiles # profile catalog
 ./run.sh --smoke      # dynamic CLI/menu tests
 ./run.sh --fix-repos  # fix DNF .repo permissions (sudo)
 ./mobsf.sh --doctor      # MobSF stack health (separate)
@@ -43,7 +39,6 @@ fedora-linux-scripts/
 ├── lib/                 ← shared libraries
 ├── system/ · dev/ · android/
 ├── mobsf/               ← Podman stack (see mobsf/GUIDE.md)
-├── legacy/              ← disabled reference only
 └── logs/
 ```
 
@@ -70,13 +65,12 @@ Workstation readiness: `./run.sh --daily-driver-check` or System menu → **Dail
 | Developer workstation areas | `dev/` | [dev/README.md](dev/README.md) |
 | Android RE tools entry | `android/` | [android/README.md](android/README.md) |
 | MobSF *(separate)* | `mobsf/` | [mobsf/GUIDE.md](mobsf/GUIDE.md) |
-| Legacy | `legacy/` | [legacy/README.md](legacy/README.md) |
 
 ---
 
 ## Install (summary)
 
-Full path: **`./run.sh --rebuild`** or **`./run.sh --profile research --yes`**. Profile catalog: [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md). Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
+Full path: **`./setup.sh research --yes`**. Profile catalog: [docs/INSTALL-PROFILES.md](docs/INSTALL-PROFILES.md). Manual order and doctor matrix: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
@@ -88,8 +82,8 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 
 | Script | Purpose |
 |--------|---------|
-| `run.sh` | **Primary entry** — menu, CLI, rebuild |
-| `setup.sh` | Bootstrap validation + setup-profile launcher |
+| `run.sh` | **Primary entry** — menu, CLI, workstation operations |
+| `setup.sh` | Bootstrap provisioning + setup-profile launcher |
 | `mobsf.sh` | MobSF wrapper → `mobsf/mobsf.sh` |
 | `system/system.sh` · `dev/dev.sh` · `android/android.sh` | Lane menus + CLI |
 | `validate.sh` | Syntax, entry points, ShellCheck; `--smoke` runs smoke_test |
@@ -107,11 +101,9 @@ MobSF optional: `./mobsf.sh install` → [mobsf/GUIDE.md](mobsf/GUIDE.md)
 | `post_update_check.sh` | After `dnf upgrade`: reboot, btrfs, services, vbox |
 | `system_update.sh` | Full Fedora update + health snapshot; `--quick` skips rpm -Va |
 | `fresh_install_check.sh` | Host baseline after fresh install (`./run.sh --baseline`) |
-| `rebuild_readiness_check.sh` | Pre-rebuild checks (`./run.sh --rebuild-check`) |
 | `system_info.sh` · `system_monitor.sh` | Snapshot · live dashboard |
 | `research_doctor.sh` | Full research doctor (Android + MobSF); Fedora doctor uses `--android-only` |
 | `log_engine.sh` | Logs CLI |
-| `view_logs.sh` | Shim → `log_engine.sh` |
 | `backup_state.sh` · `cleanup.sh` | Pre-reinstall export · DNF/log cleanup |
 
 ### Dev

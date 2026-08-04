@@ -4,7 +4,7 @@
 #
 # Run:
 #   ./log_engine.sh status
-#   ./log_engine.sh --file fedora_rebuild.log summary
+#   ./log_engine.sh --file setup_profile.log summary
 #   ./log_engine.sh tail --file system_update.log --lines 50
 
 set -euo pipefail
@@ -47,7 +47,7 @@ Options:
 
 Examples:
   $(basename "$0") summary --file system_update.log
-  $(basename "$0") --file fedora_rebuild.log issues --lines 100
+  $(basename "$0") --file setup_profile.log issues --lines 100
   $(basename "$0") rotate --file system_update.log --max-mb 5
 EOF
 }

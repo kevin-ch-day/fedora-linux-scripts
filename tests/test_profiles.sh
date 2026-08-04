@@ -70,7 +70,6 @@ pass "combined infrastructure installer defaults to Podman"
   profile_risk_level() { printf 'controlled\n'; }
   profile_impact_summary() { printf 'test only\n'; }
   profile_step_count() { printf '2\n'; }
-  profile_wants_mobsf() { return 1; }
   profile_wants_doctor() { return 1; }
   profile_next_action() { printf 'none\n'; }
   install_engine_validate_profile() { return 0; }

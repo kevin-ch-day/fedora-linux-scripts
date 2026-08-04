@@ -18,7 +18,7 @@ Guides for **fedora-linux-scripts**.
 
 **MobSF:** [GUIDE.md](../mobsf/GUIDE.md) · [STACK.md](../mobsf/STACK.md) · [TROUBLESHOOTING.md](../mobsf/TROUBLESHOOTING.md)
 
-**Other:** [logs/README.md](../logs/README.md) · [legacy/README.md](../legacy/README.md)
+**Other:** [logs/README.md](../logs/README.md)
 
 ```text
 README.md          script index

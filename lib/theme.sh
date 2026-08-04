@@ -7,7 +7,7 @@
 # FEDORA_THEME_WIDTH=54          rule width (columns)
 # FEDORA_THEME_DENSITY=normal|compact
 #
-# Lane accents (via theme_set_lane): system · dev · android · mobsf · rebuild · audit
+# Lane navigation colors (via theme_set_lane): system · dev · android · mobsf · rebuild · audit
 #
 # Call theme_init once common.sh is loaded (or from theme_preview / standalone scripts).
 # Do not execute directly.
@@ -161,9 +161,31 @@ theme_status_code() {
 }
 
 theme_lane_accent_code() {
-  # Lanes are identified by labels, not a rainbow. A single signal-red accent
-  # keeps the control surface coherent; green/amber/red remain status-only.
-  theme_signal_code
+  # Navigation hues make large menus scannable. They intentionally avoid the
+  # green/amber/failure palette, which remains reserved for runtime status.
+  case "${1:-}" in
+    main|fedora) theme_signal_code ;;
+    update|postupdate) printf '%s' 45 ;;       # teal
+    system|host|disk|logs|cleanup) printf '%s' 39 ;;  # cyan
+    install|setup|rebuild|profile) printf '%s' 171 ;; # violet
+    dev|development|desktop|virt|virtualization|web) printf '%s' 75 ;; # blue
+    android) printf '%s' 141 ;;                 # orchid
+    mobsf) printf '%s' 135 ;;                   # purple
+    audit|security|readiness|check|selftest) printf '%s' 69 ;; # cobalt
+    *) theme_signal_code ;;
+  esac
+}
+
+theme_lane_fallback_color() {
+  # ANSI 16-color equivalents for navigation only; semantic colors are still
+  # supplied by theme_status_code().
+  case "${1:-}" in
+    main|fedora|install|setup|rebuild|profile) printf '%s' 1 ;; # red signal
+    update|postupdate|system|host|disk|logs|cleanup|mobsf) printf '%s' 6 ;; # cyan
+    dev|development|desktop|virt|virtualization|web|audit|security|readiness|check|selftest) printf '%s' 4 ;; # blue
+    android) printf '%s' 5 ;; # magenta
+    *) printf '%s' 1 ;;
+  esac
 }
 
 theme_lane_icon() {
@@ -215,8 +237,10 @@ theme_set_lane() {
   if [[ "${THEME_USE_256:-0}" -eq 1 ]]; then
     THEME_ACCENT="$(_theme_fg256 "${code}")${THEME_BOLD}"
   else
-    THEME_ACCENT="$(tput setaf 1 2>/dev/null || true)${THEME_BOLD}"
+    THEME_ACCENT="$(tput setaf "$(theme_lane_fallback_color "${lane}")" 2>/dev/null || true)${THEME_BOLD}"
   fi
+  # Public semantic aliases are consumed by sourced callers, not this file.
+  # shellcheck disable=SC2034
   THEME_SIGNAL="${THEME_ACCENT}"
   CYAN="${THEME_ACCENT}"
 }
@@ -286,18 +310,32 @@ theme_init() {
     THEME_INFO="$(tput setaf 7 2>/dev/null || true)"
   fi
 
+  # Public semantic aliases are consumed by sourced callers, not this file.
+  # shellcheck disable=SC2034
   THEME_SIGNAL="${THEME_ACCENT}"
+  # shellcheck disable=SC2034
   THEME_STATUS_SUCCESS="${THEME_SUCCESS}"
+  # shellcheck disable=SC2034
   THEME_STATUS_WARNING="${THEME_WARN}"
+  # shellcheck disable=SC2034
   THEME_STATUS_FAILURE="${THEME_ERROR}"
+  # shellcheck disable=SC2034
   THEME_STATUS_MUTED="${THEME_MUTED}"
 
+  # Legacy color aliases remain part of the sourced theme API.
+  # shellcheck disable=SC2034
   CYAN="${THEME_ACCENT}"
+  # shellcheck disable=SC2034
   GREEN="${THEME_SUCCESS}"
+  # shellcheck disable=SC2034
   YELLOW="${THEME_WARN}"
+  # shellcheck disable=SC2034
   RED="${THEME_ERROR}"
+  # shellcheck disable=SC2034
   RESET="${THEME_RESET}"
+  # shellcheck disable=SC2034
   BOLD="${THEME_BOLD}"
+  # shellcheck disable=SC2034
   DIM="${THEME_DIM}"
 
   if [[ -n "${THEME_LANE}" ]]; then
@@ -400,7 +438,7 @@ theme_report_step() {
   echo
   if theme_use_color; then
     theme_rule '═' "${width}"
-    printf '%sSTEP %s%s/%s%s  %s%s%s\n' \
+    printf '%sSTEP %s%s/%s%s  %s%s\n' \
       "${THEME_ACCENT}" "${THEME_RESET}" "${step}" "${total}" \
       "${THEME_BOLD}" "${title}" "${THEME_RESET}"
     [[ -n "${detail}" ]] && theme_meta_line "${detail}"
@@ -444,7 +482,7 @@ theme_breadcrumb() {
       printf '%s%s%s' "${THEME_DIM}" "${seg}" "${THEME_RESET}"
       first=0
     else
-      printf '%s › %s%s%s' "${THEME_DIM}" "${seg}" "${THEME_RESET}"
+      printf '%s › %s%s' "${THEME_DIM}" "${seg}" "${THEME_RESET}"
     fi
   done
   if (( first )); then
@@ -525,6 +563,7 @@ theme_option_lane() {
 
   icon="$(theme_lane_icon "${lane}")"
   theme_set_lane "${lane}"
+  key_color="${THEME_ACCENT}"
 
   if [[ "${num}" == "0" ]]; then
     key_color="${THEME_DIM}"
@@ -873,10 +912,12 @@ theme_summary_row() {
   local key="$1"
   local value="$2"
   local width="${3:-11}"
+  local value_color
   if theme_use_color; then
+    value_color="$(_theme_summary_value_color "${value}")"
     printf '  %s%-*s%s %s%s%s\n' \
       "${THEME_DIM}" "${width}" "${key}" "${THEME_RESET}" \
-      "$(_theme_summary_value_color "${value}")${value}${THEME_RESET}"
+      "${value_color}" "${value}" "${THEME_RESET}"
   else
     printf '  %-*s %s\n' "${width}" "${key}" "${value}"
   fi

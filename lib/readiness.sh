@@ -692,7 +692,7 @@ readiness_print_daily_driver() {
   if readiness_vbox_is_installed; then
     if vbox_ver="$(readiness_vbox_version 2>/dev/null)"; then
       theme_kv "VBoxManage" "${vbox_ver}"
-    elif vbox_bin="$(cmd_binary_path VBoxManage 2>/dev/null)"; then
+    elif cmd_binary_path VBoxManage >/dev/null 2>&1; then
       theme_kv "VBoxManage" "installed but version unreadable"
       readiness_vbox_char_dev_ready || theme_note "/dev/vboxdrv missing — VMs cannot start until vboxdrv is loaded"
     else

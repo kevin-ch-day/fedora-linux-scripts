@@ -19,7 +19,7 @@ users_has_login_shell() {
   local shell="$1"
   [[ -n "${shell}" ]] || return 1
   case "${shell}" in
-    */nologin|*/false|/sbin/nologin|/usr/sbin/nologin) return 1 ;;
+    */nologin|*/false) return 1 ;;
     *) return 0 ;;
   esac
 }
@@ -97,6 +97,8 @@ users_detect_login() {
 
 users_detect_wheel() {
   local -a names=()
+  # `seen` is mutated through users_add_unique's nameref argument.
+  # shellcheck disable=SC2034
   local seen="" members u uid home shell
   members="$(getent group wheel 2>/dev/null | cut -d: -f4 | tr ',' '\n' || true)"
   [[ -n "${members}" ]] || return 1

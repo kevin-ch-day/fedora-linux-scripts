@@ -64,8 +64,10 @@ workflow_daily_sync() {
   echo
 
   if (( skip_post )); then
+    local update_result="done"
+    (( update_ec == 0 )) || update_result="exit ${update_ec}"
     theme_summary_box "Daily sync" \
-      "Update: $( (( update_ec == 0 )) && printf done || printf 'exit %s' "${update_ec}" )" \
+      "Update: ${update_result}" \
       "Post-update: skipped" \
       "Next: ./run.sh --post-update-check"
     return "${update_ec}"
@@ -92,9 +94,9 @@ workflow_daily_sync() {
 
 workflow_fresh_machine_hint() {
   theme_section "Fresh machine path"
-  theme_note_kv "1" "./setup.sh  or  ./run.sh --onboard"
+  theme_note_kv "1" "./setup.sh"
   theme_note_kv "2" "./run.sh --check"
-  theme_note_kv "3" "./setup.sh research --yes   (or ./run.sh --rebuild --yes)"
+  theme_note_kv "3" "./setup.sh research --yes"
   theme_note_kv "4" "./run.sh --doctor"
   theme_note_kv "Daily" "./run.sh --daily   (update + post-update)"
   theme_note_kv "Profiles" "./setup.sh list"
@@ -150,7 +152,7 @@ workflow_onboard_fresh_machine() {
   local rebuild_state="skipped"
   if (( skip_setup )) || confirm "Run guided rebuild now? (--yes, research profile)"; then
     rebuild_state="done"
-    bash "${root}/run.sh" --rebuild --yes --profile research || {
+    bash "${root}/setup.sh" research --yes || {
       rebuild_ec=$?
       rebuild_state="failed"
     }
@@ -162,7 +164,7 @@ workflow_onboard_fresh_machine() {
   if [[ "${rebuild_state}" == "failed" ]]; then
     theme_summary_box "Onboarding finished" \
       "Rebuild: review failures above" \
-      "Next: ./run.sh --doctor · logs: $(log_dir)/fedora_rebuild.log"
+      "Next: ./run.sh --doctor · logs: $(log_dir)/setup_profile.log"
     return $(( check_ec != 0 ? check_ec : rebuild_ec ))
   fi
 

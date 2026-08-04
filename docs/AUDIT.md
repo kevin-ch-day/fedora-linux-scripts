@@ -76,7 +76,7 @@ No `eval` or `curl|bash` in active scripts.
 ./validate.sh --shellcheck       # CI-equivalent
 ```
 
-Baseline: **0 warnings** at `-S warning` (excluding `legacy/`).
+Baseline: **0 warnings** at `-S warning`.
 
 ---
 
@@ -116,7 +116,7 @@ Consolidation (RE engine, lane launchers, MobSF split, secrets, autostart, dynam
 
 MobSF is a separate entry: `./mobsf.sh`
 
-CLI shortcuts exit to shell (by design): `./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`, `--rebuild*`
+CLI shortcuts exit to shell (by design): `./run.sh 1`–`8`, `--system`, `--dev`, `--android`, `--doctor`
 
 ### MobSF menu (`./mobsf.sh`)
 
@@ -132,7 +132,7 @@ Full trees were trimmed here; source of truth is `*/lib/menu.sh`. QA loop:
 
 ```bash
 ./run.sh
-./run.sh --rebuild --dry-run
+./setup.sh research --dry-run
 ./run.sh 1    # exits to shell when non-interactive — expected
 ```
 
@@ -145,7 +145,6 @@ Full trees were trimmed here; source of truth is `*/lib/menu.sh`. QA loop:
 ./run.sh --doctor
 ./mobsf.sh --doctor
 ./system/research_doctor.sh --android-only
-./legacy/update_fedora.sh          # must exit 1
 ./android/verify_re_tool.sh dex2jar
 ```
 

@@ -33,7 +33,7 @@ Options:
   --help, -h       Show this help
 
   Checks:
-  - bash -n on active scripts (excludes legacy/)
+  - bash -n on all shell scripts
   - entry points (lib/entry_points.sh)
   - CI workflow and MobSF compose secrets pattern
   - docs/GETTING-STARTED.md and docs/README.md present
@@ -131,14 +131,14 @@ if (( DO_SHELLCHECK )) && ! have shellcheck; then
   DO_SHELLCHECK=0
 fi
 
-theme_report_section "Syntax (bash -n, excluding legacy/)"
+theme_report_section "Syntax (bash -n)"
 syntax_fail=0
 while IFS= read -r -d '' script; do
   if ! bash -n "${script}" 2>/dev/null; then
     syntax_fail=1
     _validate_fail "bash -n failed: ${script#"${VALIDATE_ROOT}/"}"
   fi
-done < <(find "${VALIDATE_ROOT}" -name '*.sh' -type f ! -path "${VALIDATE_ROOT}/legacy/*" -print0)
+done < <(find "${VALIDATE_ROOT}" -name '*.sh' -type f -print0)
 (( syntax_fail == 0 )) && _validate_ok "bash -n passed for active scripts"
 
 theme_report_section "Entry points"
@@ -188,22 +188,21 @@ done
 
 theme_report_section "Visual identity"
 theme_contract_ok=1
-shared_accent="$(theme_lane_accent_code main)"
+main_accent="$(theme_lane_accent_code main)"
+nav_accent_count="$(for lane in main system dev android mobsf rebuild audit; do theme_lane_accent_code "${lane}"; printf '\n'; done | sort -u | wc -l)"
 for lane in main system dev android mobsf rebuild audit; do
   marker="$(theme_lane_icon "${lane}")"
-  if [[ "$(theme_lane_accent_code "${lane}")" != "${shared_accent}" ]]; then
-    _validate_fail "lane ${lane} does not use the shared signal accent"
-    theme_contract_ok=0
-  fi
   if [[ ! "${marker}" =~ ^[A-Z0-9]{3}\ /\ $ ]]; then
     _validate_fail "lane ${lane} marker is not a three-character ASCII technical marker"
     theme_contract_ok=0
   fi
 done
-if [[ "${shared_accent}" == "$(theme_status_code success)" ]] \
-  || [[ "${shared_accent}" == "$(theme_status_code warning)" ]] \
-  || [[ "${shared_accent}" == "$(theme_status_code failure)" ]]; then
-  _validate_fail "signal accent reuses a semantic status token"
+if [[ "${main_accent}" != "$(theme_signal_code)" ]]; then
+  _validate_fail "main lane does not use the signal accent"
+  theme_contract_ok=0
+fi
+if (( nav_accent_count < 4 )); then
+  _validate_fail "navigation lanes do not provide enough distinct scan colors"
   theme_contract_ok=0
 fi
 for token in THEME_SIGNAL THEME_STATUS_SUCCESS THEME_STATUS_WARNING \
@@ -264,7 +263,7 @@ if [[ "${preview_plain}" == *$'\r'* ]]; then
   theme_contract_ok=0
 fi
 (( theme_contract_ok == 1 )) \
-  && _validate_ok "accent, states, danger, progress, plain hierarchy, and widths"
+  && _validate_ok "navigation colors, states, danger, progress, plain hierarchy, and widths"
 
 theme_report_section "Output identity audit"
 identity_files=(
@@ -319,8 +318,8 @@ done
 (( profile_fail == 0 )) || true
 
 if (( DO_SHELLCHECK )); then
-  theme_report_section "ShellCheck (-S warning, excluding legacy/)"
-  if sc_out="$(find "${VALIDATE_ROOT}" -name '*.sh' -type f ! -path "${VALIDATE_ROOT}/legacy/*" -print0 \
+  theme_report_section "ShellCheck (-S warning)"
+  if sc_out="$(find "${VALIDATE_ROOT}" -name '*.sh' -type f -print0 \
     | xargs -0 shellcheck -S warning 2>&1)"; then
     _validate_ok "ShellCheck clean"
   else

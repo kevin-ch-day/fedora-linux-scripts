@@ -114,7 +114,7 @@ if (( FINDINGS_ONLY || SUMMARY_ONLY || PLAN_ONLY )); then
       host_context_compare_snapshots "${prev_ctx}"
     fi
   fi
-  if (( security_audit_finding_count CRITICAL > 0 )); then
+  if (( $(security_audit_finding_count CRITICAL) > 0 )); then
     theme_summary_box "Audit analysis" \
       "Host:      ${host}" \
       "Critical:  $(security_audit_finding_count CRITICAL) item(s) need attention" \

@@ -313,7 +313,7 @@ _system_logs_items() {
   menu_item 4 "Issues / errors (system_update.log)"
   theme_section "Tail / follow"
   menu_item 5 "Tail system_update.log" "last 50"
-  menu_item 6 "Tail fedora_rebuild.log" "last 50"
+  menu_item 6 "Tail setup_profile.log" "last 50"
   menu_item 7 "Tail mobsf.log" "last 50"
   menu_item 8 "Follow system_update.log" "Ctrl+C"
   menu_item 9 "Open logs/README"
@@ -328,7 +328,7 @@ _system_logs_dispatch() {
     3) menu_run_script_scroll system/log_engine.sh summary --file system_update.log; menu_pause; return 0 ;;
     4) menu_run_script_scroll system/log_engine.sh issues --file system_update.log --lines 80; menu_pause; return 0 ;;
     5) menu_run_script_scroll system/log_engine.sh tail --file system_update.log --lines 50; menu_pause; return 0 ;;
-    6) menu_run_script_scroll system/log_engine.sh tail --file fedora_rebuild.log --lines 50; menu_pause; return 0 ;;
+    6) menu_run_script_scroll system/log_engine.sh tail --file setup_profile.log --lines 50; menu_pause; return 0 ;;
     7) menu_run_script_scroll system/log_engine.sh tail --file mobsf.log --lines 50; menu_pause; return 0 ;;
     8) menu_run_script_scroll system/log_engine.sh follow --file system_update.log --lines 30; return 0 ;;
     9) menu_open_file "${MENU_ROOT}/logs/README.md"; menu_pause; return 0 ;;

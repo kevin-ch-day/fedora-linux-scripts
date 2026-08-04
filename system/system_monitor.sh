@@ -343,7 +343,7 @@ header() {
   _mon_hr
 
   if theme_use_color; then
-    printf '%sCPU :%s %3s%% [%s]    %sLoad:%s %s %s %s%s\n' \
+    printf '%sCPU :%s %3s%% [%s]    %sLoad:%s %s%s %s %s%s\n' \
       "${THEME_MUTED}" "${THEME_RESET}" "$cpu" "$(bar "$cpu" 18)" \
       "${THEME_MUTED}" "${THEME_RESET}" \
       "${THEME_ACCENT}" "$load1" "$load5" "$load15" "${THEME_RESET}"
@@ -353,7 +353,7 @@ header() {
   fi
 
   if theme_use_color; then
-    printf '%sRAM :%s %3s%% [%s]    %sUsed:%s %s/%s MiB  %sAvail:%s %s MiB\n' \
+    printf '%sRAM :%s %3s%% [%s]    %sUsed:%s %s%s/%s%s MiB  %sAvail:%s %s%s%s MiB\n' \
       "${THEME_MUTED}" "${THEME_RESET}" "$mem_pct" "$(bar "$mem_pct" 18)" \
       "${THEME_MUTED}" "${THEME_RESET}" \
       "${THEME_ACCENT}" "$mem_used" "$mem_tot" "${THEME_RESET}" \
@@ -365,7 +365,7 @@ header() {
   fi
 
   if theme_use_color; then
-    printf '%sSwap:%s %3s%% [%s]    %sUsed:%s %s/%s MiB  %sPSI10:%s CPU:%s MEM:%s IO:%s\n' \
+    printf '%sSwap:%s %3s%% [%s]    %sUsed:%s %s%s/%s%s MiB  %sPSI10:%s %sCPU:%s MEM:%s IO:%s%s\n' \
       "${THEME_MUTED}" "${THEME_RESET}" "$sw_pct" "$(bar "$sw_pct" 18)" \
       "${THEME_MUTED}" "${THEME_RESET}" \
       "${THEME_ACCENT}" "$sw_used" "$sw_tot" "${THEME_RESET}" \
@@ -377,7 +377,7 @@ header() {
   fi
 
   if theme_use_color; then
-    printf '%sDisk:%s %3s%% [%s]    %sNet:%s %s  %sConn:%s %s  %sIO:%s %s\n' \
+    printf '%sDisk:%s %3s%% [%s]    %sNet:%s %s%s%s  %sConn:%s %s%s%s  %sIO:%s %s%s%s\n' \
       "${THEME_MUTED}" "${THEME_RESET}" "$diskpct" "$(bar "$diskpct" 18)" \
       "${THEME_MUTED}" "${THEME_RESET}" \
       "${THEME_ACCENT}" "$(net_rate_line "$iface")" "${THEME_RESET}" \
