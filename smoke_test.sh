@@ -72,7 +72,7 @@ _smoke_run() {
   FAILS=$((FAILS + 1))
   FAIL_NAMES+=("${name} (expected exit ${expect_ec}, got ${ec})")
   warn "${name} — expected exit ${expect_ec}, got ${ec}"
-  printf '%s\n' "${out}" | tail -n 4 | sed 's/^/    /'
+  printf '%s\n' "${out}" | tail -n 40 | sed 's/^/    /'
   return 1
 }
 
@@ -148,7 +148,7 @@ _smoke_run "run.sh --help" 0 bash "${ROOT}/run.sh" --help
 _smoke_run "run.sh --inspect --format text" 0 \
   bash "${ROOT}/run.sh" --inspect --format text
 _smoke_run "inspect regression tests" 0 \
-  python3 -m unittest "${ROOT}/tests/test_inspect.py"
+  python3 -m unittest -v "${ROOT}/tests/test_inspect.py"
 _smoke_run "Android core helper regressions" 0 \
   bash "${ROOT}/tests/test_android_core.sh"
 _smoke_run "package output regressions" 0 \
