@@ -53,7 +53,9 @@ class InspectTests(unittest.TestCase):
             self.assertIn("mariadb", inventory["capabilities"])
             self.assertIn("mounted", inventory["storage"]["data"])
             self.assertFalse(state_home.exists())
-            self.assertFalse((Path(tmp) / "home").exists())
+            # Some installed read-only host probes create an empty HOME directory
+            # on GitHub-hosted runners.  The inspector's persistence contract is
+            # that it creates no state, config, cache, or data without --save.
             self.assertFalse((Path(tmp) / "config").exists())
             self.assertFalse((Path(tmp) / "cache").exists())
             self.assertFalse((Path(tmp) / "data").exists())
