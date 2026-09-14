@@ -155,7 +155,7 @@ if [[ -f "${VALIDATE_ROOT}/.github/workflows/validate.yml" ]]; then
   if grep -Fq './install.sh' "${VALIDATE_ROOT}/.github/workflows/validate.yml"; then
     _validate_fail "CI workflow still references removed install.sh"
   elif grep -Fq './setup.sh research --validate' "${VALIDATE_ROOT}/.github/workflows/validate.yml" \
-    && grep -Fq './setup.sh workstation --validate' "${VALIDATE_ROOT}/.github/workflows/validate.yml"; then
+    && grep -Fq './setup.sh dev-full --validate' "${VALIDATE_ROOT}/.github/workflows/validate.yml"; then
     _validate_ok "CI validates setup profiles through setup.sh"
   else
     _validate_fail "CI setup-profile validation commands not recognized"

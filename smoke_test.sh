@@ -315,12 +315,13 @@ fi
 theme_report_section "Interactive menus (non-interactive input)"
 _smoke_menu "run.sh main menu" "${ROOT}/run.sh" '0\n'
 _smoke_menu "run.sh system area back path" "${ROOT}/run.sh" '4\n0\n0\n'
-_smoke_menu "setup.sh provisioning menu back path" "${ROOT}/setup.sh" '0\n'
+_smoke_run_summary "setup.sh non-interactive readiness" "Setup ready" \
+  bash "${ROOT}/setup.sh"
 _smoke_menu "Android flat doctor route" "${ROOT}/android/android.sh" '4\n\n0\n'
 _smoke_menu "Android core broad-install cancellation" "${ROOT}/run.sh" \
   '5\n5\n1\n1\nn\n\n0\n0\n0\n0\n'
 _smoke_menu "run.sh install all profiles submenu" "${ROOT}/run.sh" '5\n8\n0\n0\n0\n'
-_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '6\n8\n1\n0\n0\n0\n'
+_smoke_menu "run.sh system disk/memory route" "${ROOT}/run.sh" '4\n8\n1\n0\n0\n0\n'
 _smoke_menu "system.sh from picker" "${ROOT}/system/system.sh" '0\n' 1
 _smoke_menu "dev.sh from picker" "${ROOT}/dev/dev.sh" '0\n' 1
 _smoke_menu "android.sh from picker" "${ROOT}/android/android.sh" '0\n' 1

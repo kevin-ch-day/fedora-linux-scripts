@@ -418,6 +418,8 @@ readiness_vbox_is_installed() {
 }
 
 # VBoxManage --version prints multi-line WARNING text before the version line.
+# The optional binary override keeps callers and tests independent of PATH.
+# shellcheck disable=SC2120
 readiness_vbox_version() {
   local bin="${1:-}" ver=""
   [[ -n "${bin}" ]] || bin="$(cmd_binary_path VBoxManage 2>/dev/null || true)"

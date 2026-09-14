@@ -94,6 +94,8 @@ hardening_sshd_effective_allow_users() {
 }
 
 # ---------- paths / drop-ins ----------
+# The optional override is used by sourced callers in the hardening rounds.
+# shellcheck disable=SC2120
 hardening_baseline_root() {
   local override="${1:-}"
   if [[ -n "${override}" ]]; then
